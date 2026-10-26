@@ -78,8 +78,9 @@ Aplicação Spring Boot com pacote raiz `UEPB.ESWII.ClinicalStudyPB`, organizada
 | `domain.model` / `domain.enums` | Entidades JPA (`Usuario`, `Estudo`) e enumerações (`PerfilUsuario`, `StatusEstudo`) | ✅ concluído (T08) |
 | `controller` / `service` / `repository` | Endpoints REST, regras de negócio e interfaces Spring Data JPA | ✅ concluído (T06) |
 | `db/migration` | Migrations SQL versionadas do Flyway (`V1__create_initial_tables.sql`, `V2__seed_initial_data.sql`) | ✅ concluído (T09) |
-| DTOs e validações | Objetos de entrada/saída da API com Bean Validation | 🔄 iniciado (`EstudoRequest`) / T15 / T27 |
-| Segurança | Configuração do Spring Security, autenticação por token e permissões por perfil | ⏳ T19 / T24 |
+| DTOs e validações | Objetos de entrada/saída da API com Bean Validation | 🔄 iniciado (`EstudoRequest`, `Usuario*Request`, `Login*Request`) / T15 / T27 |
+| Segurança | Configuração do Spring Security (`SecurityConfig`), autenticação stateless por JWT (`TokenService`), endpoint de login (`AuthController`) e senhas com BCrypt | ✅ concluído (Tasks 3060 / 3063) |
+
 
 Dependências principais: Spring Web MVC, Spring Data JPA, Flyway (`spring-boot-starter-flyway` + `flyway-database-postgresql`), Spring Security, Bean Validation, springdoc-openapi, driver PostgreSQL, H2 (escopo de testes) e Lombok.
 
@@ -169,6 +170,55 @@ cd backend/ClinicalStudyPB
 
 No Windows (PowerShell/CMD), use `mvnw.cmd spring-boot:run`. A API sobe por padrão na porta **`8081`** (`http://localhost:8081`), configurável via `SERVER_PORT`.
 
+#### Variáveis de ambiente do backend
+
+| Variável | Descrição | Padrão | Obrigatória? |
+|---|---|---|---|
+| `DB_URL` | JDBC URL do PostgreSQL | `jdbc:postgresql://localhost:5432/clinicalstudypb` | Não (local) |
+| `DB_USERNAME` | Usuário do banco | `postgres` | Não (local) |
+| `DB_PASSWORD` | Senha do banco | `postgres` | Não (local) |
+| `SERVER_PORT` | Porta HTTP da API | `8081` | Não |
+| `JWT_SECRET` | Chave secreta HS256 (mínimo de 256 bits / 32 caracteres) | — | **Sim** (ou via `application-dev.properties`) |
+| `JWT_ISSUER` | Identificador do emissor do token | `clinicalstudypb` | Não |
+| `JWT_EXPIRATION_MINUTES` | Tempo de validade do token em minutos | `30` | Não |
+
+Para desenvolvimento local, copie `src/main/resources/application-dev.properties.example` para `src/main/resources/application-dev.properties` (ignorado pelo Git) para definir `jwt.secret` sem depender de variáveis do sistema operacional.
+
+#### Autenticação, chamada de login e uso do token (Tasks 3060 / 3063)
+
+1. **Obtenção do token (Login):**
+   Envie uma requisição HTTP `POST` para `/api/auth/login` com as credenciais do usuário:
+   ```json
+   POST /api/auth/login
+   Content-Type: application/json
+
+   {
+     "email": "admin@clinicalstudy.test",
+     "senha": "senha-de-teste"
+   }
+   ```
+   Em caso de sucesso, a API responde com status `200 OK`:
+   ```json
+   {
+     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+     "tipo": "Bearer"
+   }
+   ```
+   Credenciais inválidas (e-mail inexistente, senha incorreta ou usuário inativo) retornam `401 Unauthorized` com a mensagem genérica `{"erro": "Credenciais inválidas"}`.
+
+2. **Consumo de endpoints protegidos:**
+   Envie o token JWT recebido no cabeçalho `Authorization` com o esquema `Bearer`:
+   ```http
+   GET /api/usuarios HTTP/1.1
+   Host: localhost:8081
+   Authorization: Bearer <token_recebido>
+   ```
+
+3. **Prazo de expiração e logout:**
+   - O token emitido tem validade de **30 minutos** (configurável via `JWT_EXPIRATION_MINUTES`).
+   - Nesta implementação mínima stateless, o logout é executado no lado do cliente (web/mobile) ao descartar o token armazenado.
+   - O token permanece criptograficamente válido no servidor até o término de seu período de validade (`exp`). Usuários desativados têm novas tentativas de login imediatamente rejeitadas no endpoint `/api/auth/login`.
+
 ### Aplicação web
 
 ```bash
@@ -215,11 +265,21 @@ cd backend/ClinicalStudyPB
 ./mvnw test
 ```
 
+No Windows (PowerShell): `mvnw.cmd test`.
+
 Suítes atuais:
 - `ClinicalStudyPbApplicationTests`: validação do contexto Spring Boot, Flyway e Hibernate (`ddl-auto=validate`).
 - `FlywayMigrationIntegrationTest`: verificação da execução das migrations `V1` e `V2`, integridade dos usuários de seed (4 perfis + hash BCrypt) e estudos clínicos iniciais.
 - `OpenApiDocumentationIntegrationTest`: verificação da especificação OpenAPI 3 (`/v3/api-docs`), esquema de segurança Bearer JWT e acesso ao Swagger UI (`/swagger-ui/index.html`).
-- `AuthenticationIntegrationTest`: testes de autenticação preparados para ativação após a conclusão de T19/T20.
+- `UsuarioDtoValidationTest`: testes unitários de validação Bean Validation dos DTOs de cadastro e atualização de usuários.
+- `UsuarioIntegrationTest`: testes de integração do CRUD de usuários com autenticação simulada (`@WithMockUser`).
+- `AuthenticationIntegrationTest`: 13 testes de integração cobrindo login com credenciais válidas, senha incorreta, e-mail inexistente, usuário inativo, campos obrigatórios ausentes, acesso sem token, token malformado, adulterado, expirado, com emissor inválido, consumo com token válido, acesso público ao Swagger UI e compatibilidade do BCrypt (`PasswordEncoder`).
+
+Comando para rodar exclusivamente os testes de autenticação e segurança:
+```bash
+./mvnw test -Dtest=AuthenticationIntegrationTest
+```
+
 
 ## 7. Documentação da API
 

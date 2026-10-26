@@ -6,3 +6,8 @@
 spring.datasource.url=jdbc:postgresql://localhost:5432/clinicalstudypb
 spring.datasource.username=postgres
 spring.datasource.password=postgres
+
+# Segredo JWT local (minimo de 256 bits / 32 caracteres) ou defina a variavel de ambiente JWT_SECRET
+jwt.secret=segredo-ficticio-para-desenvolvimento-local-com-mais-de-256-bits-123456
+jwt.issuer=clinicalstudypb
+jwt.expiration-minutes=30

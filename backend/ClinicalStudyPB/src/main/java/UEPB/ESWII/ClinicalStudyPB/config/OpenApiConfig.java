@@ -2,12 +2,8 @@ package UEPB.ESWII.ClinicalStudyPB.config;
 
 import java.util.List;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.web.SecurityFilterChain;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.ExternalDocumentation;
@@ -88,22 +84,5 @@ public class OpenApiConfig {
                                 .scheme("bearer")
                                 .bearerFormat("JWT")
                                 .description("Informe o token JWT obtido no endpoint de login (sem o prefixo 'Bearer ').")));
-    }
-
-    /**
-     * Cadeia de segurança padrão enquanto a task de autenticação JWT (T19) não define um
-     * {@code SecurityFilterChain} dedicado, garantindo que o Swagger UI e os endpoints iniciais
-     * possam ser inspecionados e testados sem bloqueio pelo formulário padrão do Spring Security.
-     */
-    @Bean
-    @ConditionalOnMissingBean(name = "securityFilterChain")
-    public SecurityFilterChain defaultOpenApiSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(SWAGGER_WHITELIST).permitAll()
-                        .requestMatchers("/api/**").permitAll()
-                        .anyRequest().authenticated());
-        return http.build();
     }
 }
