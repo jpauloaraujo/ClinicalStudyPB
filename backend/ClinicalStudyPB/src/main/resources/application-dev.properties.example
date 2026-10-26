@@ -1,0 +1,8 @@
+# =============================================================================
+# Exemplo de configuracao local de desenvolvimento (application-dev.properties)
+# Copie este arquivo para "application-dev.properties" (ignorado pelo Git)
+# para ajustar suas credenciais locais do PostgreSQL sem versionar senhas reais.
+# =============================================================================
+spring.datasource.url=jdbc:postgresql://localhost:5432/clinicalstudypb
+spring.datasource.username=postgres
+spring.datasource.password=postgres

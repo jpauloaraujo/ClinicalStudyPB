@@ -64,7 +64,7 @@ O sistema é um **monorepo** com três aplicações independentes que se comunic
 | **Backend (API REST)** | `backend/ClinicalStudyPB` | Regras de negócio, persistência, autenticação e autorização por perfil. Expõe a API documentada em OpenAPI/Swagger UI. |
 | **Aplicação web** | `web/ClinicalStudyPB` | SPA React usada pelos perfis **administrador**, **pesquisador** e **coordenador**. Consome a API via HTTP. |
 | **Aplicativo mobile** | `mobile/ClinicalStudyPB` | App React Native + Expo usado pelo perfil **participante**. Consome a mesma API. |
-| **Banco de dados** | — | PostgreSQL, acessado apenas pelo backend via Spring Data JPA. |
+| **Banco de dados** | — | PostgreSQL, acessado apenas pelo backend via Spring Data JPA e versionado via Flyway. |
 
 Web e mobile **não** acessam o banco diretamente: toda leitura e escrita passa pela API, que aplica validações e controle de acesso.
 
@@ -74,23 +74,25 @@ Aplicação Spring Boot com pacote raiz `UEPB.ESWII.ClinicalStudyPB`, organizada
 
 | Pacote | Conteúdo | Situação |
 |---|---|---|
-| `domain.model` | Entidades JPA do domínio (ex.: `Usuario`, mapeada para a tabela `usuarios`) | ✅ iniciado |
-| controllers / services / repositories | Endpoints REST, regras de negócio e acesso a dados | ⏳ T06 |
-| DTOs e validações | Objetos de entrada/saída da API com Bean Validation | ⏳ T15 / T27 |
+| `config` | Configuração do OpenAPI 3 / Swagger UI (`OpenApiConfig`) e liberação de rotas de documentação | ✅ concluído (T10) |
+| `domain.model` / `domain.enums` | Entidades JPA (`Usuario`, `Estudo`) e enumerações (`PerfilUsuario`, `StatusEstudo`) | ✅ concluído (T08) |
+| `controller` / `service` / `repository` | Endpoints REST, regras de negócio e interfaces Spring Data JPA | ✅ concluído (T06) |
+| `db/migration` | Migrations SQL versionadas do Flyway (`V1__create_initial_tables.sql`, `V2__seed_initial_data.sql`) | ✅ concluído (T09) |
+| DTOs e validações | Objetos de entrada/saída da API com Bean Validation | 🔄 iniciado (`EstudoRequest`) / T15 / T27 |
 | Segurança | Configuração do Spring Security, autenticação por token e permissões por perfil | ⏳ T19 / T24 |
 
-Dependências principais: Spring Web MVC, Spring Data JPA, Spring Security, Bean Validation, springdoc-openapi, driver PostgreSQL e Lombok.
+Dependências principais: Spring Web MVC, Spring Data JPA, Flyway (`spring-boot-starter-flyway` + `flyway-database-postgresql`), Spring Security, Bean Validation, springdoc-openapi, driver PostgreSQL, H2 (escopo de testes) e Lombok.
 
 ### Organização da web
 
 Projeto criado com o template React + TypeScript do Vite, com React Compiler habilitado e ESLint. Navegação (React Router), cliente HTTP (Axios) e variáveis de ambiente serão adicionados em T11, T13 e T14.
 
-Diagramas previstos (imagens ou Mermaid) — T03:
+Diagramas de arquitetura (Mermaid) — T01 / T03 (ver [docs/arquitetura.md](docs/arquitetura.md)):
 
-- [ ] Arquitetura (comunicação entre web, mobile, backend e banco de dados)
-- [ ] Casos de uso
-- [ ] Classes / modelo de domínio
-- [ ] Sequência dos principais fluxos
+- [x] Arquitetura (comunicação entre web, mobile, backend e banco de dados)
+- [x] Casos de uso e Matriz RBAC
+- [x] Classes / modelo de domínio e DER
+- [x] Sequência dos principais fluxos e máquinas de estados
 
 ## 3. Funcionalidades desenvolvidas
 
@@ -111,19 +113,19 @@ A equipe adotou a **Stack A**:
 | Camada | Tecnologia | Versão |
 |---|---|---|
 | Backend | Java | 21 |
-| Backend | Spring Boot (Web MVC, Data JPA, Security, Validation) | 4.1.1 |
+| Backend | Spring Boot (Web MVC, Data JPA, Flyway, Security, Validation) | 4.1.1 |
 | Backend | Maven (via Maven Wrapper `mvnw`) | 3.10.0 |
 | Backend | Lombok | gerenciada pelo Spring Boot |
 | Documentação da API | springdoc-openapi (Swagger UI) | 3.1.1 |
 | Banco de dados | PostgreSQL (driver JDBC) | _versão do servidor a definir_ |
-| Migrations | Flyway | _planejado (T09)_ |
+| Migrations | Flyway (`flyway-core` + `flyway-database-postgresql`) | 12.4.0 |
 | Web | React | 19.3 |
 | Web | TypeScript | 6.0 |
 | Web | Vite (com React Compiler) | 8.3 |
 | Web | ESLint | 10 |
 | Web | React Router / Axios | _planejado (T11 / T14)_ |
 | Mobile | React Native + Expo (TypeScript) | _a definir (T12)_ |
-| Testes | JUnit + Spring Boot Test (backend); demais _a definir_ | — |
+| Testes | JUnit 5 + Spring Boot Test + MockMvc + H2 (backend); demais _a definir_ | — |
 | CI | GitHub Actions | _planejado (T05)_ |
 | Gestão ágil | Azure DevOps (Azure Boards) | — |
 | Prototipação | Figma | — |
@@ -147,9 +149,16 @@ git clone https://github.com/jpauloaraujo/ClinicalStudyPB.git
 cd ClinicalStudyPB
 ```
 
-### Banco de dados
+### Banco de dados e Migrations (Flyway — T09)
 
-> _A conexão com o PostgreSQL ainda não está configurada em `application.properties` (T07), e as migrations Flyway ainda não existem (T09). Nome do banco, usuário e variáveis de ambiente serão documentados aqui._
+1. Crie um banco de dados local no PostgreSQL chamado `clinicalstudypb`:
+   ```sql
+   CREATE DATABASE clinicalstudypb;
+   ```
+2. A aplicação utiliza valores padrão locais (`jdbc:postgresql://localhost:5432/clinicalstudypb`, usuário `postgres`, senha `postgres`), que podem ser sobrescritos por variáveis de ambiente (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`) ou copiando `src/main/resources/application-dev.properties.example` para `src/main/resources/application-dev.properties` (ignorado pelo Git).
+3. Ao iniciar o backend, o **Flyway** executa automaticamente as migrations em `src/main/resources/db/migration/`:
+   - `V1__create_initial_tables.sql`: cria as tabelas `usuarios` e `estudos`, chaves estrangeiras, constraints de domínio e índices.
+   - `V2__seed_initial_data.sql`: popula os 4 usuários fictícios de demonstração (um por perfil) e 2 estudos clínicos fictícios.
 
 ### Backend
 
@@ -158,9 +167,7 @@ cd backend/ClinicalStudyPB
 ./mvnw spring-boot:run
 ```
 
-No Windows (PowerShell/CMD), use `mvnw.cmd spring-boot:run`. A API sobe por padrão em `http://localhost:8080`.
-
-> ⚠️ Enquanto o datasource do PostgreSQL não for configurado (T07), a aplicação **não inicia**, porque o Spring Data JPA exige uma conexão com o banco.
+No Windows (PowerShell/CMD), use `mvnw.cmd spring-boot:run`. A API sobe por padrão na porta **`8081`** (`http://localhost:8081`), configurável via `SERVER_PORT`.
 
 ### Aplicação web
 
@@ -184,9 +191,16 @@ A aplicação fica disponível em `http://localhost:5173`. Outros scripts:
 
 > _A ser documentado (PBI-03: T12 — projeto React Native + Expo)._
 
-### Credenciais de demonstração
+### Credenciais de demonstração (Seed Flyway `V2`)
 
-> _Credenciais fictícias para cada perfil serão listadas aqui após a implementação da autenticação (PBI-05). Nunca inclua senhas ou credenciais reais no repositório._
+Os seguintes usuários fictícios são criados automaticamente pela migration `V2__seed_initial_data.sql`:
+
+| Perfil | E-mail | Senha | UUID |
+|---|---|---|---|
+| **ADMINISTRADOR** | `admin@clinicalstudy.test` | `senha-de-teste` | `11111111-1111-4111-8111-111111111111` |
+| **PESQUISADOR** | `pesquisador@clinicalstudy.test` | `senha-de-teste` | `22222222-2222-4222-8222-222222222222` |
+| **COORDENADOR** | `coordenador@clinicalstudy.test` | `senha-de-teste` | `33333333-3333-4333-8333-333333333333` |
+| **PARTICIPANTE** | `participante@clinicalstudy.test` | `senha-de-teste` | `44444444-4444-4444-8444-444444444444` |
 
 ## 6. Testes e cobertura
 
@@ -194,25 +208,28 @@ Meta mínima: **80% de cobertura de linhas do código de negócio do backend**, 
 
 ### Backend
 
-Testes com JUnit 5 e Spring Boot Test (starters de teste de Web MVC, Data JPA, Security e Validation):
+Testes com JUnit 5, Spring Boot Test, MockMvc e banco H2 em memória no modo de compatibilidade PostgreSQL (executando as mesmas migrations do Flyway e validando o schema JPA):
 
 ```bash
 cd backend/ClinicalStudyPB
 ./mvnw test
 ```
 
-Atualmente há apenas o teste `ClinicalStudyPbApplicationTests.contextLoads`, que também depende do banco configurado (T07). A ferramenta de cobertura (ex.: JaCoCo) ainda será adicionada.
-
-> _Testes web e mobile, resultados e relatórios de cobertura serão adicionados conforme forem implementados._
+Suítes atuais:
+- `ClinicalStudyPbApplicationTests`: validação do contexto Spring Boot, Flyway e Hibernate (`ddl-auto=validate`).
+- `FlywayMigrationIntegrationTest`: verificação da execução das migrations `V1` e `V2`, integridade dos usuários de seed (4 perfis + hash BCrypt) e estudos clínicos iniciais.
+- `OpenApiDocumentationIntegrationTest`: verificação da especificação OpenAPI 3 (`/v3/api-docs`), esquema de segurança Bearer JWT e acesso ao Swagger UI (`/swagger-ui/index.html`).
+- `AuthenticationIntegrationTest`: testes de autenticação preparados para ativação após a conclusão de T19/T20.
 
 ## 7. Documentação da API
 
-A API é documentada no padrão OpenAPI com **springdoc-openapi**, que já está nas dependências do backend. Com o backend em execução, o Swagger UI fica no endereço padrão do springdoc:
+A API é documentada no padrão **OpenAPI 3** com **springdoc-openapi** (`OpenApiConfig`), incluindo metadados do projeto, organização por tags (`Usuários` e `Estudos Clínicos`), exemplos de requisição/resposta e suporte a autenticação **Bearer JWT** (botão **Authorize** no topo do Swagger UI).
 
-- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
-- Especificação OpenAPI (JSON): `http://localhost:8080/v3/api-docs`
+Com o backend em execução (porta padrão `8081`):
 
-> _Como o Spring Security está nas dependências e ainda sem configuração, todas as rotas (inclusive o Swagger) exigem login com o usuário padrão gerado pelo Spring. A liberação do Swagger e a configuração final ficam para T10 e T19._
+- **Swagger UI (atalho):** `http://localhost:8081/swagger-ui.html`
+- **Swagger UI (página principal):** `http://localhost:8081/swagger-ui/index.html`
+- **Especificação OpenAPI 3 (JSON):** `http://localhost:8081/v3/api-docs`
 
 ## 8. Releases
 
@@ -235,16 +252,23 @@ ClinicalStudyPB/
 │       └── src/
 │           ├── main/java/UEPB/ESWII/ClinicalStudyPB/
 │           │   ├── ClinicalStudyPbApplication.java
-│           │   └── domain/model/  # Entidades JPA (ex.: Usuario)
-│           ├── main/resources/application.properties
-│           └── test/java/...      # Testes do backend
+│           │   ├── config/        # OpenApiConfig (Swagger UI + Bearer JWT)
+│           │   ├── controller/    # Controllers REST, DTOs e ApiExceptionHandler
+│           │   ├── domain/        # Entidades JPA (model) e Enums (enums)
+│           │   ├── repository/    # Interfaces Spring Data JPA
+│           │   └── service/       # Regras de negócio e exceções
+│           ├── main/resources/
+│           │   ├── application.properties
+│           │   ├── application-dev.properties.example
+│           │   └── db/migration/  # Scripts SQL versionados do Flyway (V1, V2)
+│           └── test/              # Testes de integração e recursos de teste (H2)
 ├── web/
 │   └── ClinicalStudyPB/          # Aplicação web — React + TypeScript + Vite
 │       ├── package.json
 │       └── src/
 ├── mobile/
 │   └── ClinicalStudyPB/          # Aplicativo do participante — React Native + Expo
-├── docs/                         # Especificação, planejamento, diagramas e imagens
+├── docs/                         # Especificação, arquitetura, planejamento e guias
 ├── releases/                     # (a criar) Documentação de cada release
 ├── .github/workflows/            # (a criar) Workflows do GitHub Actions
 └── README.md
@@ -253,4 +277,6 @@ ClinicalStudyPB/
 ## 10. Documentos de referência
 
 - [Especificação do projeto](docs/especificacao-projeto.md) — escopo, perfis, requisitos funcionais, estratégia de testes e regras de entrega.
+- [Documento de Arquitetura de Software (DAS)](docs/arquitetura.md) — diagramas C4, casos de uso, matriz RBAC, classes UML, DER, máquinas de estados e sequência.
 - [Planejamento da Sprint 1](docs/sprint1-plano.md) — PBIs, tasks, responsáveis, capacidade, Definition of Done e riscos.
+- [Implementação do Backend — Sprint 1](docs/implementacao-backend-sprint1.md) — detalhamento das camadas, endpoints, migrations Flyway e documentação OpenAPI.
