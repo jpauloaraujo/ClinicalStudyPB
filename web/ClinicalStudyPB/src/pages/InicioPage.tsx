@@ -1,9 +1,9 @@
 import { Link } from 'react-router'
-import { useSessao } from '../contexts/sessao'
+import { useUsuarioLogado } from '../contexts/sessao'
 import { itensDoPerfil } from '../routes/navegacao'
 
 export function InicioPage() {
-  const { usuario } = useSessao()
+  const usuario = useUsuarioLogado()
   const atalhos = itensDoPerfil(usuario.perfil).filter((item) => item.caminho !== '/inicio')
 
   return (

@@ -6,6 +6,8 @@
 > - **T34** — Preparar fluxo de navegação mobile para demonstração (3h)
 >
 > Base: perfil **Participante** e módulo E da [especificação](especificacao-projeto.md) (RF17 a RF20), mais RF02/RF03 (autenticação e acesso por perfil). Telas e fluxos abaixo são uma proposta para validar com a equipe.
+>
+> **Status (26/10/2026):** a navegação da seção 4.1 já existe no app Expo (login, abas e logout) — ver [implementacao-mobile.md](implementacao-mobile.md). Faltam o arquivo do Figma (T33) e o fluxo navegável no Figma (T34).
 
 ## 1. Escopo e premissas
 

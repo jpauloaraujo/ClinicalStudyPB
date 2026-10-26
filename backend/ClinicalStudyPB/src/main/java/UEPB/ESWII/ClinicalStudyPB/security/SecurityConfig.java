@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -44,9 +45,14 @@ import UEPB.ESWII.ClinicalStudyPB.config.OpenApiConfig;
  *
  * <p>Estabelece autenticação stateless com tokens JWT assinados com HS256,
  * gerenciamento de senhas com BCrypt e proteção dos endpoints da API.</p>
+ *
+ * <p>A autorização por perfil (T24 / RF03) é declarada nos controllers com
+ * {@code @PreAuthorize}, seguindo a matriz RBAC de {@code docs/arquitetura.md}.
+ * O perfil vem da claim {@code role} do token e vira a authority {@code ROLE_<PERFIL>}.</p>
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Value("${jwt.secret:}")
@@ -82,7 +88,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+        // 5173: aplicação web (Vite) · 8082: app mobile rodando no navegador (expo start --web)
+        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:8082"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
 

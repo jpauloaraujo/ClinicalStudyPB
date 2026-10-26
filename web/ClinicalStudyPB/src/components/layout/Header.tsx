@@ -1,16 +1,22 @@
-import { Link } from 'react-router'
-import { useSessao, usuariosProvisorios } from '../../contexts/sessao'
-import { rotulosPerfil, type PerfilUsuario } from '../../types/usuario'
+import { Link, useNavigate } from 'react-router'
+import { useSessao, useUsuarioLogado } from '../../contexts/sessao'
+import { rotulosPerfil } from '../../types/usuario'
 
 type HeaderProps = {
   menuAberto: boolean
   onAlternarMenu: () => void
 }
 
-const perfisProvisorios = Object.keys(usuariosProvisorios) as PerfilUsuario[]
-
 export function Header({ menuAberto, onAlternarMenu }: HeaderProps) {
-  const { usuario, trocarPerfil } = useSessao()
+  const usuario = useUsuarioLogado()
+  const { sair } = useSessao()
+  const navegar = useNavigate()
+
+  // Logout stateless: o cliente descarta o token (ver README, seção de autenticação)
+  function encerrarSessao() {
+    sair()
+    navegar('/login', { replace: true })
+  }
 
   return (
     <header className="header">
@@ -30,27 +36,10 @@ export function Header({ menuAberto, onAlternarMenu }: HeaderProps) {
       </Link>
 
       <div className="header__usuario">
-        {/* Seletor provisório para conferir o menu por perfil; substituir pelo AuthContext na T21 */}
-        {import.meta.env.DEV && (
-          <label className="header__perfil-dev">
-            <span>Perfil (dev)</span>
-            <select
-              value={usuario.perfil}
-              onChange={(evento) => trocarPerfil(evento.target.value as PerfilUsuario)}
-            >
-              {perfisProvisorios.map((perfil) => (
-                <option key={perfil} value={perfil}>
-                  {rotulosPerfil[perfil]}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
         <span className="header__nome">
           {usuario.nome} · <strong>{rotulosPerfil[usuario.perfil]}</strong>
         </span>
-        {/* Logout implementado na T21 */}
-        <button type="button" className="botao botao--secundario" disabled title="Disponível após a T21">
+        <button type="button" className="botao botao--secundario" onClick={encerrarSessao}>
           Sair
         </button>
       </div>

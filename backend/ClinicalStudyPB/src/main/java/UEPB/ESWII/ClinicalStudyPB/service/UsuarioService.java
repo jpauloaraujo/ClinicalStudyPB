@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.UsuarioAtualizacaoRequest;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.UsuarioCriacaoRequest;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Usuario;
+import UEPB.ESWII.ClinicalStudyPB.repository.EstudoRepository;
 import UEPB.ESWII.ClinicalStudyPB.repository.UsuarioRepository;
 
 @Service
@@ -17,10 +18,13 @@ import UEPB.ESWII.ClinicalStudyPB.repository.UsuarioRepository;
 public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
+    private final EstudoRepository estudoRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public UsuarioService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder) {
+    public UsuarioService(UsuarioRepository usuarioRepository, EstudoRepository estudoRepository,
+            PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
+        this.estudoRepository = estudoRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -70,6 +74,10 @@ public class UsuarioService {
 
     public void excluir(UUID id) {
         Usuario usuario = buscarPorId(id);
+        // A FK estudos.responsavel_id é ON DELETE RESTRICT; sem esta checagem a API responderia 500
+        if (estudoRepository.existsByResponsavelId(id)) {
+            throw new RegraNegocioException("Não é possível excluir: o usuário é responsável por estudos. Desative a conta");
+        }
         usuarioRepository.delete(usuario);
     }
 }

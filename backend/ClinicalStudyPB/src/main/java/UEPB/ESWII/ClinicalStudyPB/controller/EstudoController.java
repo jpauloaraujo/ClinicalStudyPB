@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,6 +31,10 @@ import jakarta.validation.Valid;
 @Tag(name = "Estudos Clínicos", description = "RF04 — Cadastro, consulta, atualização e exclusão de protocolos de estudos clínicos")
 public class EstudoController {
 
+    /** RBAC (RF03): pesquisador gerencia estudos; coordenador apenas consulta. */
+    private static final String LEITURA = "hasAnyRole('PESQUISADOR', 'COORDENADOR')";
+    private static final String ESCRITA = "hasRole('PESQUISADOR')";
+
     private final EstudoService estudoService;
 
     public EstudoController(EstudoService estudoService) {
@@ -37,6 +42,7 @@ public class EstudoController {
     }
 
     @GetMapping
+    @PreAuthorize(LEITURA)
     @Operation(
             summary = "Listar todos os estudos clínicos",
             description = "Retorna todos os estudos clínicos cadastrados, incluindo o pesquisador responsável, datas, limite de participantes e status.")
@@ -46,6 +52,7 @@ public class EstudoController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize(LEITURA)
     @Operation(
             summary = "Buscar estudo clínico por ID",
             description = "Consulta os detalhes de um protocolo de estudo clínico específico pelo seu UUID.")
@@ -60,6 +67,7 @@ public class EstudoController {
     }
 
     @PostMapping
+    @PreAuthorize(ESCRITA)
     @Operation(
             summary = "Cadastrar novo estudo clínico",
             description = "Registra um novo estudo clínico vinculado a um pesquisador responsável, validando datas e limite mínimo de participantes.")
@@ -76,6 +84,7 @@ public class EstudoController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize(ESCRITA)
     @Operation(
             summary = "Atualizar estudo clínico",
             description = "Atualiza as informações principais, datas, limite de vagas, responsável ou estado de um estudo clínico.")
@@ -92,6 +101,7 @@ public class EstudoController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize(ESCRITA)
     @Operation(
             summary = "Excluir estudo clínico",
             description = "Remove um estudo clínico cadastrado a partir de seu UUID.")

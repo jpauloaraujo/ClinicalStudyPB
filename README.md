@@ -4,7 +4,7 @@ Sistema de Gestão de Estudos Clínicos desenvolvido na disciplina de **Engenhar
 
 O ClinicalStudyPB gerencia de forma simplificada o ciclo de vida operacional de estudos clínicos: cadastro de protocolos, recrutamento, elegibilidade, inclusão de participantes, agendamento de visitas, acompanhamento e relatórios. O sistema **não** realiza diagnósticos nem decisões clínicas automatizadas e utiliza apenas **dados fictícios**.
 
-> 🚧 **Projeto em desenvolvimento — Release 1 / Sprint 1 (13/10 a 26/10/2026).** Várias seções abaixo ainda serão preenchidas conforme as tarefas da sprint forem concluídas.
+> 🚧 **Projeto em desenvolvimento — Release 1 / Sprint 1 (13/10 a 26/10/2026).** A situação de cada task da sprint, com responsável e arquivos, está em [docs/status-sprint1.md](docs/status-sprint1.md).
 
 ## Sumário
 
@@ -78,15 +78,42 @@ Aplicação Spring Boot com pacote raiz `UEPB.ESWII.ClinicalStudyPB`, organizada
 | `domain.model` / `domain.enums` | Entidades JPA (`Usuario`, `Estudo`) e enumerações (`PerfilUsuario`, `StatusEstudo`) | ✅ concluído (T08) |
 | `controller` / `service` / `repository` | Endpoints REST, regras de negócio e interfaces Spring Data JPA | ✅ concluído (T06) |
 | `db/migration` | Migrations SQL versionadas do Flyway (`V1__create_initial_tables.sql`, `V2__seed_initial_data.sql`) | ✅ concluído (T09) |
-| DTOs e validações | Objetos de entrada/saída da API com Bean Validation | 🔄 iniciado (`EstudoRequest`, `Usuario*Request`, `Login*Request`) / T15 / T27 |
-| Segurança | Configuração do Spring Security (`SecurityConfig`), autenticação stateless por JWT (`TokenService`), endpoint de login (`AuthController`) e senhas com BCrypt | ✅ concluído (Tasks 3060 / 3063) |
+| DTOs e validações | Objetos de entrada/saída da API com Bean Validation (`EstudoRequest`, `Usuario*Request`, `Login*Request`) | ✅ concluído (T15 / T27) |
+| Segurança | Configuração do Spring Security (`SecurityConfig`), autenticação stateless por JWT (`TokenService`), endpoints `/api/auth/login` e `/api/auth/me` (`AuthController`) e senhas com BCrypt | ✅ concluído (T19 / T20 — Tasks 3060 / 3063) |
+| Autorização por perfil | `@EnableMethodSecurity` + `@PreAuthorize` nos controllers, seguindo a matriz RBAC; acesso negado responde `403` com `{"erro": "Acesso negado para o seu perfil"}` | ✅ concluído (T24) |
 
 
-Dependências principais: Spring Web MVC, Spring Data JPA, Flyway (`spring-boot-starter-flyway` + `flyway-database-postgresql`), Spring Security, Bean Validation, springdoc-openapi, driver PostgreSQL, H2 (escopo de testes) e Lombok.
+Dependências principais: Spring Web MVC, Spring Data JPA, Flyway (`spring-boot-starter-flyway` + `flyway-database-postgresql`), Spring Security (OAuth2 Resource Server para JWT), Bean Validation, springdoc-openapi, driver PostgreSQL, H2 (escopo de testes), Lombok e JaCoCo (cobertura).
+
+#### Permissões por perfil na API (T24 / RF03)
+
+| Endpoint | Administrador | Pesquisador | Coordenador | Participante |
+|---|:---:|:---:|:---:|:---:|
+| `POST /api/auth/login` (público) | ✅ | ✅ | ✅ | ✅ |
+| `GET /api/auth/me` | ✅ | ✅ | ✅ | ✅ |
+| `/api/usuarios/**` (todas as operações) | ✅ | ❌ | ❌ | ❌ |
+| `GET /api/estudos`, `GET /api/estudos/{id}` | ❌ | ✅ | ✅ | ❌ |
+| `POST`, `PUT`, `DELETE /api/estudos/**` | ❌ | ✅ | ❌ | ❌ |
+
+Sem token válido a API responde `401`; com token de um perfil sem permissão, `403`.
 
 ### Organização da web
 
-Projeto criado com o template React + TypeScript do Vite, com React Compiler habilitado e ESLint. O layout base e a navegação com React Router (T13) estão em `src/components/layout`, `src/routes` e `src/pages` — detalhes em [docs/implementacao-web-layout-navegacao.md](docs/implementacao-web-layout-navegacao.md). Cliente HTTP (Axios) e variáveis de ambiente serão adicionados em T14.
+Projeto criado com o template React + TypeScript do Vite, com React Compiler habilitado e ESLint. O layout base e a navegação com React Router (T13) estão em `src/components/layout`, `src/routes` e `src/pages` — detalhes em [docs/implementacao-web-layout-navegacao.md](docs/implementacao-web-layout-navegacao.md).
+
+| Pasta / arquivo | Conteúdo | Task |
+|---|---|---|
+| `src/services/api.ts` | Cliente Axios único, URL via `VITE_API_URL`, envio do token e tratamento de `401` | T14 |
+| `src/services/recursos.ts` | Chamadas da API por recurso (autenticação, usuários, estudos) | T14 / T31 |
+| `src/services/erros.ts` | Converte `{"erro": "..."}` da API em mensagem e campo do formulário | T31 |
+| `src/contexts/` | Sessão real: login, restauração da sessão salva, expiração do token e logout | T21 |
+| `src/routes/RotaProtegida.tsx` | Guards `RequerAutenticacao` e `RequerPerfil` (perfis lidos de `navegacao.ts`) | T25 |
+| `src/pages/usuarios/` | Listagem, cadastro, edição e exclusão de usuários (administrador) | T17 |
+| `src/pages/estudos/` | Listagem (pesquisador e coordenador) e cadastro/edição/exclusão (pesquisador) | T29 / T31 |
+
+### Organização do mobile
+
+App Expo (SDK 58) com **Expo Router**: cada arquivo em `src/app/` é uma tela. O login fica fora das abas e as abas (`Início`, `Estudos`, `Visitas`, `Perfil`) só aparecem com sessão de **participante** (`Stack.Protected`). O token fica no `expo-secure-store` (ou no `localStorage` quando o app roda no navegador). As telas de estudos e visitas mostram onde entrarão os RF17 a RF20 nas próximas sprints — detalhes em [docs/implementacao-mobile.md](docs/implementacao-mobile.md).
 
 Diagramas de arquitetura (Mermaid) — T01 / T03 (ver [docs/arquitetura.md](docs/arquitetura.md)):
 
@@ -99,13 +126,20 @@ Diagramas de arquitetura (Mermaid) — T01 / T03 (ver [docs/arquitetura.md](docs
 
 | RF | Descrição | Interface | Status |
 |---|---|---|---|
-| RF01 | Cadastro e gerenciamento de usuários | Web | 🔄 Sprint 1 |
-| RF02 | Autenticação e encerramento de sessão | Web/Mobile | 🔄 Sprint 1 (web) |
-| RF03 | Restrição de funcionalidades por perfil | Web/Mobile | 🔄 Sprint 1 (web) |
-| RF04 | Cadastro de estudos | Web | 🔄 Sprint 1 |
+| RF01 | Cadastro e gerenciamento de usuários | Web | ✅ Sprint 1 |
+| RF02 | Autenticação e encerramento de sessão | Web/Mobile | ✅ Sprint 1 (web e mobile) |
+| RF03 | Restrição de funcionalidades por perfil | Web/Mobile | ✅ Sprint 1 (API, web e mobile) |
+| RF04 | Cadastro de estudos | Web | ✅ Sprint 1 |
 | RF05 – RF22 | Demais requisitos | Web/Mobile | ⏳ Sprints futuras |
 
-> _Descrição do comportamento e capturas de tela (casos de sucesso e de erro/validação) serão adicionadas à medida que cada requisito for concluído._
+| RF | Comportamento | Casos de erro e validação |
+|---|---|---|
+| RF01 | O administrador lista, cadastra, edita (nome, e-mail, perfil, situação e senha opcional) e exclui usuários em `/usuarios` | Campos obrigatórios, e-mail inválido, senha com menos de 8 caracteres e e-mail já cadastrado ("Já existe um usuário com esse e-mail", vindo da API). Não é possível excluir a própria conta |
+| RF02 | Login com e-mail e senha na web (`/login`) e no app; a sessão é restaurada ao reabrir; "Sair" descarta o token | "Credenciais inválidas" (senha errada, e-mail inexistente ou conta inativa); token expirado leva de volta ao login. A web recusa o participante e o app recusa os demais perfis |
+| RF03 | Menu e rotas conforme o perfil; a API aplica as mesmas regras | Rota sem permissão mostra "Acesso negado"; a API responde `403` |
+| RF04 | O pesquisador cadastra, edita e exclui estudos em `/estudos` (é o responsável pelos estudos que cria); o coordenador só consulta | Título, objetivo e limite (≥ 1) obrigatórios; "A data final não pode ser anterior à data inicial" aparece no campo da data |
+
+> _Capturas de tela das interfaces ainda precisam ser adicionadas (em `docs/imagens/`) para a entrega da Release 1._
 
 ## 4. Stack tecnológico
 
@@ -125,14 +159,17 @@ A equipe adotou a **Stack A**:
 | Web | Vite (com React Compiler) | 8.3 |
 | Web | ESLint | 10 |
 | Web | React Router | 7.18 |
-| Web | Axios | _planejado (T14)_ |
-| Mobile | React Native + Expo (TypeScript) | _a definir (T12)_ |
-| Testes | JUnit 5 + Spring Boot Test + MockMvc + H2 (backend); demais _a definir_ | — |
-| CI | GitHub Actions | _planejado (T05)_ |
+| Web | Axios | 1.20 |
+| Mobile | Expo SDK | 58 |
+| Mobile | React Native | 0.88 |
+| Mobile | Expo Router + expo-secure-store | 58 |
+| Testes | JUnit 5 + Spring Boot Test + MockMvc + Mockito + H2 (backend); web e mobile _a definir_ | — |
+| Cobertura | JaCoCo | 0.8.14 |
+| CI | GitHub Actions (`.github/workflows/ci.yml`) | — |
 | Gestão ágil | Azure DevOps (Azure Boards) | — |
 | Prototipação | Figma | — |
 
-> Versões extraídas de `backend/ClinicalStudyPB/pom.xml` e `web/ClinicalStudyPB/package.json`. Itens "planejado" ainda não estão no repositório.
+> Versões extraídas de `backend/ClinicalStudyPB/pom.xml`, `web/ClinicalStudyPB/package.json` e `mobile/ClinicalStudyPB/package.json`.
 
 ## 5. Instalação e execução
 
@@ -236,11 +273,27 @@ A aplicação fica disponível em `http://localhost:5173`. Outros scripts:
 | `npm run preview` | Serve localmente o build de produção |
 | `npm run lint` | Executa o ESLint |
 
-> _A URL da API (variável de ambiente) será documentada em T14._
+A URL da API vem de `VITE_API_URL` (padrão `http://localhost:8081`). Para mudar, copie `.env.example` para `.env.local` (ignorado pelo Git). O backend libera CORS para `http://localhost:5173`.
 
 ### Aplicativo mobile
 
-> _A ser documentado (PBI-03: T12 — projeto React Native + Expo)._
+```bash
+cd mobile/ClinicalStudyPB
+npm install
+npm start
+```
+
+O Metro sobe na porta **8082**, porque a 8081 é do backend. Leia o QR code com o **Expo Go** no celular ou pressione `a` (emulador Android) ou `w` (navegador). Entre com `participante@clinicalstudy.test` / `senha-de-teste`; os outros perfis são recusados no app.
+
+A URL da API vem de `EXPO_PUBLIC_API_URL` (copie `.env.example` para `.env.local`):
+
+| Onde o app roda | Valor de `EXPO_PUBLIC_API_URL` |
+|---|---|
+| Navegador (`npm run web`) ou simulador iOS | `http://localhost:8081` (padrão) |
+| Emulador Android | `http://10.0.2.2:8081` |
+| Celular físico (mesma rede Wi-Fi) | `http://<IP-da-máquina>:8081` |
+
+Outros scripts: `npm run lint` (ESLint) e `npm run typecheck` (TypeScript).
 
 ### Credenciais de demonstração (Seed Flyway `V2`)
 
@@ -259,21 +312,26 @@ Meta mínima: **80% de cobertura de linhas do código de negócio do backend**, 
 
 ### Backend
 
-Testes com JUnit 5, Spring Boot Test, MockMvc e banco H2 em memória no modo de compatibilidade PostgreSQL (executando as mesmas migrations do Flyway e validando o schema JPA):
+Testes com JUnit 5, Spring Boot Test, MockMvc, Mockito e banco H2 em memória no modo de compatibilidade PostgreSQL (executando as mesmas migrations do Flyway e validando o schema JPA):
 
 ```bash
 cd backend/ClinicalStudyPB
 ./mvnw test
 ```
 
-No Windows (PowerShell): `mvnw.cmd test`.
+No Windows (PowerShell): `mvnw.cmd test`. O relatório de cobertura do JaCoCo é gerado em `target/site/jacoco/index.html`.
+
+**Resultado em 26/10/2026:** 62 testes, 0 falhas, 0 erros. Cobertura de linhas do código de negócio: **99%** (controllers 100%, services 100%, segurança 97%). Ficam fora da medição a classe `main`, `config` e os DTOs.
 
 Suítes atuais:
 - `ClinicalStudyPbApplicationTests`: validação do contexto Spring Boot, Flyway e Hibernate (`ddl-auto=validate`).
 - `FlywayMigrationIntegrationTest`: verificação da execução das migrations `V1` e `V2`, integridade dos usuários de seed (4 perfis + hash BCrypt) e estudos clínicos iniciais.
 - `OpenApiDocumentationIntegrationTest`: verificação da especificação OpenAPI 3 (`/v3/api-docs`), esquema de segurança Bearer JWT e acesso ao Swagger UI (`/swagger-ui/index.html`).
 - `UsuarioDtoValidationTest`: testes unitários de validação Bean Validation dos DTOs de cadastro e atualização de usuários.
-- `UsuarioIntegrationTest`: testes de integração do CRUD de usuários com autenticação simulada (`@WithMockUser`).
+- `UsuarioIntegrationTest`: testes de integração do CRUD de usuários com autenticação simulada (`@WithMockUser`), incluindo o bloqueio da exclusão de um usuário responsável por estudos.
+- `PermissaoAcessoIntegrationTest` (T26): 15 testes com tokens reais dos 4 perfis do seed, cobrindo a matriz de permissões de usuários e estudos (`200`/`201` quando permitido, `403` quando negado) e o `/api/auth/me`.
+- `EstudoServiceTest` (T30): 6 testes unitários das regras do serviço de estudos (datas, responsável inexistente, criação e atualização), com Mockito.
+- `EstudoIntegrationTest` (T30): 8 testes de integração do CRUD de estudos (cadastro com `Location`, consulta, listagem do seed, atualização, exclusão, validações `400` e `404`).
 - `AuthenticationIntegrationTest`: 13 testes de integração cobrindo login com credenciais válidas, senha incorreta, e-mail inexistente, usuário inativo, campos obrigatórios ausentes, acesso sem token, token malformado, adulterado, expirado, com emissor inválido, consumo com token válido, acesso público ao Swagger UI e compatibilidade do BCrypt (`PasswordEncoder`).
 
 Comando para rodar exclusivamente os testes de autenticação e segurança:
@@ -290,7 +348,21 @@ Comando para rodar exclusivamente os testes de autenticação e segurança:
 | Contrato testado | `POST /api/auth/login` (`email`, `senha`) → `200` com `token` e `tipo: Bearer`; credenciais inválidas → `401` com `{"erro": "Credenciais inválidas"}`; corpo inválido → `400`; `/api/**` sem token válido → `401` |
 | Banco dos testes | H2 em memória (modo PostgreSQL), com as migrations Flyway `V1` e `V2`; o usuário `admin@clinicalstudy.test` vem do seed |
 | Segredo JWT dos testes | Valor fictício em `src/test/resources/application.properties`, sem depender de variáveis de ambiente |
-| Fora do escopo | Testes da tela de login no React: dependem da T21 e da escolha da ferramenta de testes da web |
+| Fora do escopo | Testes da tela de login no React: a T21 está pronta, mas a ferramenta de testes da web ainda não foi escolhida |
+
+### Web e mobile
+
+Ainda não há testes automatizados de componentes nem E2E (a especificação pede, mas não estão no backlog da Sprint 1). Na CI, web e mobile passam por lint e verificação de tipos.
+
+### Integração contínua (T05)
+
+O workflow `.github/workflows/ci.yml` roda a cada push e pull request na `main`, com três jobs:
+
+| Job | Passos |
+|---|---|
+| Backend | JDK 21 → `./mvnw -B verify` (testes + JaCoCo) → publica os relatórios do Surefire como artefato |
+| Web | Node 22 → `npm ci` → `npm run lint` → `npm run build` |
+| Mobile | Node 22 → `npm ci` → `npm run lint` → `npm run typecheck` |
 
 
 ## 7. Documentação da API
@@ -302,6 +374,8 @@ Com o backend em execução (porta padrão `8081`):
 - **Swagger UI (atalho):** `http://localhost:8081/swagger-ui.html`
 - **Swagger UI (página principal):** `http://localhost:8081/swagger-ui/index.html`
 - **Especificação OpenAPI 3 (JSON):** `http://localhost:8081/v3/api-docs`
+
+Para testar endpoints protegidos no Swagger, faça o login em `POST /api/auth/login`, copie o `token` e cole em **Authorize**. Cada endpoint exige um perfil (ver a tabela de permissões na seção 2).
 
 ## 8. Releases
 
@@ -337,12 +411,27 @@ ClinicalStudyPB/
 ├── web/
 │   └── ClinicalStudyPB/          # Aplicação web — React + TypeScript + Vite
 │       ├── package.json
+│       ├── .env.example          # VITE_API_URL
 │       └── src/
+│           ├── components/       # Layout (Header, Sidebar) e componentes de formulário
+│           ├── contexts/         # Sessão autenticada
+│           ├── hooks/            # useCarregamento (dados da API)
+│           ├── pages/            # Login, início, usuários, estudos, 404 e acesso negado
+│           ├── routes/           # Rotas, menu por perfil e guards
+│           ├── services/         # Cliente Axios, chamadas da API e tratamento de erros
+│           └── types/            # Tipos que espelham os DTOs do backend
 ├── mobile/
-│   └── ClinicalStudyPB/          # Aplicativo do participante — React Native + Expo
+│   └── ClinicalStudyPB/          # Aplicativo do participante — React Native + Expo (SDK 58)
+│       ├── app.json
+│       ├── .env.example          # EXPO_PUBLIC_API_URL
+│       └── src/
+│           ├── app/              # Rotas do Expo Router: login e abas (tabs)
+│           ├── api/              # Cliente HTTP e armazenamento seguro do token
+│           ├── components/       # Tema e componentes de interface
+│           └── contexts/         # Sessão do participante
 ├── docs/                         # Especificação, arquitetura, planejamento e guias
 ├── releases/                     # (a criar) Documentação de cada release
-├── .github/workflows/            # (a criar) Workflows do GitHub Actions
+├── .github/workflows/ci.yml      # Pipeline de CI (backend, web e mobile)
 └── README.md
 ```
 
@@ -352,4 +441,6 @@ ClinicalStudyPB/
 - [Documento de Arquitetura de Software (DAS)](docs/arquitetura.md) — diagramas C4, casos de uso, matriz RBAC, classes UML, DER, máquinas de estados e sequência.
 - [Planejamento da Sprint 1](docs/sprint1-plano.md) — PBIs, tasks, responsáveis, capacidade, Definition of Done e riscos.
 - [Implementação do Backend — Sprint 1](docs/implementacao-backend-sprint1.md) — detalhamento das camadas, endpoints, migrations Flyway e documentação OpenAPI.
+- [Status da Sprint 1](docs/status-sprint1.md) — **ponto de partida para retomar o contexto**: situação das 35 tasks, responsáveis, arquivos de cada task e pendências.
+- [Implementação do mobile](docs/implementacao-mobile.md) — estrutura do app Expo, navegação, sessão e como rodar em emulador ou celular.
 - [Requisitos dos protótipos mobile](docs/prototipos-mobile.md) — telas, fluxos de navegação e roteiro de demonstração do aplicativo do participante (T33 e T34).

@@ -2,6 +2,8 @@
 
 Este material documenta o que foi implementado na task `T13` (PBI-03) em `web/ClinicalStudyPB`, seguindo o plano em [task-layout-navegacao-web.md](task-layout-navegacao-web.md).
 
+> **Atualização (26/10/2026):** a sessão provisória e o seletor de perfil descritos aqui foram substituídos pelo login real (T21), e as páginas *placeholder* pelas telas de usuários (T17) e estudos (T29). A proteção de rotas (T25) também já existe. Situação atual: [status-sprint1.md](status-sprint1.md) e README, seção 2.
+
 ## Resumo
 
 - O template padrão do Vite foi substituído por uma estrutura de aplicação com cabeçalho, menu lateral, área de conteúdo e rodapé.

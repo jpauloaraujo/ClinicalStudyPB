@@ -18,4 +18,6 @@ public interface EstudoRepository extends JpaRepository<Estudo, UUID> {
     @Override
     @EntityGraph(attributePaths = "responsavel")
     Optional<Estudo> findById(UUID id);
+
+    boolean existsByResponsavelId(UUID responsavelId);
 }

@@ -110,6 +110,35 @@
 
 	<build>
 		<plugins>
+			<!-- Cobertura de testes (JaCoCo): relatório em target/site/jacoco/index.html -->
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.8.14</version>
+				<configuration>
+					<!-- Mede só o código de negócio: exclui a classe main, configurações e DTOs -->
+					<excludes>
+						<exclude>UEPB/ESWII/ClinicalStudyPB/ClinicalStudyPbApplication.class</exclude>
+						<exclude>UEPB/ESWII/ClinicalStudyPB/config/**</exclude>
+						<exclude>UEPB/ESWII/ClinicalStudyPB/controller/dto/**</exclude>
+					</excludes>
+				</configuration>
+				<executions>
+					<execution>
+						<id>preparar-agente</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>relatorio</id>
+						<phase>test</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>

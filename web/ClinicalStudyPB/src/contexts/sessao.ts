@@ -1,29 +1,19 @@
 import { createContext, useContext } from 'react'
-import type { PerfilUsuario, UsuarioSessao } from '../types/usuario'
+import type { UsuarioSessao } from '../types/usuario'
 
-// Sessão provisória até a T21 (login real e AuthContext)
+// Sessão autenticada (T21): token JWT guardado pelo cliente da API e dados de /api/auth/me
 export type Sessao = {
-  usuario: UsuarioSessao
-  trocarPerfil: (perfil: PerfilUsuario) => void
+  usuario: UsuarioSessao | null
+  // true enquanto a sessão salva é restaurada ao abrir a página
+  carregando: boolean
+  entrar: (email: string, senha: string) => Promise<void>
+  sair: () => void
 }
 
-// Usuários do seed V2__seed_initial_data
-export const usuariosProvisorios: Record<Exclude<PerfilUsuario, 'PARTICIPANTE'>, UsuarioSessao> = {
-  ADMINISTRADOR: {
-    id: '11111111-1111-4111-8111-111111111111',
-    nome: 'Administrador do Sistema',
-    perfil: 'ADMINISTRADOR',
-  },
-  PESQUISADOR: {
-    id: '22222222-2222-4222-8222-222222222222',
-    nome: 'Dra. Helena Costa',
-    perfil: 'PESQUISADOR',
-  },
-  COORDENADOR: {
-    id: '33333333-3333-4333-8333-333333333333',
-    nome: 'Carlos Eduardo',
-    perfil: 'COORDENADOR',
-  },
+export class PerfilSemAcessoWebError extends Error {
+  constructor() {
+    super('O perfil Participante utiliza o aplicativo mobile.')
+  }
 }
 
 export const SessaoContext = createContext<Sessao | null>(null)
@@ -34,4 +24,24 @@ export function useSessao(): Sessao {
     throw new Error('useSessao deve ser usado dentro de <SessaoProvider>')
   }
   return sessao
+}
+
+// Para telas dentro de <RequerAutenticacao>, onde o usuário sempre existe
+export function useUsuarioLogado(): UsuarioSessao {
+  const { usuario } = useSessao()
+  if (!usuario) {
+    throw new Error('useUsuarioLogado deve ser usado em rotas protegidas')
+  }
+  return usuario
+}
+
+// Lê a claim exp do JWT para descartar tokens vencidos antes de chamar a API
+export function tokenExpirado(token: string): boolean {
+  try {
+    const carga = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    const { exp } = JSON.parse(atob(carga)) as { exp?: number }
+    return typeof exp === 'number' && exp * 1000 <= Date.now()
+  } catch {
+    return true
+  }
 }

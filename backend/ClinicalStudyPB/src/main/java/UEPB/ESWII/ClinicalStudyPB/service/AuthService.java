@@ -1,5 +1,7 @@
 package UEPB.ESWII.ClinicalStudyPB.service;
 
+import java.util.UUID;
+
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -47,5 +49,11 @@ public class AuthService {
 
         String token = tokenService.gerarToken(usuario);
         return new LoginResponse(token);
+    }
+
+    /** Busca o usuário identificado pela claim {@code sub} do token. */
+    public Usuario buscarUsuarioAutenticado(UUID id) {
+        return usuarioRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado: " + id));
     }
 }

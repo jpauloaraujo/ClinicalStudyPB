@@ -6,6 +6,8 @@
 >
 > **Status:** implementado — ver [implementacao-web-layout-navegacao.md](implementacao-web-layout-navegacao.md).
 
+> **Atualização (26/10/2026):** este é o plano original da T13. As tasks citadas como "fora do escopo" (T14, T17, T21, T25 e T29) já foram implementadas — ver [status-sprint1.md](status-sprint1.md).
+
 ## 1. Objetivo
 
 Substituir a tela padrão do template Vite por uma estrutura de aplicação com **layout base** (cabeçalho, menu lateral e área de conteúdo) e **navegação entre rotas** com React Router, deixando prontos os pontos de encaixe para as telas de usuários (T17), estudos (T29), login (T21) e proteção de rotas por perfil (T25).

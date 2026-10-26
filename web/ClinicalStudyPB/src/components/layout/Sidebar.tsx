@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router'
-import { useSessao } from '../../contexts/sessao'
+import { useUsuarioLogado } from '../../contexts/sessao'
 import { itensDoPerfil } from '../../routes/navegacao'
 
 type SidebarProps = {
@@ -8,7 +8,7 @@ type SidebarProps = {
 }
 
 export function Sidebar({ aberto, onNavegar }: SidebarProps) {
-  const { usuario } = useSessao()
+  const usuario = useUsuarioLogado()
 
   return (
     <nav

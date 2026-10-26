@@ -116,6 +116,19 @@ class UsuarioIntegrationTest {
     }
 
     @Test
+    void naoDeveExcluirUsuarioResponsavelPorEstudo() throws Exception {
+        // Pesquisadora do seed V2, responsável pelos dois estudos de demonstração
+        String pesquisadora = "22222222-2222-4222-8222-222222222222";
+
+        mockMvc.perform(delete(API + "/" + pesquisadora))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value(
+                        "Não é possível excluir: o usuário é responsável por estudos. Desative a conta"));
+
+        assertThat(usuarioRepository.existsById(UUID.fromString(pesquisadora))).isTrue();
+    }
+
+    @Test
     void deveExcluirUsuarioESinalizarQueNaoExisteMais() throws Exception {
         Usuario usuario = usuarioExistente("exclusao.task3045@clinicalstudy.test");
 
