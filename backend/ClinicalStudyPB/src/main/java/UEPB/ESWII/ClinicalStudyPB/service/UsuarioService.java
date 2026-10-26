@@ -3,11 +3,13 @@ package UEPB.ESWII.ClinicalStudyPB.service;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.UsuarioAtualizacaoRequest;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.UsuarioCriacaoRequest;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Usuario;
 import UEPB.ESWII.ClinicalStudyPB.repository.UsuarioRepository;
 
@@ -33,30 +35,36 @@ public class UsuarioService {
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado: " + id));
     }
 
-    public Usuario criar(Usuario usuario) {
-        if (usuarioRepository.existsByEmail(usuario.getEmail())) {
+    public Usuario criar(UsuarioCriacaoRequest dados) {
+        if (usuarioRepository.existsByEmail(dados.email())) {
             throw new RegraNegocioException("Já existe um usuário com esse e-mail");
         }
-        usuario.setId(null);
-        usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
+
+        Usuario usuario = new Usuario();
+        usuario.setNome(dados.nome());
+        usuario.setEmail(dados.email());
+        usuario.setSenha(passwordEncoder.encode(dados.senha()));
+        usuario.setPerfil(dados.perfil());
         usuario.setAtivo(true);
+
         return usuarioRepository.save(usuario);
     }
 
-    public Usuario atualizar(UUID id, Usuario dados) {
+    public Usuario atualizar(UUID id, UsuarioAtualizacaoRequest dados) {
         Usuario existente = buscarPorId(id);
-        usuarioRepository.findByEmail(dados.getEmail()).ifPresent(outro -> {
+        usuarioRepository.findByEmail(dados.email()).ifPresent(outro -> {
             if (!outro.getId().equals(id)) {
                 throw new RegraNegocioException("Já existe um usuário com esse e-mail");
             }
         });
-        existente.setNome(dados.getNome());
-        existente.setEmail(dados.getEmail());
-        if (dados.getSenha() != null && !dados.getSenha().isBlank()) {
-            existente.setSenha(passwordEncoder.encode(dados.getSenha()));
+
+        existente.setNome(dados.nome());
+        existente.setEmail(dados.email());
+        if (dados.senha() != null) {
+            existente.setSenha(passwordEncoder.encode(dados.senha()));
         }
-        existente.setPerfil(dados.getPerfil());
-        existente.setAtivo(dados.isAtivo());
+        existente.setPerfil(dados.perfil());
+        existente.setAtivo(dados.ativo());
         return usuarioRepository.save(existente);
     }
 
