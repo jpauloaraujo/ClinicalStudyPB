@@ -281,6 +281,17 @@ Comando para rodar exclusivamente os testes de autenticação e segurança:
 ./mvnw test -Dtest=AuthenticationIntegrationTest
 ```
 
+#### Evidência da T22 (PBI-05 — testes de login válido, inválido e acesso não autenticado)
+
+| Item | Resultado |
+|---|---|
+| Classe | `AuthenticationIntegrationTest` (`src/test/java/UEPB/ESWII/ClinicalStudyPB/`) |
+| Execução em 26/10/2026 | **13 testes, 0 falhas, 0 erros, 0 ignorados** (`target/surefire-reports`) |
+| Contrato testado | `POST /api/auth/login` (`email`, `senha`) → `200` com `token` e `tipo: Bearer`; credenciais inválidas → `401` com `{"erro": "Credenciais inválidas"}`; corpo inválido → `400`; `/api/**` sem token válido → `401` |
+| Banco dos testes | H2 em memória (modo PostgreSQL), com as migrations Flyway `V1` e `V2`; o usuário `admin@clinicalstudy.test` vem do seed |
+| Segredo JWT dos testes | Valor fictício em `src/test/resources/application.properties`, sem depender de variáveis de ambiente |
+| Fora do escopo | Testes da tela de login no React: dependem da T21 e da escolha da ferramenta de testes da web |
+
 
 ## 7. Documentação da API
 
@@ -341,3 +352,4 @@ ClinicalStudyPB/
 - [Documento de Arquitetura de Software (DAS)](docs/arquitetura.md) — diagramas C4, casos de uso, matriz RBAC, classes UML, DER, máquinas de estados e sequência.
 - [Planejamento da Sprint 1](docs/sprint1-plano.md) — PBIs, tasks, responsáveis, capacidade, Definition of Done e riscos.
 - [Implementação do Backend — Sprint 1](docs/implementacao-backend-sprint1.md) — detalhamento das camadas, endpoints, migrations Flyway e documentação OpenAPI.
+- [Requisitos dos protótipos mobile](docs/prototipos-mobile.md) — telas, fluxos de navegação e roteiro de demonstração do aplicativo do participante (T33 e T34).
