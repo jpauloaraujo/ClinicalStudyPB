@@ -86,7 +86,7 @@ Dependências principais: Spring Web MVC, Spring Data JPA, Flyway (`spring-boot-
 
 ### Organização da web
 
-Projeto criado com o template React + TypeScript do Vite, com React Compiler habilitado e ESLint. Navegação (React Router), cliente HTTP (Axios) e variáveis de ambiente serão adicionados em T11, T13 e T14.
+Projeto criado com o template React + TypeScript do Vite, com React Compiler habilitado e ESLint. O layout base e a navegação com React Router (T13) estão em `src/components/layout`, `src/routes` e `src/pages` — detalhes em [docs/implementacao-web-layout-navegacao.md](docs/implementacao-web-layout-navegacao.md). Cliente HTTP (Axios) e variáveis de ambiente serão adicionados em T14.
 
 Diagramas de arquitetura (Mermaid) — T01 / T03 (ver [docs/arquitetura.md](docs/arquitetura.md)):
 
@@ -124,7 +124,8 @@ A equipe adotou a **Stack A**:
 | Web | TypeScript | 6.0 |
 | Web | Vite (com React Compiler) | 8.3 |
 | Web | ESLint | 10 |
-| Web | React Router / Axios | _planejado (T11 / T14)_ |
+| Web | React Router | 7.18 |
+| Web | Axios | _planejado (T14)_ |
 | Mobile | React Native + Expo (TypeScript) | _a definir (T12)_ |
 | Testes | JUnit 5 + Spring Boot Test + MockMvc + H2 (backend); demais _a definir_ | — |
 | CI | GitHub Actions | _planejado (T05)_ |
