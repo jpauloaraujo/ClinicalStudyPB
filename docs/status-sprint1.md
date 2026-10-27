@@ -101,8 +101,10 @@ Legenda: ✅ concluída · 🆕 concluída nesta branch · 🎨 fora do código
 - **Novo endpoint `GET /api/auth/me`:** devolve nome, e-mail e perfil do dono do token. A web e o mobile usam para montar a sessão, porque a resposta do login só traz o token.
 - **CORS:** além de `http://localhost:5173` (web), libera `http://localhost:8082` (app mobile rodando no navegador).
 - **Exclusão de usuário responsável por estudo:** antes resultava em erro 500 (FK `ON DELETE RESTRICT`); agora `UsuarioService` responde `400` com "Não é possível excluir: o usuário é responsável por estudos. Desative a conta".
+- **Revisão de regras (pós-merge):** o backend passou a recusar que o administrador exclua, desative ou rebaixe a própria conta e que o último administrador ativo deixe de ser ativo; o responsável do estudo precisa ser `PESQUISADOR`; e-mails são normalizados para minúsculas (migration `V3`, login incluído); cadastro simultâneo com o mesmo e-mail vira `400` em vez de `500`; JSON malformado, enum inválido e UUID inválido respondem `400` no formato `{"erro": "..."}`; `EstudoRequest` ganhou mensagens em português. Testes em `RegrasDeContaIntegrationTest`.
+- **Sessão (web e mobile):** ao restaurar a sessão, o token só é descartado quando a API responde `401`, `403` ou `404`; com o backend fora do ar ele é mantido.
 - **T26 / T30:** 29 testes novos em `PermissaoAcessoIntegrationTest`, `EstudoServiceTest` e `EstudoIntegrationTest`, mais 1 em `UsuarioIntegrationTest` (exclusão acima), e o utilitário `support/TokenDeTeste`, que faz login real com os usuários do seed.
-- **Cobertura:** JaCoCo no `pom.xml`. Resultado: 62 testes passando e 99% das linhas do código de negócio cobertas.
+- **Cobertura:** JaCoCo no `pom.xml`. Resultado: 70 testes passando e 97% das linhas do código de negócio cobertas.
 
 ### Web (`web/ClinicalStudyPB`)
 
@@ -117,7 +119,7 @@ Legenda: ✅ concluída · 🆕 concluída nesta branch · 🎨 fora do código
 
 ### CI (`.github/workflows/ci.yml`)
 
-- **T05:** três jobs (backend, web e mobile) a cada push e PR na `main`. Ver README, seção 6.
+- **T05:** quatro jobs (backend, backend no PostgreSQL, web e mobile) a cada push e PR na `main` e na `develop`. Ver README, seção 6. O job do PostgreSQL ainda não foi executado no GitHub: confirmar que fica verde no primeiro push.
 
 ## 4. Decisões tomadas que a equipe deve validar
 
@@ -127,6 +129,8 @@ Legenda: ✅ concluída · 🆕 concluída nesta branch · 🎨 fora do código
 | Responsável por um estudo novo é o pesquisador logado | `/api/usuarios` é só do administrador, então o pesquisador não tem como listar outros responsáveis | I3 / I6 |
 | `GET /api/auth/me` adicionado | O `LoginResponse` não traz perfil (e o teste da T22 garante isso) | I4 |
 | Mobile com Expo Router em vez de pasta `navigation/` | É o padrão do Expo SDK 58; a estrutura `api/`, `components/` e `contexts/` segue a seção 8 da arquitetura | I7 / I1 |
+| Qualquer pesquisador edita e exclui qualquer estudo | O RF04 não exige dono do estudo; só o *cadastro* define o responsável. Para restringir ao dono, bastaria comparar o `sub` do token com `responsavel.id` em `EstudoService` | I3 / I2 |
+| Revogação de JWT não implementada (risco aceito) | Desativar conta ou mudar perfil só vale após o token vencer (30 min); o logout descarta o token no cliente. Revogar na hora exige consulta ao banco por requisição ou lista de tokens | I4 |
 | Metro do Expo na porta 8082 | A 8081 é a porta padrão do backend | I7 |
 | JaCoCo sem limite mínimo obrigatório no build | Só gera o relatório; um `check` de 80% pode ser ligado depois | I1 / I2 |
 
@@ -145,4 +149,5 @@ Legenda: ✅ concluída · 🆕 concluída nesta branch · 🎨 fora do código
 
 - Não há testes automatizados de componentes web e mobile nem E2E. A especificação pede pelo menos um fluxo E2E em cada interface.
 - O `npm audit` do mobile aponta vulnerabilidades em dependências de desenvolvimento do Expo CLI (`node-forge`, `zod`). A correção forçada quebraria o SDK; acompanhar as atualizações do Expo.
-- O logout é só no cliente (JWT stateless): o token continua válido até expirar (30 minutos).
+- O logout é só no cliente (JWT stateless): o token continua válido até expirar (30 minutos), mesmo se a conta for desativada ou mudar de perfil (risco aceito, seção 4).
+- Os testes locais usam H2; o PostgreSQL só é exercitado pelo job da CI (ainda sem execução confirmada) e, manualmente, no login e no seed.

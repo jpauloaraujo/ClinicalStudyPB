@@ -1,11 +1,11 @@
-# T05 (PBI-01): build e verificações básicas a cada push e pull request na main
+# T05 (PBI-01): build e verificações básicas a cada push e pull request na main e na develop
 name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -37,6 +37,45 @@ jobs:
           name: relatorio-testes-backend
           path: backend/ClinicalStudyPB/target/surefire-reports/
           if-no-files-found: ignore
+
+  # Mesmos testes do backend, mas contra PostgreSQL real (as variáveis de ambiente
+  # sobrescrevem a URL H2 de src/test/resources): valida migrations e consultas no banco de produção
+  backend-postgres:
+    name: Backend (testes no PostgreSQL)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/ClinicalStudyPB
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: clinicalstudypb_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/clinicalstudypb_test
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Testes no PostgreSQL
+        run: |
+          chmod +x mvnw
+          ./mvnw -B test
 
   web:
     name: Web (React + Vite)

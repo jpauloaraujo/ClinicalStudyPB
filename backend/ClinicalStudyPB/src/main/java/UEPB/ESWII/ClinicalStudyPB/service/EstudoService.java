@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.EstudoRequest;
+import UEPB.ESWII.ClinicalStudyPB.domain.enums.PerfilUsuario;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Estudo;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Usuario;
 import UEPB.ESWII.ClinicalStudyPB.repository.EstudoRepository;
@@ -60,6 +61,9 @@ public class EstudoService {
         Usuario responsavel = usuarioRepository.findById(dados.responsavelId())
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         "Responsável não encontrado: " + dados.responsavelId()));
+        if (responsavel.getPerfil() != PerfilUsuario.PESQUISADOR) {
+            throw new RegraNegocioException("O responsável pelo estudo deve ter o perfil de pesquisador");
+        }
         estudo.setTitulo(dados.titulo());
         estudo.setObjetivo(dados.objetivo());
         estudo.setResponsavel(responsavel);

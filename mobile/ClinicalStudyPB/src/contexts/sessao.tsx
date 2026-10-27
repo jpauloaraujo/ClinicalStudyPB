@@ -19,8 +19,21 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     tokenArmazenado
       .ler()
       .then((token) => (token ? autenticacaoApi.usuarioAtual() : null))
-      .then((dados) => setUsuario(dados?.perfil === 'PARTICIPANTE' ? dados : null))
-      .catch(() => tokenArmazenado.remover())
+      .then(async (dados) => {
+        if (dados?.perfil === 'PARTICIPANTE') {
+          setUsuario(dados);
+        } else if (dados) {
+          await tokenArmazenado.remover();
+        }
+      })
+      .catch(async (erro) => {
+        // Só descarta o token se a API o rejeitou; com a API fora do ar ele é mantido
+        // e a restauração é tentada de novo na próxima abertura
+        const status = erro instanceof ErroApi ? erro.status : undefined;
+        if (status === 401 || status === 403 || status === 404) {
+          await tokenArmazenado.remover();
+        }
+      })
       .finally(() => setCarregando(false));
   }, []);
 

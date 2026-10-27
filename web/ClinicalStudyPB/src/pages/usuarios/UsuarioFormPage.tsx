@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Campo } from '../../components/ui/Campo'
+import { useUsuarioLogado } from '../../contexts/sessao'
 import { extrairErro } from '../../services/erros'
 import { usuariosApi } from '../../services/recursos'
 import { perfis, rotulosPerfil, type PerfilUsuario } from '../../types/usuario'
@@ -37,6 +38,8 @@ const VAZIO: Campos = { nome: '', email: '', senha: '', perfil: 'PESQUISADOR', a
 // Cadastro e edição de usuário (T17 / RF01)
 export function UsuarioFormPage() {
   const { id } = useParams()
+  const logado = useUsuarioLogado()
+  const propriaConta = id !== undefined && id === logado.id
   const edicao = id !== undefined
   const navegar = useNavigate()
 
@@ -111,7 +114,11 @@ export function UsuarioFormPage() {
           />
         </Campo>
         <Campo rotulo="Perfil" erro={erros.perfil}>
-          <select value={campos.perfil} onChange={(e) => alterar('perfil', e.target.value as PerfilUsuario)}>
+          <select
+            value={campos.perfil}
+            disabled={propriaConta}
+            title={propriaConta ? 'Você não pode alterar o perfil da própria conta' : undefined}
+            onChange={(e) => alterar('perfil', e.target.value as PerfilUsuario)}>
             {perfis.map((perfil) => (
               <option key={perfil} value={perfil}>
                 {rotulosPerfil[perfil]}
@@ -121,7 +128,12 @@ export function UsuarioFormPage() {
         </Campo>
         {edicao && (
           <label className="campo campo--checkbox">
-            <input type="checkbox" checked={campos.ativo} onChange={(e) => alterar('ativo', e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={campos.ativo}
+              disabled={propriaConta}
+              onChange={(e) => alterar('ativo', e.target.checked)}
+            />
             <span>Conta ativa</span>
           </label>
         )}

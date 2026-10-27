@@ -134,10 +134,10 @@ Diagramas de arquitetura (Mermaid) — T01 / T03 (ver [docs/arquitetura.md](docs
 
 | RF | Comportamento | Casos de erro e validação |
 |---|---|---|
-| RF01 | O administrador lista, cadastra, edita (nome, e-mail, perfil, situação e senha opcional) e exclui usuários em `/usuarios` | Campos obrigatórios, e-mail inválido, senha com menos de 8 caracteres e e-mail já cadastrado ("Já existe um usuário com esse e-mail", vindo da API). Não é possível excluir a própria conta |
+| RF01 | O administrador lista, cadastra, edita (nome, e-mail, perfil, situação e senha opcional) e exclui usuários em `/usuarios` | Campos obrigatórios, e-mail inválido, senha com menos de 8 caracteres e e-mail já cadastrado ("Já existe um usuário com esse e-mail", vindo da API; maiúsculas e minúsculas não diferenciam e-mails). Regras da API: o administrador não exclui, desativa nem rebaixa a própria conta, e o último administrador ativo não pode ser removido, desativado nem rebaixado |
 | RF02 | Login com e-mail e senha na web (`/login`) e no app; a sessão é restaurada ao reabrir; "Sair" descarta o token | "Credenciais inválidas" (senha errada, e-mail inexistente ou conta inativa); token expirado leva de volta ao login. A web recusa o participante e o app recusa os demais perfis |
 | RF03 | Menu e rotas conforme o perfil; a API aplica as mesmas regras | Rota sem permissão mostra "Acesso negado"; a API responde `403` |
-| RF04 | O pesquisador cadastra, edita e exclui estudos em `/estudos` (é o responsável pelos estudos que cria); o coordenador só consulta | Título, objetivo e limite (≥ 1) obrigatórios; "A data final não pode ser anterior à data inicial" aparece no campo da data |
+| RF04 | O pesquisador cadastra, edita e exclui estudos em `/estudos` (é o responsável pelos estudos que cria; a API só aceita um usuário com perfil pesquisador como responsável); o coordenador só consulta | Título, objetivo e limite (≥ 1) obrigatórios; "A data final não pode ser anterior à data inicial" aparece no campo da data |
 
 > _Capturas de tela das interfaces ainda precisam ser adicionadas (em `docs/imagens/`) para a entrega da Release 1._
 
@@ -256,6 +256,15 @@ Para desenvolvimento local, copie `src/main/resources/application-dev.properties
    - O token emitido tem validade de **30 minutos** (configurável via `JWT_EXPIRATION_MINUTES`).
    - Nesta implementação mínima stateless, o logout é executado no lado do cliente (web/mobile) ao descartar o token armazenado.
    - O token permanece criptograficamente válido no servidor até o término de seu período de validade (`exp`). Usuários desativados têm novas tentativas de login imediatamente rejeitadas no endpoint `/api/auth/login`.
+   - **Risco aceito:** desativar uma conta ou mudar o perfil dela **não** derruba o token já emitido; o acesso antigo continua até o token vencer (no máximo 30 minutos). Revogar na hora exigiria consultar o banco a cada requisição ou manter uma lista de tokens revogados, o que está fora do escopo da Sprint 1. Se o prazo for um problema, reduza `JWT_EXPIRATION_MINUTES`.
+   - A web e o app só descartam o token salvo quando a API o rejeita (`401`, `403` ou `404`). Se o backend estiver fora do ar ao abrir, o token é mantido e a restauração é tentada de novo na próxima abertura.
+
+4. **Regras de negócio da API que valem para qualquer cliente:**
+   - **E-mail:** é gravado e consultado em minúsculas (`A@x.com` e `a@x.com` são a mesma conta; o login aceita qualquer caixa). A migration `V3` converte os e-mails já existentes. Um cadastro simultâneo com o mesmo e-mail também responde `400` com "Já existe um usuário com esse e-mail".
+   - **Contas de administrador:** o administrador logado não pode excluir, desativar nem alterar o perfil da própria conta, e o sistema sempre mantém ao menos um administrador ativo (`400`).
+   - **Responsável do estudo:** deve ser um usuário com perfil `PESQUISADOR`; outro perfil responde `400` ("O responsável pelo estudo deve ter o perfil de pesquisador").
+   - **Estudos sem dono:** o RF04 não exige dono, então **qualquer pesquisador pode editar e excluir qualquer estudo**, inclusive os de outro pesquisador. Decisão de produto a validar com a equipe (ver [docs/status-sprint1.md](docs/status-sprint1.md), seção 4).
+   - **Erros no mesmo formato:** JSON malformado, valor de enum inválido (perfil, status) e UUID inválido na URL respondem `400` com `{"erro": "..."}`, como as demais validações, com mensagens em português também nos estudos.
 
 ### Aplicação web
 
@@ -321,17 +330,18 @@ cd backend/ClinicalStudyPB
 ./mvnw test
 ```
 
-No Windows (PowerShell): `mvnw.cmd test`. O relatório de cobertura do JaCoCo é gerado em `target/site/jacoco/index.html`.
+No Windows (PowerShell): `mvnw.cmd test`. Os testes locais usam H2; a CI roda os mesmos testes também contra PostgreSQL real (job "Backend (testes no PostgreSQL)", abaixo). O relatório de cobertura do JaCoCo é gerado em `target/site/jacoco/index.html`.
 
-**Resultado em 26/10/2026:** 62 testes, 0 falhas, 0 erros. Cobertura de linhas do código de negócio: **99%** (controllers 100%, services 100%, segurança 97%). Ficam fora da medição a classe `main`, `config` e os DTOs.
+**Resultado em 26/10/2026:** 70 testes, 0 falhas, 0 erros. Cobertura de linhas do código de negócio: **97%** (controllers 100%, services 95%, segurança 97%). Ficam fora da medição a classe `main`, `config` e os DTOs.
 
 Suítes atuais:
 - `ClinicalStudyPbApplicationTests`: validação do contexto Spring Boot, Flyway e Hibernate (`ddl-auto=validate`).
-- `FlywayMigrationIntegrationTest`: verificação da execução das migrations `V1` e `V2`, integridade dos usuários de seed (4 perfis + hash BCrypt) e estudos clínicos iniciais.
+- `FlywayMigrationIntegrationTest`: verificação da execução das migrations `V1` e `V2` (a `V3` normaliza e-mails para minúsculas), integridade dos usuários de seed (4 perfis + hash BCrypt) e estudos clínicos iniciais.
 - `OpenApiDocumentationIntegrationTest`: verificação da especificação OpenAPI 3 (`/v3/api-docs`), esquema de segurança Bearer JWT e acesso ao Swagger UI (`/swagger-ui/index.html`).
 - `UsuarioDtoValidationTest`: testes unitários de validação Bean Validation dos DTOs de cadastro e atualização de usuários.
 - `UsuarioIntegrationTest`: testes de integração do CRUD de usuários com autenticação simulada (`@WithMockUser`), incluindo o bloqueio da exclusão de um usuário responsável por estudos.
 - `PermissaoAcessoIntegrationTest` (T26): 15 testes com tokens reais dos 4 perfis do seed, cobrindo a matriz de permissões de usuários e estudos (`200`/`201` quando permitido, `403` quando negado) e o `/api/auth/me`.
+- `RegrasDeContaIntegrationTest`: 8 testes com tokens reais sobre a proteção das contas (administrador não exclui, desativa nem rebaixa a si mesmo; último administrador ativo protegido), responsável do estudo só pesquisador, e-mail sem diferenciar maiúsculas (cadastro e login), `400` padronizado para JSON malformado, enum e UUID inválidos e mensagens de validação de estudo em português.
 - `EstudoServiceTest` (T30): 6 testes unitários das regras do serviço de estudos (datas, responsável inexistente, criação e atualização), com Mockito.
 - `EstudoIntegrationTest` (T30): 8 testes de integração do CRUD de estudos (cadastro com `Location`, consulta, listagem do seed, atualização, exclusão, validações `400` e `404`).
 - `AuthenticationIntegrationTest`: 13 testes de integração cobrindo login com credenciais válidas, senha incorreta, e-mail inexistente, usuário inativo, campos obrigatórios ausentes, acesso sem token, token malformado, adulterado, expirado, com emissor inválido, consumo com token válido, acesso público ao Swagger UI e compatibilidade do BCrypt (`PasswordEncoder`).
@@ -358,11 +368,12 @@ Ainda não há testes automatizados de componentes nem E2E (a especificação pe
 
 ### Integração contínua (T05)
 
-O workflow `.github/workflows/ci.yml` roda a cada push e pull request na `main`, com três jobs:
+O workflow `.github/workflows/ci.yml` roda a cada push e pull request na `main` e na `develop`, com quatro jobs:
 
 | Job | Passos |
 |---|---|
 | Backend | JDK 21 → `./mvnw -B verify` (testes + JaCoCo) → publica os relatórios do Surefire como artefato |
+| Backend (PostgreSQL) | JDK 21 → serviço `postgres:16` → `./mvnw -B test` com `SPRING_DATASOURCE_*` apontando para o PostgreSQL, que valida as migrations e as consultas no banco de produção |
 | Web | Node 22 → `npm ci` → `npm run lint` → `npm run build` |
 | Mobile | Node 22 → `npm ci` → `npm run lint` → `npm run typecheck` |
 

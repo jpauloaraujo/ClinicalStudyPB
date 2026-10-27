@@ -40,7 +40,7 @@ public class AuthService {
      * exceção genérica para impedir enumeração de usuários.</p>
      */
     public LoginResponse autenticar(LoginRequest request) {
-        Usuario usuario = usuarioRepository.findByEmail(request.email())
+        Usuario usuario = usuarioRepository.findByEmail(UsuarioService.normalizarEmail(request.email()))
                 .orElseThrow(() -> new BadCredentialsException("Credenciais inválidas"));
 
         if (!usuario.isAtivo() || !passwordEncoder.matches(request.senha(), usuario.getSenha())) {

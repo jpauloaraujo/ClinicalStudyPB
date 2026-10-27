@@ -22,9 +22,14 @@ public final class TokenDeTeste {
 
     /** Retorna o cabeçalho {@code Authorization} completo ("Bearer ..."). */
     public static String bearer(MockMvc mockMvc, String email) throws Exception {
+        return bearer(mockMvc, email, SENHA_SEED);
+    }
+
+    /** Variante para usuários criados no próprio teste, com senha própria. */
+    public static String bearer(MockMvc mockMvc, String email, String senha) throws Exception {
         String corpo = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"" + email + "\",\"senha\":\"" + SENHA_SEED + "\"}"))
+                        .content("{\"email\":\"" + email + "\",\"senha\":\"" + senha + "\"}"))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         String token = JsonPath.read(corpo, "$.token");
