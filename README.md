@@ -275,6 +275,8 @@ A aplicação fica disponível em `http://localhost:5173`. Outros scripts:
 
 A URL da API vem de `VITE_API_URL` (padrão `http://localhost:8081`). Para mudar, copie `.env.example` para `.env.local` (ignorado pelo Git). O backend libera CORS para `http://localhost:5173`.
 
+> **Erro `Failed to resolve import "axios"`:** após um `git pull` que altere o `package.json`, rode `npm install` de novo em `web/ClinicalStudyPB` — o cliente HTTP (`src/services/api.ts` e `src/services/erros.ts`) depende do `axios`, adicionado depois da estrutura inicial. Se o erro continuar com o servidor já rodando, reinicie-o com `npm run dev -- --force` para o Vite descartar o cache de dependências.
+
 ### Aplicativo mobile
 
 ```bash
@@ -444,3 +446,5 @@ ClinicalStudyPB/
 - [Status da Sprint 1](docs/status-sprint1.md) — **ponto de partida para retomar o contexto**: situação das 35 tasks, responsáveis, arquivos de cada task e pendências.
 - [Implementação do mobile](docs/implementacao-mobile.md) — estrutura do app Expo, navegação, sessão e como rodar em emulador ou celular.
 - [Requisitos dos protótipos mobile](docs/prototipos-mobile.md) — telas, fluxos de navegação e roteiro de demonstração do aplicativo do participante (T33 e T34).
+- [Protótipo navegável do mobile (Figma)](https://www.figma.com/design/IqDUJYAEp8GvSMO6vaEoNd/Clinical-Studies-Mobile-Design?node-id=39-568&t=t88dh0uGIHa60Db9-1) — telas do aplicativo do participante com o fluxo de navegação para demonstração (T33 e T34).
+- [Protótipo navegável da web no Figma](https://www.figma.com/design/e89syvyxm6LEOzBkeLUtea) — 12 telas (login, administrador, pesquisador, coordenador e acesso negado) com navegação entre elas (T32). Para navegar, abra o arquivo e use o modo *Present*, começando pelo Login.

@@ -1,0 +1,4 @@
+# IDEs e editores (cada subprojeto tem o seu .gitignore para build e dependências)
+.idea/
+.vscode/
+*.iml
