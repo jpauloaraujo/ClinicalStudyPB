@@ -44,7 +44,7 @@ const VAZIO: Campos = {
 
 // Cadastro e edição de estudo (T29 / T31 / RF04) — apenas pesquisador
 export function EstudoFormPage() {
-  const { id } = useParams()
+  const { estudoId: id } = useParams()
   const edicao = id !== undefined
   const usuario = useUsuarioLogado()
   const navegar = useNavigate()

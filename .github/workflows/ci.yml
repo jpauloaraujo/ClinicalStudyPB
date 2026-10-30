@@ -93,6 +93,8 @@ jobs:
       - run: npm ci
       - name: Lint
         run: npm run lint
+      - name: Testes de componente (Vitest)
+        run: npm test
       - name: Build (inclui verificação de tipos)
         run: npm run build
 
