@@ -364,16 +364,77 @@ Comando para rodar exclusivamente os testes de autenticação e segurança:
 
 ### Web e mobile
 
-Ainda não há testes automatizados de componentes nem E2E (a especificação pede, mas não estão no backlog da Sprint 1). Na CI, web e mobile passam por lint e verificação de tipos.
+- **Web, componentes:** Vitest + Testing Library (`npm test` em `web/ClinicalStudyPB`), por exemplo o detalhe do estudo com abas (T39). Os testes E2E ficam em `e2e/` e **não** rodam no Vitest.
+- **Web, E2E:** Playwright, descrito na próxima seção.
+- **Mobile:** ainda sem testes automatizados; na CI passa por lint e verificação de tipos. O E2E do app mobile está previsto para a Sprint 3.
+
+### Testes E2E (Playwright, T65)
+
+Testes de ponta a ponta da aplicação web, rodando um navegador de verdade contra o backend e o banco reais. Hoje cobrem login válido (administrador, pesquisador e coordenador), login inválido (senha errada e e-mail inexistente) e logout. O participante usa o app mobile e fica de fora.
+
+**Pré-requisitos:** Node 22 ou superior, JDK 21 e um PostgreSQL com o banco `clinicalstudypb` (os mesmos da seção de instalação do backend).
+
+**1. Subir o ambiente** (três terminais):
+
+```bash
+# Terminal 1: backend na porta 8081 (com DB_PASSWORD e JWT_SECRET definidos, ver seção do backend)
+cd backend/ClinicalStudyPB
+./mvnw spring-boot:run
+
+# Terminal 2: web na porta 5173
+cd web/ClinicalStudyPB
+npm ci
+npm run dev
+```
+
+**2. Preparar os testes** (uma vez por máquina):
+
+```bash
+cd web/ClinicalStudyPB
+npx playwright install chromium     # no Linux: npx playwright install --with-deps chromium
+cp .env.e2e.example .env.e2e        # no PowerShell: Copy-Item .env.e2e.example .env.e2e
+```
+
+**3. Rodar:**
+
+| Comando (em `web/ClinicalStudyPB`) | O que faz |
+|---|---|
+| `npm run test:e2e` | Roda todos os testes (Chromium sem janela) |
+| `npx playwright test e2e/tests/login.spec.ts` | Roda só um arquivo |
+| `npx playwright test -g "logout"` | Roda só os testes cujo nome contém o texto |
+| `npm run test:e2e:headed` | Roda com o navegador visível |
+| `npm run test:e2e:report` | Abre o relatório HTML da última execução |
+| `npx playwright test --repeat-each=10` | Repete cada teste 10 vezes (checagem de estabilidade) |
+
+**Variáveis** (arquivo `.env.e2e`, ignorado pelo Git; o `.env.e2e.example` traz valores fictícios). Se alguma faltar, o setup falha dizendo qual.
+
+| Variável | Para que serve |
+|---|---|
+| `E2E_BASE_URL` | URL da aplicação web (padrão do exemplo: `http://localhost:5173`) |
+| `E2E_API_URL` | URL do backend (`http://localhost:8081`) |
+| `E2E_BOOTSTRAP_EMAIL` / `E2E_BOOTSTRAP_SENHA` | Administrador do seed `V2`, usado só para criar os usuários E2E |
+| `E2E_<PERFIL>_EMAIL` / `E2E_<PERFIL>_SENHA` | Usuário de teste de cada perfil (`ADMINISTRADOR`, `PESQUISADOR`, `COORDENADOR`) |
+
+**Como funciona:**
+- **Setup a cada execução** (`e2e/setup/auth.setup.ts`): entra pela API como o administrador do seed, cria os usuários `e2e.*@clinicalstudy.test` (ou, se já existem, redefine senha e situação, então pode rodar quantas vezes quiser), faz login por API de cada perfil e salva o token em `e2e/.auth/<perfil>.json`. A senha fica como hash BCrypt no banco, como qualquer usuário.
+- **Sessão reaproveitada:** um arquivo de teste escolhe o perfil com `test.use(comoPerfil('PESQUISADOR'))` e já abre as páginas autenticado, sem passar pela tela de login. Os testes de login não usam sessão salva.
+- **Estrutura:** `e2e/pages` (page objects, sem seletores soltos nos testes; localizadores por papel e rótulo), `e2e/fixtures` (o `test` com os page objects e `comoPerfil`), `e2e/setup`, `e2e/support` (variáveis e caminhos) e `e2e/tests` (`*.spec.ts`). Para um novo cenário: crie o page object, registre-o em `e2e/fixtures/index.ts` e escreva o `*.spec.ts`; a configuração e o workflow não mudam.
+- **Convenções:** cada teste é independente (contexto novo, sem depender da ordem); nada de `waitForTimeout`, só as esperas automáticas e os `expect` do Playwright; e-mails de cenários de erro são inexistentes, para não bloquear contas reais.
+- **Falhas:** geram captura de tela e vídeo; no CI (2 repetições) também o trace, que abre com `npx playwright show-trace <arquivo>.zip`.
+
+Explicação detalhada de cada arquivo e do fluxo: [docs/sprint2/T65 — Implementação da infraestrutura E2E.md](<docs/sprint2/T65 — Implementação da infraestrutura E2E.md>).
+
+**No CI:** o job `E2E (Playwright)` de `.github/workflows/ci.yml` roda em todo push e pull request na `main` e na `develop`. Ele sobe um PostgreSQL como serviço, empacota e inicia o backend, constrói e serve o web (`vite preview`), espera `/v3/api-docs` e `/login` responderem, instala o Chromium (`npx playwright install --with-deps chromium`) e executa `npm run test:e2e` com o `.env.e2e.example`. O relatório HTML e os traces ficam no artefato `playwright-report` (14 dias).
 
 ### Integração contínua (T05)
 
-O workflow `.github/workflows/ci.yml` roda a cada push e pull request na `main` e na `develop`, com quatro jobs:
+O workflow `.github/workflows/ci.yml` roda a cada push e pull request na `main` e na `develop`, com cinco jobs:
 
 | Job | Passos |
 |---|---|
 | Backend | JDK 21 → `./mvnw -B verify` (testes + JaCoCo) → publica os relatórios do Surefire como artefato |
 | Backend (PostgreSQL) | JDK 21 → serviço `postgres:16` → `./mvnw -B test` com `SPRING_DATASOURCE_*` apontando para o PostgreSQL, que valida as migrations e as consultas no banco de produção |
+| E2E | PostgreSQL como serviço → backend empacotado e iniciado → web construído e servido → Chromium → `npm run test:e2e` → publica relatório e traces como artefato (ver "Testes E2E") |
 | Web | Node 22 → `npm ci` → `npm run lint` → `npm run build` |
 | Mobile | Node 22 → `npm ci` → `npm run lint` → `npm run typecheck` |
 
@@ -444,7 +505,7 @@ ClinicalStudyPB/
 │           └── contexts/         # Sessão do participante
 ├── docs/                         # Especificação, arquitetura, planejamento e guias
 ├── releases/                     # (a criar) Documentação de cada release
-├── .github/workflows/ci.yml      # Pipeline de CI (backend, web e mobile)
+├── .github/workflows/ci.yml      # Pipeline de CI (backend, E2E, web e mobile)
 └── README.md
 ```
 
