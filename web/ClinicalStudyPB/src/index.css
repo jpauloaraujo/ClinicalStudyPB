@@ -237,6 +237,14 @@ a {
   font-weight: 600;
 }
 
+.tabela__link {
+  color: inherit;
+}
+
+.tabela__link:hover {
+  color: var(--cor-primaria);
+}
+
 .tabela__detalhe {
   max-width: 420px;
   font-size: 0.875rem;

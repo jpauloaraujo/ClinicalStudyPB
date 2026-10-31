@@ -5,12 +5,7 @@ import { useCarregamento } from '../../hooks/useCarregamento'
 import { extrairErro } from '../../services/erros'
 import { estudosApi } from '../../services/recursos'
 import { rotulosStatus, type Estudo } from '../../types/estudo'
-
-function formatarData(data: string | null): string {
-  if (!data) return '—'
-  const [ano, mes, dia] = data.split('-')
-  return `${dia}/${mes}/${ano}`
-}
+import { formatarData } from '../../utils/datas'
 
 // Listagem de estudos (T29 / RF04). Pesquisador gerencia; coordenador só consulta.
 export function EstudosPage() {
@@ -70,7 +65,10 @@ export function EstudosPage() {
               {estudos.map((estudo) => (
                 <tr key={estudo.id}>
                   <td>
-                    <strong>{estudo.titulo}</strong>
+                    {/* Abre a página de detalhe com abas (T39) */}
+                    <Link to={`/estudos/${estudo.id}`} className="tabela__link">
+                      <strong>{estudo.titulo}</strong>
+                    </Link>
                     <div className="texto-suave tabela__detalhe">{estudo.objetivo}</div>
                   </td>
                   <td>{estudo.responsavel.nome}</td>
@@ -83,7 +81,7 @@ export function EstudosPage() {
                   </td>
                   {podeGerenciar && (
                     <td className="tabela__acoes">
-                      <Link to={`/estudos/${estudo.id}`} className="botao botao--secundario botao--pequeno">
+                      <Link to={`/estudos/${estudo.id}/editar`} className="botao botao--secundario botao--pequeno">
                         Editar
                       </Link>
                       <button
