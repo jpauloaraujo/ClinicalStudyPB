@@ -1,0 +1,14 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://localhost:5173",
+      "localStorage": [
+        {
+          "name": "clinicalstudypb.token",
+          "value": "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJjbGluaWNhbHN0dWR5cGIiLCJzdWIiOiIwNzE1ZTg5ZS02YTNjLTQ5NmItYjMzZC04YjI3NTNjNGJiNDciLCJyb2xlIjoiUEVTUVVJU0FET1IiLCJleHAiOjE3OTM0Mjg5NjUsImlhdCI6MTc5MzQyNzE2NX0.6SVnx1CImREO64zp4qG0AkMWaDEwTGuCocy-TY26VGo"
+        }
+      ]
+    }
+  ]
+}
