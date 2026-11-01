@@ -80,6 +80,7 @@ Aplicação Spring Boot com pacote raiz `UEPB.ESWII.ClinicalStudyPB`, organizada
 | `db/migration` | Migrations SQL versionadas do Flyway (`V1__create_initial_tables.sql`, `V2__seed_initial_data.sql`) | ✅ concluído (T09) |
 | DTOs e validações | Objetos de entrada/saída da API com Bean Validation (`EstudoRequest`, `Usuario*Request`, `Login*Request`) | ✅ concluído (T15 / T27) |
 | Segurança | Configuração do Spring Security (`SecurityConfig`), autenticação stateless por JWT (`TokenService`), endpoints `/api/auth/login` e `/api/auth/me` (`AuthController`) e senhas com BCrypt | ✅ concluído (T19 / T20 — Tasks 3060 / 3063) |
+| Recrutamento (RF05 a RF11) | Critérios (inclusão/exclusão), visitas planejadas e ações, candidatos, avaliação de elegibilidade, consentimento simulado e inclusão de participantes, com migration `V4` e regras próprias; erros de regra respondem `409` com `{"erro", "codigo"}`. Ver [a documentação do domínio](<docs/sprint2/Implementação do modelo de domínio de recrutamento.md>) | ✅ backend concluído (telas ainda não) |
 | Autorização por perfil | `@EnableMethodSecurity` + `@PreAuthorize` nos controllers, seguindo a matriz RBAC; acesso negado responde `403` com `{"erro": "Acesso negado para o seu perfil"}` | ✅ concluído (T24) |
 
 
@@ -94,6 +95,9 @@ Dependências principais: Spring Web MVC, Spring Data JPA, Flyway (`spring-boot-
 | `/api/usuarios/**` (todas as operações) | ✅ | ❌ | ❌ | ❌ |
 | `GET /api/estudos`, `GET /api/estudos/{id}` | ❌ | ✅ | ✅ | ❌ |
 | `POST`, `PUT`, `DELETE /api/estudos/**` | ❌ | ✅ | ❌ | ❌ |
+| `GET` de critérios, visitas, candidatos, avaliações, consentimento e participantes | ❌ | ✅ | ✅ | ❌ |
+| `POST`/`PUT`/`DELETE` de critérios e visitas/ações (só com o estudo em planejamento) | ❌ | ✅ | ❌ | ❌ |
+| `POST`/`PUT` de candidatos, avaliações, consentimento e inclusão de participantes (só com o estudo em recrutamento) | ❌ | ❌ | ✅ | ❌ |
 
 Sem token válido a API responde `401`; com token de um perfil sem permissão, `403`.
 
@@ -332,15 +336,17 @@ cd backend/ClinicalStudyPB
 
 No Windows (PowerShell): `mvnw.cmd test`. Os testes locais usam H2; a CI roda os mesmos testes também contra PostgreSQL real (job "Backend (testes no PostgreSQL)", abaixo). O relatório de cobertura do JaCoCo é gerado em `target/site/jacoco/index.html`.
 
-**Resultado em 26/10/2026:** 70 testes, 0 falhas, 0 erros. Cobertura de linhas do código de negócio: **97%** (controllers 100%, services 95%, segurança 97%). Ficam fora da medição a classe `main`, `config` e os DTOs.
+**Resultado em 01/11/2026:** 91 testes, 0 falhas, 0 erros. Cobertura de linhas do código de negócio: **93%** (controllers 94%, services 91%, segurança 97%, domínio 100%). Ficam fora da medição a classe `main`, `config` e os DTOs.
 
 Suítes atuais:
 - `ClinicalStudyPbApplicationTests`: validação do contexto Spring Boot, Flyway e Hibernate (`ddl-auto=validate`).
-- `FlywayMigrationIntegrationTest`: verificação da execução das migrations `V1` e `V2` (a `V3` normaliza e-mails para minúsculas), integridade dos usuários de seed (4 perfis + hash BCrypt) e estudos clínicos iniciais.
+- `FlywayMigrationIntegrationTest`: verificação da execução das migrations `V1` e `V2` (a `V3` normaliza e-mails para minúsculas e a `V4` cria as tabelas do recrutamento), integridade dos usuários de seed (4 perfis + hash BCrypt) e estudos clínicos iniciais.
 - `OpenApiDocumentationIntegrationTest`: verificação da especificação OpenAPI 3 (`/v3/api-docs`), esquema de segurança Bearer JWT e acesso ao Swagger UI (`/swagger-ui/index.html`).
 - `UsuarioDtoValidationTest`: testes unitários de validação Bean Validation dos DTOs de cadastro e atualização de usuários.
 - `UsuarioIntegrationTest`: testes de integração do CRUD de usuários com autenticação simulada (`@WithMockUser`), incluindo o bloqueio da exclusão de um usuário responsável por estudos.
 - `PermissaoAcessoIntegrationTest` (T26): 15 testes com tokens reais dos 4 perfis do seed, cobrindo a matriz de permissões de usuários e estudos (`200`/`201` quando permitido, `403` quando negado) e o `/api/auth/me`.
+- `DominioRecrutamentoTest`: 10 testes unitários das regras de domínio (critérios de inclusão e exclusão, regra de elegibilidade, janela das visitas planejadas).
+- `RecrutamentoIntegrationTest`: 11 testes com tokens reais do fluxo RF05 a RF11 (critérios e visitas, candidatos, avaliação com histórico, consentimento, inclusão, vagas esgotadas, permissões por perfil).
 - `RegrasDeContaIntegrationTest`: 8 testes com tokens reais sobre a proteção das contas (administrador não exclui, desativa nem rebaixa a si mesmo; último administrador ativo protegido), responsável do estudo só pesquisador, e-mail sem diferenciar maiúsculas (cadastro e login), `400` padronizado para JSON malformado, enum e UUID inválidos e mensagens de validação de estudo em português.
 - `EstudoServiceTest` (T30): 6 testes unitários das regras do serviço de estudos (datas, responsável inexistente, criação e atualização), com Mockito.
 - `EstudoIntegrationTest` (T30): 8 testes de integração do CRUD de estudos (cadastro com `Location`, consulta, listagem do seed, atualização, exclusão, validações `400` e `404`).

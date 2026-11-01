@@ -21,6 +21,7 @@ import UEPB.ESWII.ClinicalStudyPB.domain.enums.PerfilUsuario;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.StatusEstudo;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Estudo;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Usuario;
+import UEPB.ESWII.ClinicalStudyPB.repository.CandidatoRepository;
 import UEPB.ESWII.ClinicalStudyPB.repository.EstudoRepository;
 import UEPB.ESWII.ClinicalStudyPB.repository.UsuarioRepository;
 import UEPB.ESWII.ClinicalStudyPB.service.EstudoService;
@@ -39,7 +40,7 @@ class EstudoServiceTest {
     void configurar() {
         estudoRepository = mock(EstudoRepository.class);
         usuarioRepository = mock(UsuarioRepository.class);
-        service = new EstudoService(estudoRepository, usuarioRepository);
+        service = new EstudoService(estudoRepository, usuarioRepository, mock(CandidatoRepository.class));
 
         pesquisador = new Usuario();
         pesquisador.setId(UUID.randomUUID());
