@@ -83,7 +83,9 @@ class RecrutamentoIntegrationTest {
     }
 
     private void mudarEstado(String estudoId, int limite, String estado) throws Exception {
-        enviar("PUT", "/api/estudos/" + estudoId, pesquisador, corpoEstudo(limite, estado)).andExpect(status().isOk());
+        // RF07: o estado só muda pela transição (o PUT não altera mais o estado)
+        enviar("POST", "/api/estudos/" + estudoId + "/transicoes", pesquisador, "{\"destino\":\"" + estado + "\"}")
+                .andExpect(status().isOk());
     }
 
     private String criarCriterio(String estudoId, String tipo, String titulo, String extra) throws Exception {
@@ -385,15 +387,16 @@ class RecrutamentoIntegrationTest {
     }
 
     @Test
-    @DisplayName("Critério já usado em avaliação não pode ser excluído")
+    @DisplayName("Critério já usado em avaliação não pode ser excluído (o estudo já saiu de planejamento)")
     void criterioEmUsoNaoEExcluido() throws Exception {
         String[] estudo = estudoEmRecrutamento(2);
         String candidato = criarCandidato(estudo[0], "S. T.");
         avaliar(candidato, estudo[1], true, estudo[2], false).andExpect(status().isCreated());
 
-        mudarEstado(estudo[0], 2, "PLANEJAMENTO");
+        // Antes o teste voltava o estudo a planejamento pelo PUT para chegar a CRITERIO_EM_USO; sem a brecha,
+        // a exclusão já é barrada pelo estado. A regra CRITERIO_EM_USO fica coberta em CriterioServiceTest.
         enviar("DELETE", "/api/estudos/" + estudo[0] + "/criterios/" + estudo[1], pesquisador, null)
-                .andExpect(status().isConflict()).andExpect(jsonPath("$.codigo").value("CRITERIO_EM_USO"));
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.codigo").value("ESTUDO_FORA_DE_PLANEJAMENTO"));
     }
 
     // ---------- RF03: permissões ----------

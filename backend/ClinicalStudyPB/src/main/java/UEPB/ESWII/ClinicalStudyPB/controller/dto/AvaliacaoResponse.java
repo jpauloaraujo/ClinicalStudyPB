@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.hibernate.Hibernate;
+
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.ResultadoAvaliacao;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.TipoCriterio;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.AvaliacaoElegibilidade;
@@ -38,7 +40,12 @@ public record AvaliacaoResponse(
                         r.getCriterio().getTitulo(), r.isAplica(), r.getObservacao()))
                 .toList();
 
-        List<Criterio> criterios = avaliacao.getRespostas().stream().map(RespostaAvaliacao::getCriterio).toList();
+        // O critério de uma resposta é carregado de forma preguiçosa: sem desembrulhar o proxy ele não é
+        // instância de CriterioInclusao/CriterioExclusao e a regra de elegibilidade não o reconheceria
+        List<Criterio> criterios = avaliacao.getRespostas().stream()
+                .map(RespostaAvaliacao::getCriterio)
+                .map(criterio -> Hibernate.unproxy(criterio, Criterio.class))
+                .toList();
         Map<UUID, Boolean> aplica = new HashMap<>();
         avaliacao.getRespostas().forEach(r -> aplica.put(r.getCriterio().getId(), r.isAplica()));
         List<CriterioFalho> falhas = RegraElegibilidade.avaliar(criterios, aplica).falhas().stream()

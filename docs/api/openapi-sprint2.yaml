@@ -1,0 +1,1613 @@
+# Contrato OpenAPI da Sprint 2 (T37). Este é o arquivo mantido pela equipe: edite-o diretamente
+# quando houver divergência com o código, no mesmo Pull Request.
+openapi: 3.0.3
+info:
+  title: ClinicalStudyPB — contrato da Sprint 2 (RF05 a RF11)
+  version: 1.0.0
+  description: |-
+    Contrato dos endpoints de recrutamento da Sprint 2, escrito para web e backend andarem em paralelo (os tipos TypeScript são gerados deste arquivo com `npm run api:tipos`).
+
+    **Regra de manutenção:** qualquer divergência encontrada durante a Sprint é corrigida neste arquivo, no mesmo Pull Request do código. O teste `ContratoOpenApiTest` do backend falha se um caminho ou método deste contrato não existir na API publicada em `/v3/api-docs`.
+
+    **Erros:** formato único `{"erro", "codigo?"}` (ver o schema `Erro`): 400 validação, 401 sem token, 403 perfil sem permissão, 404 recurso inexistente, 409 regra de negócio violada, sempre com `codigo`.
+
+    **Perfis:** o pesquisador escreve critérios, visitas e o estado do estudo; o coordenador escreve candidatos, avaliação, consentimento e inclusão; ambos leem; o administrador e o participante não acessam o recrutamento.
+servers:
+- url: http://localhost:8081
+  description: Backend local
+security:
+- bearerAuth: []
+tags:
+- name: Estado do estudo
+- name: Critérios
+- name: Visitas planejadas
+- name: Candidatos
+- name: Elegibilidade
+- name: Consentimento
+- name: Participantes
+paths:
+  /api/estudos/{estudoId}/transicoes:
+    post:
+      tags:
+      - Estado do estudo
+      summary: Avançar o estado do estudo
+      operationId: avancarEstado
+      description: 'Aceita só o estado seguinte ao atual. Para sair de planejamento exige ao menos um critério de
+        inclusão e uma visita prevista. Cada avanço grava usuário e data no histórico. Códigos 409: TRANSICAO_ESTADO_INVALIDA,
+        ESTUDO_SEM_CRITERIO_INCLUSAO, ESTUDO_SEM_VISITA_PREVISTA. Perfis: somente PESQUISADOR; COORDENADOR e ADMINISTRADOR
+        recebem 403.'
+      parameters:
+      - name: estudoId
+        in: path
+        required: true
+        description: UUID do estudo.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransicaoRequest'
+      responses:
+        '200':
+          description: Estado alterado; devolve o estudo já no novo estado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Estudo'
+        '400':
+          $ref: '#/components/responses/Erro400'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
+  /api/estudos/{estudoId}/historico-status:
+    get:
+      tags:
+      - Estado do estudo
+      summary: Histórico de mudanças de estado do estudo
+      operationId: listarHistoricoStatus
+      description: 'Perfis: PESQUISADOR e COORDENADOR; ADMINISTRADOR e PARTICIPANTE recebem 403.'
+      parameters:
+      - name: estudoId
+        in: path
+        required: true
+        description: UUID do estudo.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Mudanças, da mais antiga para a mais recente.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HistoricoStatusResponse'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+  /api/estudos/{estudoId}/criterios:
+    get:
+      tags:
+      - Critérios
+      summary: Listar os critérios do estudo
+      operationId: listarCriterios
+      description: 'Perfis: PESQUISADOR e COORDENADOR; ADMINISTRADOR e PARTICIPANTE recebem 403.'
+      parameters:
+      - name: estudoId
+        in: path
+        required: true
+        description: UUID do estudo.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Critérios de inclusão e exclusão, ordenados por título.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CriterioResponse'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+    post:
+      tags:
+      - Critérios
+      summary: Cadastrar critério
+      operationId: criarCriterio
+      description: 'Só com o estudo em planejamento. Títulos e descrições não se repetem (ignorando maiúsculas)
+        no mesmo tipo e estudo. Códigos 409: ESTUDO_FORA_DE_PLANEJAMENTO, CRITERIO_DUPLICADO. Perfis: escrita só
+        do PESQUISADOR; leitura de PESQUISADOR e COORDENADOR; ADMINISTRADOR e PARTICIPANTE recebem 403.'
+      parameters:
+      - name: estudoId
+        in: path
+        required: true
+        description: UUID do estudo.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriterioRequest'
+      responses:
+        '201':
+          description: Critério criado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CriterioResponse'
+        '400':
+          $ref: '#/components/responses/Erro400'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
+  /api/estudos/{estudoId}/criterios/{id}:
+    put:
+      tags:
+      - Critérios
+      summary: Atualizar critério
+      operationId: atualizarCriterio
+      description: 'O tipo não pode ser alterado (400). Códigos 409: ESTUDO_FORA_DE_PLANEJAMENTO, CRITERIO_DUPLICADO.
+        Perfis: escrita só do PESQUISADOR; leitura de PESQUISADOR e COORDENADOR; ADMINISTRADOR e PARTICIPANTE recebem
+        403.'
+      parameters:
+      - name: estudoId
+        in: path
+        required: true
+        description: UUID do estudo.
+        schema:
+          type: string
+          format: uuid
+      - name: id
+        in: path
+        required: true
+        description: UUID do critério.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriterioRequest'
+      responses:
+        '200':
+          description: Critério atualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CriterioResponse'
+        '400':
+          $ref: '#/components/responses/Erro400'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
+    delete:
+      tags:
+      - Critérios
+      summary: Excluir critério
+      operationId: excluirCriterio
+      description: 'Códigos 409: ESTUDO_FORA_DE_PLANEJAMENTO, CRITERIO_EM_USO. Perfis: escrita só do PESQUISADOR;
+        leitura de PESQUISADOR e COORDENADOR; ADMINISTRADOR e PARTICIPANTE recebem 403.'
+      parameters:
+      - name: estudoId
+        in: path
+        required: true
+        description: UUID do estudo.
+        schema:
+          type: string
+          format: uuid
+      - name: id
+        in: path
+        required: true
+        description: UUID do critério.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Critério excluído.
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
+  /api/estudos/{estudoId}/visitas:
+    get:
+      tags:
+      - Visitas planejadas
+      summary: Listar as visitas do estudo
+      operationId: listarVisitas
+      description: 'Perfis: PESQUISADOR e COORDENADOR; ADMINISTRADOR e PARTICIPANTE recebem 403.'
+      parameters:
+      - name: estudoId
+        in: path
+        required: true
+        description: UUID do estudo.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Visitas ordenadas pelo dia previsto, com as suas ações.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VisitaResponse'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+    post:
+      tags:
+      - Visitas planejadas
+      summary: Cadastrar visita planejada
+      operationId: criarVisita
+      description: 'Só com o estudo em planejamento. Códigos 409: ESTUDO_FORA_DE_PLANEJAMENTO, VISITA_DIA_DUPLICADO.
+        Perfis: escrita só do PESQUISADOR; leitura de PESQUISADOR e COORDENADOR; ADMINISTRADOR e PARTICIPANTE recebem
+        403.'
+      parameters:
+      - name: estudoId
+        in: path
+        required: true
+        description: UUID do estudo.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisitaRequest'
+      responses:
+        '201':
+          description: Visita criada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisitaResponse'
+        '400':
+          $ref: '#/components/responses/Erro400'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
+  /api/estudos/{estudoId}/visitas/{id}:
+    put:
+      tags:
+      - Visitas planejadas
+      summary: Atualizar visita planejada
+      operationId: atualizarVisita
+      description: 'Códigos 409: ESTUDO_FORA_DE_PLANEJAMENTO, VISITA_DIA_DUPLICADO. Perfis: escrita só do PESQUISADOR;
+        leitura de PESQUISADOR e COORDENADOR; ADMINISTRADOR e PARTICIPANTE recebem 403.'
+      parameters:
+      - name: estudoId
+        in: path
+        required: true
+        description: UUID do estudo.
+        schema:
+          type: string
+          format: uuid
+      - name: id
+        in: path
+        required: true
+        description: UUID da visita.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisitaRequest'
+      responses:
+        '200':
+          description: Visita atualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisitaResponse'
+        '400':
+          $ref: '#/components/responses/Erro400'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
+    delete:
+      tags:
+      - Visitas planejadas
+      summary: Excluir visita planejada
+      operationId: excluirVisita
+      description: 'Código 409: ESTUDO_FORA_DE_PLANEJAMENTO. Perfis: escrita só do PESQUISADOR; leitura de PESQUISADOR
+        e COORDENADOR; ADMINISTRADOR e PARTICIPANTE recebem 403.'
+      parameters:
+      - name: estudoId
+        in: path
+        required: true
+        description: UUID do estudo.
+        schema:
+          type: string
+          format: uuid
+      - name: id
+        in: path
+        required: true
+        description: UUID da visita.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Visita excluída junto com as suas ações.
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
+  /api/visitas/{visitaId}/acoes:
+    post:
+      tags:
+      - Visitas planejadas
+      summary: Cadastrar ação (procedimento) em uma visita
+      operationId: criarAcao
+      description: 'Código 409: ESTUDO_FORA_DE_PLANEJAMENTO. Perfis: escrita só do PESQUISADOR; leitura de PESQUISADOR
+        e COORDENADOR; ADMINISTRADOR e PARTICIPANTE recebem 403.'
+      parameters:
+      - name: visitaId
+        in: path
+        required: true
+        description: UUID da visita.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcaoRequest'
+      responses:
+        '201':
+          description: Ação criada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcaoResponse'
+        '400':
+          $ref: '#/components/responses/Erro400'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
+  /api/visitas/{visitaId}/acoes/{id}:
+    put:
+      tags:
+      - Visitas planejadas
+      summary: Atualizar ação de uma visita
+      operationId: atualizarAcao
+      description: 'Código 409: ESTUDO_FORA_DE_PLANEJAMENTO. Perfis: escrita só do PESQUISADOR; leitura de PESQUISADOR
+        e COORDENADOR; ADMINISTRADOR e PARTICIPANTE recebem 403.'
+      parameters:
+      - name: visitaId
+        in: path
+        required: true
+        description: UUID da visita.
+        schema:
+          type: string
+          format: uuid
+      - name: id
+        in: path
+        required: true
+        description: UUID da ação.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcaoRequest'
+      responses:
+        '200':
+          description: Ação atualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcaoResponse'
+        '400':
+          $ref: '#/components/responses/Erro400'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
+    delete:
+      tags:
+      - Visitas planejadas
+      summary: Excluir ação de uma visita
+      operationId: excluirAcao
+      description: 'Código 409: ESTUDO_FORA_DE_PLANEJAMENTO. Perfis: escrita só do PESQUISADOR; leitura de PESQUISADOR
+        e COORDENADOR; ADMINISTRADOR e PARTICIPANTE recebem 403.'
+      parameters:
+      - name: visitaId
+        in: path
+        required: true
+        description: UUID da visita.
+        schema:
+          type: string
+          format: uuid
+      - name: id
+        in: path
+        required: true
+        description: UUID da ação.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Ação excluída.
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
+  /api/estudos/{estudoId}/candidatos:
+    get:
+      tags:
+      - Candidatos
+      summary: Listar candidatos do estudo
+      operationId: listarCandidatos
+      description: 'Perfis: PESQUISADOR e COORDENADOR; ADMINISTRADOR e PARTICIPANTE recebem 403.'
+      parameters:
+      - name: estudoId
+        in: path
+        required: true
+        description: UUID do estudo.
+        schema:
+          type: string
+          format: uuid
+      - name: situacao
+        in: query
+        required: false
+        description: Filtra por situação.
+        schema:
+          $ref: '#/components/schemas/SituacaoCandidato'
+      - name: pagina
+        in: query
+        required: false
+        description: Página, base 0.
+        schema:
+          type: integer
+          default: 0
+          minimum: 0
+      - name: tamanho
+        in: query
+        required: false
+        description: Itens por página (máximo 100).
+        schema:
+          type: integer
+          default: 20
+          minimum: 1
+          maximum: 100
+      responses:
+        '200':
+          description: Página de candidatos, ordenada pelo código.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginaCandidatos'
+        '400':
+          $ref: '#/components/responses/Erro400'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+    post:
+      tags:
+      - Candidatos
+      summary: Cadastrar candidato
+      operationId: criarCandidato
+      description: 'Só com o estudo em recrutamento. Códigos 409: ESTUDO_FORA_DE_RECRUTAMENTO, CANDIDATO_DUPLICADO.
+        Perfis: escrita só do COORDENADOR; leitura de COORDENADOR e PESQUISADOR; ADMINISTRADOR e PARTICIPANTE recebem
+        403.'
+      parameters:
+      - name: estudoId
+        in: path
+        required: true
+        description: UUID do estudo.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CandidatoRequest'
+      responses:
+        '201':
+          description: Candidato criado com o código gerado (CAND-001...).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidatoResponse'
+        '400':
+          $ref: '#/components/responses/Erro400'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
+  /api/candidatos/{id}:
+    get:
+      tags:
+      - Candidatos
+      summary: Detalhe do candidato
+      operationId: buscarCandidato
+      description: 'Perfis: PESQUISADOR e COORDENADOR; ADMINISTRADOR e PARTICIPANTE recebem 403.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID do candidato.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Candidato com o resumo da avaliação vigente e do consentimento.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidatoResponse'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+    put:
+      tags:
+      - Candidatos
+      summary: Atualizar candidato
+      operationId: atualizarCandidato
+      description: 'Permitido até a inclusão. Códigos 409: CANDIDATO_JA_INCLUIDO, CANDIDATO_DUPLICADO. Perfis: escrita
+        só do COORDENADOR; leitura de COORDENADOR e PESQUISADOR; ADMINISTRADOR e PARTICIPANTE recebem 403.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID do candidato.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CandidatoRequest'
+      responses:
+        '200':
+          description: Candidato atualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidatoResponse'
+        '400':
+          $ref: '#/components/responses/Erro400'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
+  /api/candidatos/{candidatoId}/avaliacoes:
+    get:
+      tags:
+      - Elegibilidade
+      summary: Histórico de avaliações do candidato
+      operationId: listarAvaliacoes
+      description: 'Perfis: PESQUISADOR e COORDENADOR; ADMINISTRADOR e PARTICIPANTE recebem 403.'
+      parameters:
+      - name: candidatoId
+        in: path
+        required: true
+        description: UUID do candidato.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Da mais recente (vigente) para a mais antiga.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AvaliacaoResponse'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+    post:
+      tags:
+      - Elegibilidade
+      summary: Registrar avaliação de elegibilidade
+      operationId: avaliarCandidato
+      description: 'Exige uma resposta para cada critério do estudo (400 se faltar, repetir ou sobrar). A avaliação
+        anterior vai para o histórico. Códigos 409: ESTUDO_FORA_DE_RECRUTAMENTO, CANDIDATO_JA_INCLUIDO. Perfis:
+        escrita só do COORDENADOR; leitura de COORDENADOR e PESQUISADOR; ADMINISTRADOR e PARTICIPANTE recebem 403.'
+      parameters:
+      - name: candidatoId
+        in: path
+        required: true
+        description: UUID do candidato.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvaliacaoRequest'
+      responses:
+        '201':
+          description: Avaliação registrada; passa a ser a vigente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvaliacaoResponse'
+        '400':
+          $ref: '#/components/responses/Erro400'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
+  /api/candidatos/{candidatoId}/consentimento:
+    get:
+      tags:
+      - Consentimento
+      summary: Comprovante do consentimento
+      operationId: buscarConsentimento
+      description: 'Perfis: PESQUISADOR e COORDENADOR; ADMINISTRADOR e PARTICIPANTE recebem 403.'
+      parameters:
+      - name: candidatoId
+        in: path
+        required: true
+        description: UUID do candidato.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Consentimento registrado (404 se ainda não foi).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentimentoResponse'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+    post:
+      tags:
+      - Consentimento
+      summary: Registrar consentimento
+      operationId: registrarConsentimento
+      description: 'Um por candidato; o responsável é o usuário autenticado; a data não pode ser futura (400). Códigos
+        409: ESTUDO_FORA_DE_RECRUTAMENTO, CANDIDATO_JA_INCLUIDO, CONSENTIMENTO_DUPLICADO. Perfis: escrita só do
+        COORDENADOR; leitura de COORDENADOR e PESQUISADOR; ADMINISTRADOR e PARTICIPANTE recebem 403.'
+      parameters:
+      - name: candidatoId
+        in: path
+        required: true
+        description: UUID do candidato.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsentimentoRequest'
+      responses:
+        '201':
+          description: Consentimento registrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentimentoResponse'
+        '400':
+          $ref: '#/components/responses/Erro400'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
+  /api/estudos/{estudoId}/participantes:
+    get:
+      tags:
+      - Participantes
+      summary: Listar participantes incluídos
+      operationId: listarParticipantes
+      description: 'Perfis: PESQUISADOR e COORDENADOR; ADMINISTRADOR e PARTICIPANTE recebem 403.'
+      parameters:
+      - name: estudoId
+        in: path
+        required: true
+        description: UUID do estudo.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Participantes, do mais antigo para o mais recente.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ParticipacaoResponse'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+    post:
+      tags:
+      - Participantes
+      summary: Incluir candidato como participante
+      operationId: incluirParticipante
+      description: 'Verifica, nesta ordem: estudo em recrutamento, candidato do estudo e ainda não incluído, avaliação
+        vigente aprovada, consentimento registrado e vaga disponível. Candidato de outro estudo: 404. Códigos 409:
+        ESTUDO_FORA_DE_RECRUTAMENTO, CANDIDATO_JA_INCLUIDO, CANDIDATO_NAO_ELEGIVEL, CONSENTIMENTO_AUSENTE, VAGAS_ESGOTADAS.
+        Perfis: escrita só do COORDENADOR; leitura de COORDENADOR e PESQUISADOR; ADMINISTRADOR e PARTICIPANTE recebem
+        403.'
+      parameters:
+      - name: estudoId
+        in: path
+        required: true
+        description: UUID do estudo.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InclusaoRequest'
+      responses:
+        '201':
+          description: Participante incluído (dia 0 = hoje); o candidato passa a INCLUIDO.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipacaoResponse'
+        '400':
+          $ref: '#/components/responses/Erro400'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
+  /api/estudos/{estudoId}/participantes/vagas:
+    get:
+      tags:
+      - Participantes
+      summary: Resumo de vagas
+      operationId: resumirVagas
+      description: 'Perfis: PESQUISADOR e COORDENADOR; ADMINISTRADOR e PARTICIPANTE recebem 403.'
+      parameters:
+      - name: estudoId
+        in: path
+        required: true
+        description: UUID do estudo.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Incluídos, limite e vagas restantes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VagasResponse'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Erro400:
+      description: Validação falhou (campo obrigatório, tamanho, formato) ou regra de formato.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+          example:
+            erro: 'descricao: A descrição deve ter entre 5 e 500 caracteres'
+    Erro401:
+      description: Sem token ou token inválido/expirado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+          example:
+            erro: Não autenticado
+    Erro403:
+      description: O perfil do usuário não tem permissão.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+          example:
+            erro: Acesso negado para o seu perfil
+    Erro404:
+      description: Recurso inexistente.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+          example:
+            erro: 'Estudo não encontrado: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    Erro409:
+      description: Regra de negócio violada; "codigo" identifica a regra.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+          example:
+            erro: Critérios e visitas só podem ser alterados com o estudo em planejamento
+            codigo: ESTUDO_FORA_DE_PLANEJAMENTO
+  schemas:
+    StatusEstudo:
+      type: string
+      enum:
+      - PLANEJAMENTO
+      - RECRUTAMENTO
+      - EXECUCAO
+      - ENCERRADO
+      description: Estado do estudo; só avança, um de cada vez, nesta ordem.
+    TipoCriterio:
+      type: string
+      enum:
+      - INCLUSAO
+      - EXCLUSAO
+      description: Tipo do critério de aceitação.
+    CategoriaAcao:
+      type: string
+      enum:
+      - AVALIACAO_CLINICA
+      - EXAME_LABORATORIAL
+      - EXAME_IMAGEM
+      - QUESTIONARIO
+      - MEDICACAO
+      - OUTROS
+      description: Categoria do procedimento de uma visita.
+    SituacaoCandidato:
+      type: string
+      enum:
+      - CADASTRADO
+      - EM_AVALIACAO
+      - ELEGIVEL
+      - NAO_ELEGIVEL
+      - CONSENTIDO
+      - INCLUIDO
+      description: Etapa do candidato no funil de triagem.
+    ResultadoAvaliacao:
+      type: string
+      enum:
+      - APROVADO
+      - REPROVADO
+      description: Resultado final da avaliação de elegibilidade.
+    Erro:
+      type: object
+      description: 'Formato único de erro da API. O status HTTP identifica a classe do erro: 400 validação ou regra
+        de formato, 401 sem token, 403 perfil sem permissão, 404 recurso inexistente, 409 regra de negócio violada
+        (sempre com "codigo").'
+      properties:
+        erro:
+          type: string
+          description: 'Mensagem em português. Em erro de validação (400) vem no formato "campo: mensagem".'
+        codigo:
+          type: string
+          description: Código estável da regra de negócio violada. Presente nos 409.
+      required:
+      - erro
+      example:
+        erro: 'Não há vagas disponíveis: o limite de 1 participantes do estudo foi atingido'
+        codigo: VAGAS_ESGOTADAS
+    Responsavel:
+      type: object
+      description: Usuário responsável pelo estudo (nunca traz a senha).
+      properties:
+        id:
+          type: string
+          format: uuid
+        nome:
+          type: string
+        email:
+          type: string
+          format: email
+        perfil:
+          type: string
+          enum:
+          - ADMINISTRADOR
+          - PESQUISADOR
+          - COORDENADOR
+          - PARTICIPANTE
+        ativo:
+          type: boolean
+      required:
+      - id
+      - nome
+      - email
+      - perfil
+      - ativo
+    Estudo:
+      type: object
+      description: Estudo clínico (cadastro da Sprint 1, devolvido pela transição de estado).
+      properties:
+        id:
+          type: string
+          format: uuid
+        titulo:
+          type: string
+          maxLength: 180
+        objetivo:
+          type: string
+        responsavel:
+          $ref: '#/components/schemas/Responsavel'
+        dataInicio:
+          type: string
+          format: date
+          nullable: true
+        dataFim:
+          type: string
+          format: date
+          nullable: true
+        limiteParticipantes:
+          type: integer
+          minimum: 1
+        status:
+          $ref: '#/components/schemas/StatusEstudo'
+      required:
+      - id
+      - titulo
+      - objetivo
+      - responsavel
+      - limiteParticipantes
+      - status
+      example:
+        id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+        titulo: Estudo Clínico Demonstrativo
+        objetivo: Avaliar a adesão ao protocolo fictício.
+        responsavel:
+          id: 22222222-2222-4222-8222-222222222222
+          nome: Pesquisador Fictício
+          email: pesquisador@clinicalstudy.test
+          perfil: PESQUISADOR
+          ativo: true
+        dataInicio: '2026-11-01'
+        dataFim: '2027-02-01'
+        limiteParticipantes: 50
+        status: RECRUTAMENTO
+    TransicaoRequest:
+      type: object
+      description: Estado de destino; precisa ser o seguinte ao atual.
+      properties:
+        destino:
+          $ref: '#/components/schemas/StatusEstudo'
+      required:
+      - destino
+      example:
+        destino: RECRUTAMENTO
+    HistoricoStatusResponse:
+      type: object
+      description: Uma mudança de estado do estudo.
+      properties:
+        id:
+          type: string
+          format: uuid
+        estudoId:
+          type: string
+          format: uuid
+        estadoAnterior:
+          $ref: '#/components/schemas/StatusEstudo'
+        estadoNovo:
+          $ref: '#/components/schemas/StatusEstudo'
+        usuario:
+          type: string
+          description: Nome de quem avançou o estudo.
+        dataHora:
+          type: string
+          format: date-time
+      required:
+      - id
+      - estudoId
+      - estadoAnterior
+      - estadoNovo
+      - usuario
+      - dataHora
+      example:
+        id: d1d1d1d1-d1d1-4d1d-8d1d-d1d1d1d1d1d1
+        estudoId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+        estadoAnterior: PLANEJAMENTO
+        estadoNovo: RECRUTAMENTO
+        usuario: Pesquisador Fictício
+        dataHora: '2026-11-02T09:30:00'
+    CriterioRequest:
+      type: object
+      description: Criação ou edição de critério. O tipo não pode ser trocado na edição.
+      properties:
+        tipo:
+          $ref: '#/components/schemas/TipoCriterio'
+        titulo:
+          type: string
+          maxLength: 120
+        descricao:
+          type: string
+          minLength: 5
+          maxLength: 500
+        peso:
+          type: number
+          format: float
+          exclusiveMinimum: true
+          minimum: 0
+          description: Só INCLUSAO; padrão 1. Ignorado em EXCLUSAO.
+        determinante:
+          type: boolean
+          description: Só INCLUSAO; padrão true. Critérios de exclusão são sempre determinantes.
+      required:
+      - tipo
+      - titulo
+      - descricao
+      example:
+        tipo: INCLUSAO
+        titulo: Idade adulta
+        descricao: Candidato com 18 anos ou mais
+        peso: 1.0
+        determinante: true
+    CriterioResponse:
+      type: object
+      description: Critério de aceitação do estudo.
+      properties:
+        id:
+          type: string
+          format: uuid
+        estudoId:
+          type: string
+          format: uuid
+        tipo:
+          $ref: '#/components/schemas/TipoCriterio'
+        titulo:
+          type: string
+        descricao:
+          type: string
+        peso:
+          type: number
+          format: float
+          nullable: true
+          description: Só em critérios de inclusão.
+        determinante:
+          type: boolean
+          nullable: true
+          description: Só em critérios de inclusão.
+      required:
+      - id
+      - estudoId
+      - tipo
+      - titulo
+      - descricao
+      example:
+        id: b1b1b1b1-b1b1-4b1b-8b1b-b1b1b1b1b1b1
+        estudoId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+        tipo: INCLUSAO
+        titulo: Idade adulta
+        descricao: Candidato com 18 anos ou mais
+        peso: 1.0
+        determinante: true
+    AcaoRequest:
+      type: object
+      description: Procedimento de uma visita planejada.
+      properties:
+        nome:
+          type: string
+          maxLength: 100
+        descricao:
+          type: string
+          maxLength: 500
+        categoria:
+          $ref: '#/components/schemas/CategoriaAcao'
+      required:
+      - nome
+      - categoria
+      example:
+        nome: Coleta de sangue
+        categoria: EXAME_LABORATORIAL
+    AcaoResponse:
+      type: object
+      description: Ação (procedimento) de uma visita.
+      properties:
+        id:
+          type: string
+          format: uuid
+        visitaId:
+          type: string
+          format: uuid
+        nome:
+          type: string
+        descricao:
+          type: string
+          nullable: true
+        categoria:
+          $ref: '#/components/schemas/CategoriaAcao'
+      required:
+      - id
+      - visitaId
+      - nome
+      - categoria
+    VisitaRequest:
+      type: object
+      description: Visita planejada do protocolo.
+      properties:
+        nome:
+          type: string
+          maxLength: 100
+        diaPrevisto:
+          type: integer
+          minimum: 0
+          description: Dia alvo da visita contado a partir da inclusão (dia 0).
+        tolerancia:
+          type: integer
+          minimum: 0
+          maximum: 30
+          description: Margem em dias, antes e depois do dia previsto.
+      required:
+      - nome
+      - diaPrevisto
+      - tolerancia
+      example:
+        nome: Retorno Mensal
+        diaPrevisto: 30
+        tolerancia: 5
+    VisitaResponse:
+      type: object
+      description: Visita planejada com as suas ações.
+      properties:
+        id:
+          type: string
+          format: uuid
+        estudoId:
+          type: string
+          format: uuid
+        nome:
+          type: string
+        diaPrevisto:
+          type: integer
+        tolerancia:
+          type: integer
+        ordem:
+          type: integer
+          minimum: 1
+          description: Posição cronológica, derivada do dia previsto.
+        acoes:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcaoResponse'
+      required:
+      - id
+      - estudoId
+      - nome
+      - diaPrevisto
+      - tolerancia
+      - ordem
+      - acoes
+    CandidatoRequest:
+      type: object
+      description: Cadastro ou edição de candidato (somente dados fictícios).
+      properties:
+        nomeFicticio:
+          type: string
+          maxLength: 120
+          description: Pseudônimo ou iniciais; nunca o nome civil.
+        dataNascimento:
+          type: string
+          format: date
+          description: No passado.
+        contato:
+          type: string
+          maxLength: 180
+          description: Opcional.
+      required:
+      - nomeFicticio
+      - dataNascimento
+      example:
+        nomeFicticio: J. S.
+        dataNascimento: '1990-04-12'
+    CandidatoResponse:
+      type: object
+      description: Candidato com o resumo da avaliação vigente e do consentimento.
+      properties:
+        id:
+          type: string
+          format: uuid
+        estudoId:
+          type: string
+          format: uuid
+        codigo:
+          type: string
+          description: Gerado pelo sistema (CAND-001...), único no estudo.
+        nomeFicticio:
+          type: string
+        dataNascimento:
+          type: string
+          format: date
+        contato:
+          type: string
+          nullable: true
+        usuarioId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Conta de usuário do participante, quando existir.
+        situacao:
+          $ref: '#/components/schemas/SituacaoCandidato'
+        resultadoAvaliacao:
+          allOf:
+          - $ref: '#/components/schemas/ResultadoAvaliacao'
+          nullable: true
+          description: Resultado da avaliação vigente; nulo se nunca foi avaliado.
+        dataAvaliacao:
+          type: string
+          format: date-time
+          nullable: true
+        consentimentoRegistrado:
+          type: boolean
+        dataConsentimento:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - id
+      - estudoId
+      - codigo
+      - nomeFicticio
+      - dataNascimento
+      - situacao
+      - consentimentoRegistrado
+      example:
+        id: c1c1c1c1-c1c1-4c1c-8c1c-c1c1c1c1c1c1
+        estudoId: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+        codigo: CAND-001
+        nomeFicticio: J. S.
+        dataNascimento: '1990-04-12'
+        situacao: ELEGIVEL
+        resultadoAvaliacao: APROVADO
+        dataAvaliacao: '2026-11-03T10:00:00'
+        consentimentoRegistrado: false
+    PaginaCandidatos:
+      type: object
+      description: Página de candidatos.
+      properties:
+        conteudo:
+          type: array
+          items:
+            $ref: '#/components/schemas/CandidatoResponse'
+        pagina:
+          type: integer
+          description: Base 0.
+        tamanho:
+          type: integer
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+      required:
+      - conteudo
+      - pagina
+      - tamanho
+      - totalElementos
+      - totalPaginas
+    RespostaAvaliacaoRequest:
+      type: object
+      description: Resposta a um critério do estudo.
+      properties:
+        criterioId:
+          type: string
+          format: uuid
+        aplica:
+          type: boolean
+          description: Se a condição do critério se aplica ao candidato. Em critério de exclusão, "se aplica" reprova.
+        observacao:
+          type: string
+          maxLength: 500
+      required:
+      - criterioId
+      - aplica
+    AvaliacaoRequest:
+      type: object
+      description: Avaliação de elegibilidade.
+      properties:
+        respostas:
+          type: array
+          items:
+            $ref: '#/components/schemas/RespostaAvaliacaoRequest'
+          description: Exatamente uma resposta por critério do estudo, sem faltar, repetir nem sobrar (senão 400).
+      required:
+      - respostas
+    RespostaAvaliacaoResponse:
+      type: object
+      description: Resposta registrada.
+      properties:
+        criterioId:
+          type: string
+          format: uuid
+        tipo:
+          $ref: '#/components/schemas/TipoCriterio'
+        titulo:
+          type: string
+        aplica:
+          type: boolean
+        observacao:
+          type: string
+          nullable: true
+      required:
+      - criterioId
+      - tipo
+      - titulo
+      - aplica
+    CriterioReprovador:
+      type: object
+      description: Critério que causou a reprovação.
+      properties:
+        criterioId:
+          type: string
+          format: uuid
+        tipo:
+          $ref: '#/components/schemas/TipoCriterio'
+        titulo:
+          type: string
+      required:
+      - criterioId
+      - tipo
+      - titulo
+    AvaliacaoResponse:
+      type: object
+      description: Avaliação de elegibilidade. Elegível = todos os critérios de inclusão determinantes atendidos
+        e nenhum de exclusão satisfeito.
+      properties:
+        id:
+          type: string
+          format: uuid
+        candidatoId:
+          type: string
+          format: uuid
+        dataAvaliacao:
+          type: string
+          format: date-time
+        avaliador:
+          type: string
+        resultado:
+          $ref: '#/components/schemas/ResultadoAvaliacao'
+        pontuacao:
+          type: number
+          format: float
+        vigente:
+          type: boolean
+          description: Só a avaliação mais recente é vigente; as demais formam o histórico.
+        respostas:
+          type: array
+          items:
+            $ref: '#/components/schemas/RespostaAvaliacaoResponse'
+        criteriosReprovadores:
+          type: array
+          items:
+            $ref: '#/components/schemas/CriterioReprovador'
+          description: Vazio quando aprovado.
+      required:
+      - id
+      - candidatoId
+      - dataAvaliacao
+      - avaliador
+      - resultado
+      - pontuacao
+      - vigente
+      - respostas
+      - criteriosReprovadores
+    ConsentimentoRequest:
+      type: object
+      description: Consentimento simulado. O corpo pode ser vazio.
+      properties:
+        dataHora:
+          type: string
+          format: date-time
+          description: 'Não pode ser futura; padrão: agora.'
+        versaoTermo:
+          type: string
+          maxLength: 60
+          description: 'Padrão: TCLE-SIMULADO v1.'
+    ConsentimentoResponse:
+      type: object
+      description: Comprovante do consentimento.
+      properties:
+        id:
+          type: string
+          format: uuid
+        candidatoId:
+          type: string
+          format: uuid
+        dataHora:
+          type: string
+          format: date-time
+        responsavel:
+          type: string
+        versaoTermo:
+          type: string
+      required:
+      - id
+      - candidatoId
+      - dataHora
+      - responsavel
+      - versaoTermo
+      example:
+        id: e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e1e1
+        candidatoId: c1c1c1c1-c1c1-4c1c-8c1c-c1c1c1c1c1c1
+        dataHora: '2026-11-03T10:15:00'
+        responsavel: Coordenador Fictício
+        versaoTermo: TCLE-SIMULADO v1
+    InclusaoRequest:
+      type: object
+      description: Pedido de inclusão de um candidato.
+      properties:
+        candidatoId:
+          type: string
+          format: uuid
+      required:
+      - candidatoId
+    ParticipacaoResponse:
+      type: object
+      description: Participante incluído no estudo.
+      properties:
+        id:
+          type: string
+          format: uuid
+        candidatoId:
+          type: string
+          format: uuid
+        codigo:
+          type: string
+        nomeFicticio:
+          type: string
+        estudoId:
+          type: string
+          format: uuid
+        dataInclusao:
+          type: string
+          format: date
+          description: Dia 0 do cronograma do participante.
+        incluidoPor:
+          type: string
+      required:
+      - id
+      - candidatoId
+      - codigo
+      - nomeFicticio
+      - estudoId
+      - dataInclusao
+      - incluidoPor
+    VagasResponse:
+      type: object
+      description: Resumo das vagas do estudo.
+      properties:
+        incluidos:
+          type: integer
+          format: int64
+        limite:
+          type: integer
+        restantes:
+          type: integer
+          format: int64
+      required:
+      - incluidos
+      - limite
+      - restantes
+      example:
+        incluidos: 1
+        limite: 2
+        restantes: 1

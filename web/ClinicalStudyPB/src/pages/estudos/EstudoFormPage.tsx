@@ -157,7 +157,7 @@ export function EstudoFormPage() {
             />
           </Campo>
           <Campo rotulo="Status" erro={erros.status}>
-            <select value={campos.status} onChange={(e) => alterar('status', e.target.value as StatusEstudo)}>
+            <select value={campos.status} disabled title="O estado muda pelo botão de avançar na página do estudo" onChange={(e) => alterar('status', e.target.value as StatusEstudo)}>
               {statusEstudo.map((status) => (
                 <option key={status} value={status}>
                   {rotulosStatus[status]}

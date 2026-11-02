@@ -1,0 +1,232 @@
+/* Telas do detalhe do estudo da Sprint 2: estado, critérios, visitas, candidatos e ficha */
+
+/* Avisos e alertas */
+.alerta--info {
+  border: 1px solid var(--cor-primaria);
+  background: var(--cor-primaria-fundo);
+  color: var(--cor-primaria-escura);
+}
+
+.alerta--ok {
+  border: 1px solid var(--cor-sucesso);
+  background: var(--cor-sucesso-fundo);
+  color: var(--cor-sucesso);
+}
+
+.etiqueta--perigo {
+  background: var(--cor-perigo-fundo);
+  color: var(--cor-perigo);
+}
+
+.pilha {
+  display: grid;
+  gap: var(--espaco-4);
+}
+
+.secao {
+  padding: var(--espaco-4);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+  box-shadow: var(--sombra);
+}
+
+.secao > h2,
+.secao > h3 {
+  margin-top: 0;
+}
+
+.secao--reservada {
+  border-style: dashed;
+  background: transparent;
+  box-shadow: none;
+  color: var(--cor-texto-suave);
+}
+
+/* Indicador dos quatro estados do estudo */
+.estados {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-2);
+  margin: 0 0 var(--espaco-4);
+  padding: 0;
+  list-style: none;
+}
+
+.estados__item {
+  padding: var(--espaco-1) var(--espaco-3);
+  border: 1px solid var(--cor-borda);
+  border-radius: 999px;
+  background: var(--cor-superficie);
+  color: var(--cor-texto-suave);
+  font-size: 0.875rem;
+}
+
+.estados__item--feito {
+  border-color: var(--cor-sucesso);
+  color: var(--cor-sucesso);
+}
+
+.estados__item--atual {
+  border-color: var(--cor-primaria);
+  background: var(--cor-primaria);
+  color: #fff;
+  font-weight: 600;
+}
+
+.estados-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-3);
+  margin-bottom: var(--espaco-4);
+}
+
+/* Diálogo de confirmação */
+.dialogo-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--espaco-4);
+  background: rgba(16, 24, 40, 0.5);
+}
+
+.dialogo {
+  width: min(480px, 100%);
+  padding: var(--espaco-6);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+  box-shadow: 0 12px 32px rgba(16, 24, 40, 0.3);
+}
+
+.dialogo h2 {
+  margin-top: 0;
+}
+
+/* Listas de critérios e cartões de visitas */
+.itens {
+  display: grid;
+  gap: var(--espaco-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--espaco-3);
+  padding: var(--espaco-3) var(--espaco-4);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+}
+
+.item__texto {
+  flex: 1 1 280px;
+}
+
+.item__titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-2);
+  font-weight: 600;
+}
+
+.item__descricao {
+  margin: var(--espaco-1) 0 0;
+  color: var(--cor-texto-suave);
+}
+
+.cartao-visita {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+}
+
+.cartao-visita > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-2);
+  padding: var(--espaco-3) var(--espaco-4);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.cartao-visita__corpo {
+  display: grid;
+  gap: var(--espaco-3);
+  padding: 0 var(--espaco-4) var(--espaco-4);
+}
+
+/* Avaliação de elegibilidade */
+.criterio-avaliacao {
+  display: grid;
+  gap: var(--espaco-2);
+  margin: 0 0 var(--espaco-3);
+  padding: var(--espaco-3) var(--espaco-4);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+}
+
+.criterio-avaliacao legend {
+  padding: 0 var(--espaco-2);
+  font-weight: 600;
+}
+
+.opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-4);
+}
+
+.opcoes label {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-2);
+}
+
+.resultado {
+  padding: var(--espaco-4);
+  border-radius: var(--raio);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.resultado--aprovado {
+  border: 1px solid var(--cor-sucesso);
+  background: var(--cor-sucesso-fundo);
+  color: var(--cor-sucesso);
+}
+
+.resultado--reprovado {
+  border: 1px solid var(--cor-perigo);
+  background: var(--cor-perigo-fundo);
+  color: var(--cor-perigo);
+}
+
+.tabela--candidatos td:first-child {
+  white-space: nowrap;
+}
+
+.paginacao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-3);
+  margin-top: var(--espaco-3);
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--espaco-4);
+  margin-bottom: var(--espaco-4);
+}

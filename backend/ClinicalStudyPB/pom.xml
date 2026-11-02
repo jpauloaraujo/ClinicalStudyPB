@@ -28,6 +28,10 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+		<!-- T64: cobertura mínima de linhas do código de negócio (domínio e serviços). Até 04/11 só informa;
+		     em 05/11 mudar jacoco.haltOnFailure para true (ou passar -Djacoco.haltOnFailure=true) -->
+		<jacoco.cobertura.minima>0.80</jacoco.cobertura.minima>
+		<jacoco.haltOnFailure>false</jacoco.haltOnFailure>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -136,6 +140,34 @@
 						<goals>
 							<goal>report</goal>
 						</goals>
+					</execution>
+					<!-- T64: regra de cobertura mínima, só sobre o código de negócio -->
+					<execution>
+						<id>verificar-cobertura</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+						<configuration>
+							<haltOnFailure>${jacoco.haltOnFailure}</haltOnFailure>
+							<!-- Só as classes de domínio e de serviços entram na conta desta regra -->
+							<includes>
+								<include>UEPB/ESWII/ClinicalStudyPB/domain/**</include>
+								<include>UEPB/ESWII/ClinicalStudyPB/service/**</include>
+							</includes>
+							<rules>
+								<rule>
+									<element>BUNDLE</element>
+									<limits>
+										<limit>
+											<counter>LINE</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>${jacoco.cobertura.minima}</minimum>
+										</limit>
+									</limits>
+								</rule>
+							</rules>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>
