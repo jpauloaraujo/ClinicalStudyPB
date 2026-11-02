@@ -14,8 +14,7 @@ public record CriterioRequest(
         @NotNull(message = "O tipo é obrigatório")
         TipoCriterio tipo,
 
-        @Schema(description = "Título curto do critério", example = "Idade entre 18 e 65 anos", maxLength = 120)
-        @NotBlank(message = "O título é obrigatório")
+        @Schema(description = "Título opcional; quando ausente, é derivado da descrição", example = "Idade entre 18 e 65 anos", maxLength = 120)
         @Size(max = 120, message = "O título deve ter no máximo 120 caracteres")
         String titulo,
 
@@ -30,4 +29,9 @@ public record CriterioRequest(
 
         @Schema(description = "Só para INCLUSAO: se o critério DEVE ser atendido para o candidato ser elegível (padrão true). Ignorado em EXCLUSAO", example = "true")
         Boolean determinante) {
+
+    public CriterioRequest {
+        titulo = titulo == null ? null : titulo.trim();
+        descricao = descricao == null ? null : descricao.trim();
+    }
 }

@@ -113,14 +113,14 @@ class EstudoServiceTest {
     void atualizaEstudoExistente() {
         Estudo existente = new Estudo();
         existente.setId(UUID.randomUUID());
-        when(estudoRepository.findById(existente.getId())).thenReturn(Optional.of(existente));
+        when(estudoRepository.buscarComBloqueio(existente.getId())).thenReturn(Optional.of(existente));
 
         EstudoRequest dados = new EstudoRequest("Novo título", "Novo objetivo", pesquisador.getId(),
-                null, null, 99, StatusEstudo.RECRUTAMENTO);
+                null, null, 99, StatusEstudo.PLANEJAMENTO);
         Estudo atualizado = service.atualizar(existente.getId(), dados);
 
         assertThat(atualizado.getId()).isEqualTo(existente.getId());
         assertThat(atualizado.getTitulo()).isEqualTo("Novo título");
-        assertThat(atualizado.getStatus()).isEqualTo(StatusEstudo.RECRUTAMENTO);
+        assertThat(atualizado.getStatus()).isEqualTo(StatusEstudo.PLANEJAMENTO);
     }
 }

@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.EstudoRequest;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.PerfilUsuario;
+import UEPB.ESWII.ClinicalStudyPB.domain.enums.StatusEstudo;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Estudo;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Usuario;
 import UEPB.ESWII.ClinicalStudyPB.repository.CandidatoRepository;
@@ -43,12 +44,19 @@ public class EstudoService {
     public Estudo criar(EstudoRequest dados) {
         Estudo estudo = new Estudo();
         preencher(estudo, dados);
+        estudo.setStatus(StatusEstudo.PLANEJAMENTO);
         estudo.setId(null);
         return estudoRepository.save(estudo);
     }
 
     public Estudo atualizar(UUID id, EstudoRequest dados) {
-        Estudo estudo = buscarPorId(id);
+        // Participa do mesmo bloqueio da transição para não restaurar um estado antigo em um PUT concorrente.
+        Estudo estudo = estudoRepository.buscarComBloqueio(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Estudo não encontrado: " + id));
+        if (dados.status() != estudo.getStatus()) {
+            throw new ConflitoRegraException("ESTADO_EXIGE_TRANSICAO",
+                    "Use o endpoint de transições para alterar o estado do estudo");
+        }
         preencher(estudo, dados);
         return estudoRepository.save(estudo);
     }
@@ -80,6 +88,5 @@ public class EstudoService {
         estudo.setDataInicio(dados.dataInicio());
         estudo.setDataFim(dados.dataFim());
         estudo.setLimiteParticipantes(dados.limiteParticipantes());
-        estudo.setStatus(dados.status());
     }
 }

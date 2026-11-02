@@ -457,6 +457,54 @@ Com o backend em execução (porta padrão `8081`):
 
 Para testar endpoints protegidos no Swagger, faça o login em `POST /api/auth/login`, copie o `token` e cole em **Authorize**. Cada endpoint exige um perfil (ver a tabela de permissões na seção 2).
 
+### Sprint 2 — T42, T45, T48, T53, T57 e T63
+
+O contrato dessas operações está em [docs/sprint2/OpanAPI.yaml](docs/sprint2/OpanAPI.yaml). Os caminhos canônicos permanecem em português, como no backend existente:
+
+| Task | Uso da API |
+|---|---|
+| **T42** | `POST /api/estudos/{id}/transicoes`, com `{"novoEstado":"RECRUTAMENTO"}`, devolve `200` e o estudo atualizado. Só pesquisador; exige o próximo estado e, para sair de planejamento, um critério de inclusão e uma visita. Cada avanço grava usuário e data no histórico. |
+| **T45** | `GET/POST /api/estudos/{estudoId}/criterios`, `PUT/DELETE .../criterios/{id}`. Tipo obrigatório e descrição de 5 a 500 caracteres após `trim`; descrição repetida no mesmo tipo/estudo é recusada ignorando maiúsculas. Título opcional, derivado da descrição quando ausente. |
+| **T48** | `GET/POST /api/estudos/{estudoId}/visitas`, `PUT/DELETE .../visitas/{id}` e `POST /api/visitas/{visitaId}/acoes`, `PUT/DELETE .../acoes/{id}`. A listagem traz as visitas ordenadas pelo dia, com suas atividades em `acoes`; excluir visita remove suas atividades. |
+| **T53** | Testes de candidatos: regras isoladas, datas, códigos sequenciais por estudo, permissões, paginação, filtro e erros HTTP. |
+| **T57** | `POST/GET /api/candidatos/{candidatoId}/consentimento`. Registro pelo coordenador; consulta também pelo pesquisador. Corpo opcional `{"dataHora":"2026-11-01T10:30:00","versaoTermo":"TCLE-SIMULADO v1"}`; sem valores, usa agora e `app.consentimento.versao-termo`. Responsável vem do token. |
+| **T63** | Script repetível Flyway de demonstração, carregado somente com o perfil `demo`. |
+
+O estudo sempre nasce em `PLANEJAMENTO`. O `PUT` comum não avança nem retrocede estados: enviar um status diferente resulta em `409 ESTADO_EXIGE_TRANSICAO`. Critérios, visitas e atividades só podem ser alterados em planejamento pelo pesquisador; o coordenador pode consultar. O consentimento exige recrutamento, não aceita data futura nem segundo registro e não depende de avaliação anterior; candidato já incluído não pode registrar consentimento.
+
+Erros tratados pela API expõem `status`, `codigoRegra`, `mensagem` e `errosCampo` (lista de `{campo, erro}`). Os aliases `erro` e `codigo` foram preservados para os clientes existentes. Validações retornam `400`, perfil sem permissão `403`, recurso inexistente `404` e conflitos de regra `409`; ausência de token continua retornando `401` pela segurança.
+
+**Testes do backend**, a partir de `backend/ClinicalStudyPB` (JDK 21 ou superior):
+
+```powershell
+.\mvnw.cmd test
+.\mvnw.cmd '-Dtest=CandidatoServiceTest,CandidatoIntegrationTest' test
+```
+
+Em Linux/macOS, use `./mvnw` no lugar de `.\mvnw.cmd`. A suíte local usa H2; a execução contra PostgreSQL é configurada no workflow. As telas de outras tasks da Sprint 2 não fazem parte dessas seis entregas.
+
+**Demonstração da T63:** crie um banco PostgreSQL dedicado, por exemplo `clinicalstudypb_demo`, e configure `DB_USERNAME`, `DB_PASSWORD` e `JWT_SECRET` como descrito na seção de instalação. Então, no PowerShell:
+
+```powershell
+cd backend/ClinicalStudyPB
+$env:SPRING_PROFILES_ACTIVE='demo'
+$env:DB_URL='jdbc:postgresql://localhost:5432/clinicalstudypb_demo'
+.\mvnw.cmd spring-boot:run
+```
+
+Para reutilizar configurações locais de desenvolvimento, o perfil pode ser `dev,demo`. A localização `db/demo` é adicional às migrations comuns e não é carregada sem `demo`. Como os dados já inseridos ficam no banco mesmo após desativar o perfil, mantenha o banco de demonstração separado dos demais ambientes. O script evita duplicação quando reaplicado e não reinicia o progresso da demonstração.
+
+Contas **fictícias** adicionais, todas com senha **`senha-de-teste`** armazenada como hash BCrypt:
+
+| Perfil | E-mail |
+|---|---|
+| Administrador | `demo.admin@clinicalstudy.test` |
+| Pesquisador | `demo.pesquisador@clinicalstudy.test` |
+| Coordenador | `demo.coordenador@clinicalstudy.test` |
+| Participante | `demo.participante@clinicalstudy.test` |
+
+O conjunto traz dois estudos com critérios e visitas: um em planejamento (`d6300000-0000-4000-8000-000000000101`) e outro em recrutamento (`d6300000-0000-4000-8000-000000000102`), além de seis candidatos fictícios em situações diferentes. No segundo, uma das duas vagas já está ocupada; `CAND-004` e `CAND-006` estão elegíveis e consentidos. Incluir um ocupa a última vaga; tentar incluir o outro demonstra o bloqueio por `VAGAS_ESGOTADAS`.
+
 ## 8. Releases
 
 | Release | Sprints | Documento |
