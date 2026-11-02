@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import UEPB.ESWII.ClinicalStudyPB.service.ConflitoRegraException;
 import UEPB.ESWII.ClinicalStudyPB.service.RecursoNaoEncontradoException;
 import UEPB.ESWII.ClinicalStudyPB.service.RegraNegocioException;
 
@@ -36,6 +37,13 @@ public class ApiExceptionHandler {
     @ExceptionHandler(RegraNegocioException.class)
     public ResponseEntity<Map<String, String>> tratarRegraNegocio(RegraNegocioException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("erro", ex.getMessage()));
+    }
+
+    // Regra de recrutamento violada: 409 com um código estável para a tela explicar o motivo
+    @ExceptionHandler(ConflitoRegraException.class)
+    public ResponseEntity<Map<String, String>> tratarConflito(ConflitoRegraException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("erro", ex.getMessage(), "codigo", ex.getCodigo()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
