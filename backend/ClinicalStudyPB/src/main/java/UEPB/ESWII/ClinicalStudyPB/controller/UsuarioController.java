@@ -6,6 +6,8 @@ import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -79,7 +81,7 @@ public class UsuarioController {
     @PutMapping("/{id}")
     @Operation(
             summary = "Atualizar usuário existente",
-            description = "Atualiza os dados cadastrais, perfil e estado ativo. A senha é opcional.")
+            description = "Atualiza os dados cadastrais, perfil e estado ativo. A senha é opcional. O administrador não pode desativar nem alterar o perfil da própria conta, e o último administrador ativo não pode ser desativado nem rebaixado.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Usuário atualizado com sucesso"),
             @ApiResponse(responseCode = "400", description = "Dados inválidos ou conflito de e-mail"),
@@ -88,20 +90,27 @@ public class UsuarioController {
     public UsuarioResponse atualizar(
             @Parameter(description = "UUID do usuário a ser atualizado", example = "22222222-2222-4222-8222-222222222222")
             @PathVariable UUID id,
-            @Valid @RequestBody UsuarioAtualizacaoRequest dados) {
-        return UsuarioResponse.de(usuarioService.atualizar(id, dados));
+            @Valid @RequestBody UsuarioAtualizacaoRequest dados,
+            @AuthenticationPrincipal Jwt jwt) {
+        return UsuarioResponse.de(usuarioService.atualizar(id, dados, idDe(jwt)));
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Excluir usuário", description = "Remove o registro de um usuário pelo identificador UUID.")
+    @Operation(summary = "Excluir usuário", description = "Remove o registro de um usuário pelo identificador UUID. Não permite excluir a própria conta, o último administrador ativo nem quem é responsável por estudos.")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Usuário excluído com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Exclusão não permitida pelas regras de negócio"),
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
     })
     public ResponseEntity<Void> excluir(
             @Parameter(description = "UUID do usuário", example = "44444444-4444-4444-8444-444444444444")
-            @PathVariable UUID id) {
-        usuarioService.excluir(id);
+            @PathVariable UUID id,
+            @AuthenticationPrincipal Jwt jwt) {
+        usuarioService.excluir(id, idDe(jwt));
         return ResponseEntity.noContent().build();
+    }
+
+    private static UUID idDe(Jwt jwt) {
+        return jwt == null ? null : UUID.fromString(jwt.getSubject());
     }
 }

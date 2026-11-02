@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { definirAoExpirarSessao, lerToken, salvarToken } from '../services/api'
+import { extrairErro } from '../services/erros'
 import { autenticacaoApi } from '../services/recursos'
 import { perfisWeb, type UsuarioSessao } from '../types/usuario'
 import { PerfilSemAcessoWebError, SessaoContext, tokenExpirado } from './sessao'
@@ -25,8 +26,21 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     }
     autenticacaoApi
       .usuarioAtual()
-      .then((dados) => setUsuario(perfisWeb.includes(dados.perfil) ? dados : null))
-      .catch(() => salvarToken(null))
+      .then((dados) => {
+        if (perfisWeb.includes(dados.perfil)) {
+          setUsuario(dados)
+        } else {
+          salvarToken(null)
+        }
+      })
+      .catch((erro) => {
+        // Só descarta o token se a API o rejeitou; com a API fora do ar ele é mantido
+        // e a restauração é tentada de novo na próxima abertura
+        const status = extrairErro(erro).status
+        if (status === 401 || status === 403 || status === 404) {
+          salvarToken(null)
+        }
+      })
       .finally(() => setCarregando(false))
   }, [])
 

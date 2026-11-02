@@ -80,6 +80,7 @@ Aplicação Spring Boot com pacote raiz `UEPB.ESWII.ClinicalStudyPB`, organizada
 | `db/migration` | Migrations SQL versionadas do Flyway (`V1__create_initial_tables.sql`, `V2__seed_initial_data.sql`) | ✅ concluído (T09) |
 | DTOs e validações | Objetos de entrada/saída da API com Bean Validation (`EstudoRequest`, `Usuario*Request`, `Login*Request`) | ✅ concluído (T15 / T27) |
 | Segurança | Configuração do Spring Security (`SecurityConfig`), autenticação stateless por JWT (`TokenService`), endpoints `/api/auth/login` e `/api/auth/me` (`AuthController`) e senhas com BCrypt | ✅ concluído (T19 / T20 — Tasks 3060 / 3063) |
+| Recrutamento (RF05 a RF11) | Critérios (inclusão/exclusão), visitas planejadas e ações, candidatos, avaliação de elegibilidade, consentimento simulado e inclusão de participantes, com migration `V4` e regras próprias; erros de regra respondem `409` com `{"erro", "codigo"}`. Ver [a documentação do domínio](<docs/sprint2/Implementação do modelo de domínio de recrutamento.md>) | ✅ backend concluído (telas ainda não) |
 | Autorização por perfil | `@EnableMethodSecurity` + `@PreAuthorize` nos controllers, seguindo a matriz RBAC; acesso negado responde `403` com `{"erro": "Acesso negado para o seu perfil"}` | ✅ concluído (T24) |
 
 
@@ -94,6 +95,9 @@ Dependências principais: Spring Web MVC, Spring Data JPA, Flyway (`spring-boot-
 | `/api/usuarios/**` (todas as operações) | ✅ | ❌ | ❌ | ❌ |
 | `GET /api/estudos`, `GET /api/estudos/{id}` | ❌ | ✅ | ✅ | ❌ |
 | `POST`, `PUT`, `DELETE /api/estudos/**` | ❌ | ✅ | ❌ | ❌ |
+| `GET` de critérios, visitas, candidatos, avaliações, consentimento e participantes | ❌ | ✅ | ✅ | ❌ |
+| `POST`/`PUT`/`DELETE` de critérios e visitas/ações (só com o estudo em planejamento) | ❌ | ✅ | ❌ | ❌ |
+| `POST`/`PUT` de candidatos, avaliações, consentimento e inclusão de participantes (só com o estudo em recrutamento) | ❌ | ❌ | ✅ | ❌ |
 
 Sem token válido a API responde `401`; com token de um perfil sem permissão, `403`.
 
@@ -134,10 +138,10 @@ Diagramas de arquitetura (Mermaid) — T01 / T03 (ver [docs/arquitetura.md](docs
 
 | RF | Comportamento | Casos de erro e validação |
 |---|---|---|
-| RF01 | O administrador lista, cadastra, edita (nome, e-mail, perfil, situação e senha opcional) e exclui usuários em `/usuarios` | Campos obrigatórios, e-mail inválido, senha com menos de 8 caracteres e e-mail já cadastrado ("Já existe um usuário com esse e-mail", vindo da API). Não é possível excluir a própria conta |
+| RF01 | O administrador lista, cadastra, edita (nome, e-mail, perfil, situação e senha opcional) e exclui usuários em `/usuarios` | Campos obrigatórios, e-mail inválido, senha com menos de 8 caracteres e e-mail já cadastrado ("Já existe um usuário com esse e-mail", vindo da API; maiúsculas e minúsculas não diferenciam e-mails). Regras da API: o administrador não exclui, desativa nem rebaixa a própria conta, e o último administrador ativo não pode ser removido, desativado nem rebaixado |
 | RF02 | Login com e-mail e senha na web (`/login`) e no app; a sessão é restaurada ao reabrir; "Sair" descarta o token | "Credenciais inválidas" (senha errada, e-mail inexistente ou conta inativa); token expirado leva de volta ao login. A web recusa o participante e o app recusa os demais perfis |
 | RF03 | Menu e rotas conforme o perfil; a API aplica as mesmas regras | Rota sem permissão mostra "Acesso negado"; a API responde `403` |
-| RF04 | O pesquisador cadastra, edita e exclui estudos em `/estudos` (é o responsável pelos estudos que cria); o coordenador só consulta | Título, objetivo e limite (≥ 1) obrigatórios; "A data final não pode ser anterior à data inicial" aparece no campo da data |
+| RF04 | O pesquisador cadastra, edita e exclui estudos em `/estudos` (é o responsável pelos estudos que cria; a API só aceita um usuário com perfil pesquisador como responsável); o coordenador só consulta | Título, objetivo e limite (≥ 1) obrigatórios; "A data final não pode ser anterior à data inicial" aparece no campo da data |
 
 > _Capturas de tela das interfaces ainda precisam ser adicionadas (em `docs/imagens/`) para a entrega da Release 1._
 
@@ -256,6 +260,15 @@ Para desenvolvimento local, copie `src/main/resources/application-dev.properties
    - O token emitido tem validade de **30 minutos** (configurável via `JWT_EXPIRATION_MINUTES`).
    - Nesta implementação mínima stateless, o logout é executado no lado do cliente (web/mobile) ao descartar o token armazenado.
    - O token permanece criptograficamente válido no servidor até o término de seu período de validade (`exp`). Usuários desativados têm novas tentativas de login imediatamente rejeitadas no endpoint `/api/auth/login`.
+   - **Risco aceito:** desativar uma conta ou mudar o perfil dela **não** derruba o token já emitido; o acesso antigo continua até o token vencer (no máximo 30 minutos). Revogar na hora exigiria consultar o banco a cada requisição ou manter uma lista de tokens revogados, o que está fora do escopo da Sprint 1. Se o prazo for um problema, reduza `JWT_EXPIRATION_MINUTES`.
+   - A web e o app só descartam o token salvo quando a API o rejeita (`401`, `403` ou `404`). Se o backend estiver fora do ar ao abrir, o token é mantido e a restauração é tentada de novo na próxima abertura.
+
+4. **Regras de negócio da API que valem para qualquer cliente:**
+   - **E-mail:** é gravado e consultado em minúsculas (`A@x.com` e `a@x.com` são a mesma conta; o login aceita qualquer caixa). A migration `V3` converte os e-mails já existentes. Um cadastro simultâneo com o mesmo e-mail também responde `400` com "Já existe um usuário com esse e-mail".
+   - **Contas de administrador:** o administrador logado não pode excluir, desativar nem alterar o perfil da própria conta, e o sistema sempre mantém ao menos um administrador ativo (`400`).
+   - **Responsável do estudo:** deve ser um usuário com perfil `PESQUISADOR`; outro perfil responde `400` ("O responsável pelo estudo deve ter o perfil de pesquisador").
+   - **Estudos sem dono:** o RF04 não exige dono, então **qualquer pesquisador pode editar e excluir qualquer estudo**, inclusive os de outro pesquisador. Decisão de produto a validar com a equipe (ver [docs/status-sprint1.md](docs/status-sprint1.md), seção 4).
+   - **Erros no mesmo formato:** JSON malformado, valor de enum inválido (perfil, status) e UUID inválido na URL respondem `400` com `{"erro": "..."}`, como as demais validações, com mensagens em português também nos estudos.
 
 ### Aplicação web
 
@@ -321,17 +334,20 @@ cd backend/ClinicalStudyPB
 ./mvnw test
 ```
 
-No Windows (PowerShell): `mvnw.cmd test`. O relatório de cobertura do JaCoCo é gerado em `target/site/jacoco/index.html`.
+No Windows (PowerShell): `mvnw.cmd test`. Os testes locais usam H2; a CI roda os mesmos testes também contra PostgreSQL real (job "Backend (testes no PostgreSQL)", abaixo). O relatório de cobertura do JaCoCo é gerado em `target/site/jacoco/index.html`.
 
-**Resultado em 26/10/2026:** 62 testes, 0 falhas, 0 erros. Cobertura de linhas do código de negócio: **99%** (controllers 100%, services 100%, segurança 97%). Ficam fora da medição a classe `main`, `config` e os DTOs.
+**Resultado em 01/11/2026:** 91 testes, 0 falhas, 0 erros. Cobertura de linhas do código de negócio: **93%** (controllers 94%, services 91%, segurança 97%, domínio 100%). Ficam fora da medição a classe `main`, `config` e os DTOs.
 
 Suítes atuais:
 - `ClinicalStudyPbApplicationTests`: validação do contexto Spring Boot, Flyway e Hibernate (`ddl-auto=validate`).
-- `FlywayMigrationIntegrationTest`: verificação da execução das migrations `V1` e `V2`, integridade dos usuários de seed (4 perfis + hash BCrypt) e estudos clínicos iniciais.
+- `FlywayMigrationIntegrationTest`: verificação da execução das migrations `V1` e `V2` (a `V3` normaliza e-mails para minúsculas e a `V4` cria as tabelas do recrutamento), integridade dos usuários de seed (4 perfis + hash BCrypt) e estudos clínicos iniciais.
 - `OpenApiDocumentationIntegrationTest`: verificação da especificação OpenAPI 3 (`/v3/api-docs`), esquema de segurança Bearer JWT e acesso ao Swagger UI (`/swagger-ui/index.html`).
 - `UsuarioDtoValidationTest`: testes unitários de validação Bean Validation dos DTOs de cadastro e atualização de usuários.
 - `UsuarioIntegrationTest`: testes de integração do CRUD de usuários com autenticação simulada (`@WithMockUser`), incluindo o bloqueio da exclusão de um usuário responsável por estudos.
 - `PermissaoAcessoIntegrationTest` (T26): 15 testes com tokens reais dos 4 perfis do seed, cobrindo a matriz de permissões de usuários e estudos (`200`/`201` quando permitido, `403` quando negado) e o `/api/auth/me`.
+- `DominioRecrutamentoTest`: 10 testes unitários das regras de domínio (critérios de inclusão e exclusão, regra de elegibilidade, janela das visitas planejadas).
+- `RecrutamentoIntegrationTest`: 11 testes com tokens reais do fluxo RF05 a RF11 (critérios e visitas, candidatos, avaliação com histórico, consentimento, inclusão, vagas esgotadas, permissões por perfil).
+- `RegrasDeContaIntegrationTest`: 8 testes com tokens reais sobre a proteção das contas (administrador não exclui, desativa nem rebaixa a si mesmo; último administrador ativo protegido), responsável do estudo só pesquisador, e-mail sem diferenciar maiúsculas (cadastro e login), `400` padronizado para JSON malformado, enum e UUID inválidos e mensagens de validação de estudo em português.
 - `EstudoServiceTest` (T30): 6 testes unitários das regras do serviço de estudos (datas, responsável inexistente, criação e atualização), com Mockito.
 - `EstudoIntegrationTest` (T30): 8 testes de integração do CRUD de estudos (cadastro com `Location`, consulta, listagem do seed, atualização, exclusão, validações `400` e `404`).
 - `AuthenticationIntegrationTest`: 13 testes de integração cobrindo login com credenciais válidas, senha incorreta, e-mail inexistente, usuário inativo, campos obrigatórios ausentes, acesso sem token, token malformado, adulterado, expirado, com emissor inválido, consumo com token válido, acesso público ao Swagger UI e compatibilidade do BCrypt (`PasswordEncoder`).
@@ -354,15 +370,77 @@ Comando para rodar exclusivamente os testes de autenticação e segurança:
 
 ### Web e mobile
 
-Ainda não há testes automatizados de componentes nem E2E (a especificação pede, mas não estão no backlog da Sprint 1). Na CI, web e mobile passam por lint e verificação de tipos.
+- **Web, componentes:** Vitest + Testing Library (`npm test` em `web/ClinicalStudyPB`), por exemplo o detalhe do estudo com abas (T39). Os testes E2E ficam em `e2e/` e **não** rodam no Vitest.
+- **Web, E2E:** Playwright, descrito na próxima seção.
+- **Mobile:** ainda sem testes automatizados; na CI passa por lint e verificação de tipos. O E2E do app mobile está previsto para a Sprint 3.
+
+### Testes E2E (Playwright, T65)
+
+Testes de ponta a ponta da aplicação web, rodando um navegador de verdade contra o backend e o banco reais. Hoje cobrem login válido (administrador, pesquisador e coordenador), login inválido (senha errada e e-mail inexistente) e logout. O participante usa o app mobile e fica de fora.
+
+**Pré-requisitos:** Node 22 ou superior, JDK 21 e um PostgreSQL com o banco `clinicalstudypb` (os mesmos da seção de instalação do backend).
+
+**1. Subir o ambiente** (três terminais):
+
+```bash
+# Terminal 1: backend na porta 8081 (com DB_PASSWORD e JWT_SECRET definidos, ver seção do backend)
+cd backend/ClinicalStudyPB
+./mvnw spring-boot:run
+
+# Terminal 2: web na porta 5173
+cd web/ClinicalStudyPB
+npm ci
+npm run dev
+```
+
+**2. Preparar os testes** (uma vez por máquina):
+
+```bash
+cd web/ClinicalStudyPB
+npx playwright install chromium     # no Linux: npx playwright install --with-deps chromium
+cp .env.e2e.example .env.e2e        # no PowerShell: Copy-Item .env.e2e.example .env.e2e
+```
+
+**3. Rodar:**
+
+| Comando (em `web/ClinicalStudyPB`) | O que faz |
+|---|---|
+| `npm run test:e2e` | Roda todos os testes (Chromium sem janela) |
+| `npx playwright test e2e/tests/login.spec.ts` | Roda só um arquivo |
+| `npx playwright test -g "logout"` | Roda só os testes cujo nome contém o texto |
+| `npm run test:e2e:headed` | Roda com o navegador visível |
+| `npm run test:e2e:report` | Abre o relatório HTML da última execução |
+| `npx playwright test --repeat-each=10` | Repete cada teste 10 vezes (checagem de estabilidade) |
+
+**Variáveis** (arquivo `.env.e2e`, ignorado pelo Git; o `.env.e2e.example` traz valores fictícios). Se alguma faltar, o setup falha dizendo qual.
+
+| Variável | Para que serve |
+|---|---|
+| `E2E_BASE_URL` | URL da aplicação web (padrão do exemplo: `http://localhost:5173`) |
+| `E2E_API_URL` | URL do backend (`http://localhost:8081`) |
+| `E2E_BOOTSTRAP_EMAIL` / `E2E_BOOTSTRAP_SENHA` | Administrador do seed `V2`, usado só para criar os usuários E2E |
+| `E2E_<PERFIL>_EMAIL` / `E2E_<PERFIL>_SENHA` | Usuário de teste de cada perfil (`ADMINISTRADOR`, `PESQUISADOR`, `COORDENADOR`) |
+
+**Como funciona:**
+- **Setup a cada execução** (`e2e/setup/auth.setup.ts`): entra pela API como o administrador do seed, cria os usuários `e2e.*@clinicalstudy.test` (ou, se já existem, redefine senha e situação, então pode rodar quantas vezes quiser), faz login por API de cada perfil e salva o token em `e2e/.auth/<perfil>.json`. A senha fica como hash BCrypt no banco, como qualquer usuário.
+- **Sessão reaproveitada:** um arquivo de teste escolhe o perfil com `test.use(comoPerfil('PESQUISADOR'))` e já abre as páginas autenticado, sem passar pela tela de login. Os testes de login não usam sessão salva.
+- **Estrutura:** `e2e/pages` (page objects, sem seletores soltos nos testes; localizadores por papel e rótulo), `e2e/fixtures` (o `test` com os page objects e `comoPerfil`), `e2e/setup`, `e2e/support` (variáveis e caminhos) e `e2e/tests` (`*.spec.ts`). Para um novo cenário: crie o page object, registre-o em `e2e/fixtures/index.ts` e escreva o `*.spec.ts`; a configuração e o workflow não mudam.
+- **Convenções:** cada teste é independente (contexto novo, sem depender da ordem); nada de `waitForTimeout`, só as esperas automáticas e os `expect` do Playwright; e-mails de cenários de erro são inexistentes, para não bloquear contas reais.
+- **Falhas:** geram captura de tela e vídeo; no CI (2 repetições) também o trace, que abre com `npx playwright show-trace <arquivo>.zip`.
+
+Explicação detalhada de cada arquivo e do fluxo: [docs/sprint2/T65 — Implementação da infraestrutura E2E.md](<docs/sprint2/T65 — Implementação da infraestrutura E2E.md>).
+
+**No CI:** o job `E2E (Playwright)` de `.github/workflows/ci.yml` roda em todo push e pull request na `main` e na `develop`. Ele sobe um PostgreSQL como serviço, empacota e inicia o backend, constrói e serve o web (`vite preview`), espera `/v3/api-docs` e `/login` responderem, instala o Chromium (`npx playwright install --with-deps chromium`) e executa `npm run test:e2e` com o `.env.e2e.example`. O relatório HTML e os traces ficam no artefato `playwright-report` (14 dias).
 
 ### Integração contínua (T05)
 
-O workflow `.github/workflows/ci.yml` roda a cada push e pull request na `main`, com três jobs:
+O workflow `.github/workflows/ci.yml` roda a cada push e pull request na `main` e na `develop`, com cinco jobs:
 
 | Job | Passos |
 |---|---|
 | Backend | JDK 21 → `./mvnw -B verify` (testes + JaCoCo) → publica os relatórios do Surefire como artefato |
+| Backend (PostgreSQL) | JDK 21 → serviço `postgres:16` → `./mvnw -B test` com `SPRING_DATASOURCE_*` apontando para o PostgreSQL, que valida as migrations e as consultas no banco de produção |
+| E2E | PostgreSQL como serviço → backend empacotado e iniciado → web construído e servido → Chromium → `npm run test:e2e` → publica relatório e traces como artefato (ver "Testes E2E") |
 | Web | Node 22 → `npm ci` → `npm run lint` → `npm run build` |
 | Mobile | Node 22 → `npm ci` → `npm run lint` → `npm run typecheck` |
 
@@ -433,7 +511,7 @@ ClinicalStudyPB/
 │           └── contexts/         # Sessão do participante
 ├── docs/                         # Especificação, arquitetura, planejamento e guias
 ├── releases/                     # (a criar) Documentação de cada release
-├── .github/workflows/ci.yml      # Pipeline de CI (backend, web e mobile)
+├── .github/workflows/ci.yml      # Pipeline de CI (backend, E2E, web e mobile)
 └── README.md
 ```
 

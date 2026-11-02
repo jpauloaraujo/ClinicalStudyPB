@@ -7,8 +7,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.EstudoRequest;
+import UEPB.ESWII.ClinicalStudyPB.domain.enums.PerfilUsuario;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Estudo;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Usuario;
+import UEPB.ESWII.ClinicalStudyPB.repository.CandidatoRepository;
 import UEPB.ESWII.ClinicalStudyPB.repository.EstudoRepository;
 import UEPB.ESWII.ClinicalStudyPB.repository.UsuarioRepository;
 
@@ -18,10 +20,13 @@ public class EstudoService {
 
     private final EstudoRepository estudoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final CandidatoRepository candidatoRepository;
 
-    public EstudoService(EstudoRepository estudoRepository, UsuarioRepository usuarioRepository) {
+    public EstudoService(EstudoRepository estudoRepository, UsuarioRepository usuarioRepository,
+            CandidatoRepository candidatoRepository) {
         this.estudoRepository = estudoRepository;
         this.usuarioRepository = usuarioRepository;
+        this.candidatoRepository = candidatoRepository;
     }
 
     @Transactional(readOnly = true)
@@ -49,7 +54,13 @@ public class EstudoService {
     }
 
     public void excluir(UUID id) {
-        estudoRepository.delete(buscarPorId(id));
+        Estudo estudo = buscarPorId(id);
+        // A FK candidatos.estudo_id é ON DELETE RESTRICT; sem esta checagem a API responderia 500
+        if (candidatoRepository.existsByEstudoId(id)) {
+            throw new ConflitoRegraException("ESTUDO_COM_CANDIDATOS",
+                    "Não é possível excluir: o estudo já tem candidatos cadastrados");
+        }
+        estudoRepository.delete(estudo);
     }
 
     private void preencher(Estudo estudo, EstudoRequest dados) {
@@ -60,6 +71,9 @@ public class EstudoService {
         Usuario responsavel = usuarioRepository.findById(dados.responsavelId())
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         "Responsável não encontrado: " + dados.responsavelId()));
+        if (responsavel.getPerfil() != PerfilUsuario.PESQUISADOR) {
+            throw new RegraNegocioException("O responsável pelo estudo deve ter o perfil de pesquisador");
+        }
         estudo.setTitulo(dados.titulo());
         estudo.setObjetivo(dados.objetivo());
         estudo.setResponsavel(responsavel);

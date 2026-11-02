@@ -1,0 +1,325 @@
+# docs/api/openapi-sprint2.yaml
+openapi: 3.0.3
+info:
+  title: ClinicalStudyPB API - Sprint 2
+  version: 2.0.0
+  description: Contrato de API para gerenciamento de estudos, critérios, visitas e inclusão de participantes.
+paths:
+  /api/studies/{studyId}/status:
+    patch:
+      summary: Atualiza o estado do estudo
+      parameters:
+        - name: studyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudyStatusUpdateDTO'
+      responses:
+        '204':
+          description: Estado atualizado com sucesso
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /api/studies/{studyId}/criteria:
+    post:
+      summary: Adiciona critério ao estudo
+      parameters:
+        - name: studyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriterionRequestDTO'
+      responses:
+        '201':
+          description: Critério criado
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/studies/{studyId}/planned-visits:
+    post:
+      summary: Adiciona visita planejada e suas atividades
+      parameters:
+        - name: studyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlannedVisitRequestDTO'
+      responses:
+        '201':
+          description: Visita criada
+
+  /api/studies/{studyId}/capacity-summary:
+    get:
+      summary: Resumo de vagas do estudo
+      parameters:
+        - name: studyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Resumo de vagas retornado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapacitySummaryDTO'
+
+  /api/candidates/{candidateId}/eligibility-evaluations:
+    post:
+      summary: Registra avaliação de elegibilidade
+      parameters:
+        - name: candidateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EligibilityEvaluationRequestDTO'
+      responses:
+        '201':
+          description: Avaliação registrada
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /api/candidates/{candidateId}/consents:
+    post:
+      summary: Registra consentimento do candidato
+      parameters:
+        - name: candidateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsentRequestDTO'
+      responses:
+        '201':
+          description: Consentimento registrado
+
+  /api/candidates/{candidateId}/participations:
+    post:
+      summary: Efetiva a inclusão do candidato (Participação)
+      parameters:
+        - name: candidateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: Participação criada com sucesso
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+components:
+  schemas:
+    StudyStatusUpdateDTO:
+      type: object
+      properties:
+        novoEstado:
+          type: string
+          enum: [PLANEJAMENTO, RECRUTAMENTO, EXECUCAO, ENCERRADO]
+          example: "RECRUTAMENTO"
+
+    CriterionRequestDTO:
+      type: object
+      properties:
+        titulo:
+          type: string
+          example: "Faixa Etária"
+        descricao:
+          type: string
+          example: "Paciente deve ter mais de 18 anos"
+        tipo:
+          type: string
+          enum: [INCLUSAO, EXCLUSAO]
+          example: "INCLUSAO"
+        peso:
+          type: number
+          format: float
+          example: 1.0
+        determinante:
+          type: boolean
+          example: true
+
+    PlannedVisitRequestDTO:
+      type: object
+      properties:
+        ordem:
+          type: integer
+          example: 1
+        diaPrevisto:
+          type: integer
+          example: 30
+        tolerancia:
+          type: integer
+          example: 5
+        atividades:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityRequestDTO'
+
+    ActivityRequestDTO:
+      type: object
+      properties:
+        nome:
+          type: string
+          example: "Coleta de Sangue"
+        descricao:
+          type: string
+          example: "Hemograma completo"
+        categoria:
+          type: string
+          enum: [AVALIACAO_CLINICA, EXAME_LABORATORIAL, EXAME_IMAGEM, QUESTIONARIO, MEDICACAO, OUTROS]
+          example: "EXAME_LABORATORIAL"
+
+    CapacitySummaryDTO:
+      type: object
+      properties:
+        limiteVagas:
+          type: integer
+          example: 100
+        vagasOcupadas:
+          type: integer
+          example: 45
+        vagasDisponiveis:
+          type: integer
+          example: 55
+
+    EligibilityEvaluationRequestDTO:
+      type: object
+      properties:
+        dataAvaliacao:
+          type: string
+          format: date-time
+          example: "2026-11-01T10:00:00Z"
+        respostas:
+          type: array
+          items:
+            $ref: '#/components/schemas/EligibilityAnswerDTO'
+
+    EligibilityAnswerDTO:
+      type: object
+      properties:
+        criterioId:
+          type: string
+          format: uuid
+          example: "a3b1c2d3-1234-5678-9abc-def012345678"
+        seAplica:
+          type: boolean
+          example: true
+        observacao:
+          type: string
+          example: "Comprovado via documento de identidade."
+
+    ConsentRequestDTO:
+      type: object
+      properties:
+        dataHora:
+          type: string
+          format: date-time
+          example: "2026-11-01T10:30:00Z"
+        responsavelId:
+          type: string
+          format: uuid
+          example: "c9d8e7f6-4321-8765-cba9-0987654321fe"
+        versaoTermo:
+          type: string
+          example: "v2.1"
+
+    ApiError:
+      type: object
+      properties:
+        status:
+          type: integer
+          example: 400
+        codigoRegra:
+          type: string
+          example: "VAL-001"
+        mensagem:
+          type: string
+          example: "Erro de validação nos dados enviados."
+        errosCampo:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+    FieldError:
+      type: object
+      properties:
+        campo:
+          type: string
+          example: "peso"
+        erro:
+          type: string
+          example: "O peso não pode ser negativo ou vazio."
+
+  responses:
+    ValidationError:
+      description: Erro de validação nos dados (400)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ForbiddenError:
+      description: Acesso negado pelo perfil (403)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFoundError:
+      description: Recurso não encontrado (404)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ConflictError:
+      description: Conflito com regras de negócio (409)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            status: 409
+            codigoRegra: "EST-005"
+            mensagem: "Inclusão rejeitada: O limite de vagas deste estudo foi atingido."
+            errosCampo: []

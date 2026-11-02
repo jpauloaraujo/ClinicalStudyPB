@@ -1,12 +1,16 @@
 package UEPB.ESWII.ClinicalStudyPB.domain.model;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.StatusEstudo;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -17,6 +21,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -76,4 +81,13 @@ public class Estudo {
     @Column(nullable = false, length = 30)
     @Schema(description = "Estado atual do ciclo de vida do estudo clínico", example = "PLANEJAMENTO", defaultValue = "PLANEJAMENTO")
     private StatusEstudo status = StatusEstudo.PLANEJAMENTO;
+
+    /**
+     * Critérios de aceitação do estudo (inclusão e exclusão). Mapeados na tabela {@code criterios},
+     * cada um apontando para o estudo; não fazem parte do JSON do estudo (têm endpoint próprio).
+     */
+    @JsonIgnore
+    @Schema(hidden = true)
+    @OneToMany(mappedBy = "estudo", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Criterio> criterios = new ArrayList<>();
 }
