@@ -44,6 +44,7 @@ public class CriterioService {
         Estudo estudo = estudoAcesso.buscarComBloqueio(estudoId);
         estudoAcesso.exigirPlanejamento(estudo);
         garantirDescricaoUnica(estudoId, dados.tipo(), dados.descricao(), null);
+        garantirTituloUnico(estudoId, dados.tipo(), dados.titulo(), null);
 
         Criterio criterio = novo(dados.tipo());
         criterio.setEstudo(estudo);
@@ -59,6 +60,7 @@ public class CriterioService {
             throw new RegraNegocioException("O tipo de um critério não pode ser alterado; exclua e crie outro");
         }
         garantirDescricaoUnica(estudoId, dados.tipo(), dados.descricao(), id);
+        garantirTituloUnico(estudoId, dados.tipo(), dados.titulo(), id);
 
         preencher(criterio, dados);
         return CriterioResponse.de(criterioRepository.save(criterio));
@@ -96,6 +98,18 @@ public class CriterioService {
         if (criterio instanceof CriterioInclusao inclusao) {
             inclusao.setPeso(dados.peso() == null ? 1f : dados.peso());
             inclusao.setDeterminante(dados.determinante() == null || dados.determinante());
+        }
+    }
+
+    private void garantirTituloUnico(UUID estudoId, TipoCriterio tipo, String titulo, UUID ignorarId) {
+        if (titulo == null || titulo.isBlank()) return;
+        boolean repetido = criterioRepository.findByEstudoIdOrderByTituloAsc(estudoId).stream()
+                .filter(outro -> !outro.getId().equals(ignorarId))
+                .anyMatch(outro -> outro.getTipo() == tipo && outro.getTitulo().equalsIgnoreCase(titulo.trim()));
+        if (repetido) {
+            throw new ConflitoRegraException("CRITERIO_DUPLICADO",
+                    "Já existe um critério de " + (tipo == TipoCriterio.INCLUSAO ? "inclusão" : "exclusão")
+                            + " com esse título neste estudo");
         }
     }
 

@@ -1,8 +1,12 @@
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router'
 import { AppLayout } from '../components/layout/AppLayout'
 import { PublicLayout } from '../components/layout/PublicLayout'
+import { AbaCandidatos } from '../pages/estudos/detalhe/abas/AbaCandidatos'
+import { AbaCriterios } from '../pages/estudos/detalhe/abas/AbaCriterios'
 import { AbaProvisoria } from '../pages/estudos/detalhe/abas/AbaProvisoria'
 import { AbaResumo } from '../pages/estudos/detalhe/abas/AbaResumo'
+import { AbaVisitas } from '../pages/estudos/detalhe/abas/AbaVisitas'
+import { FichaCandidatoPage } from '../pages/estudos/detalhe/candidato/FichaCandidatoPage'
 import { perfisDaAba } from '../pages/estudos/detalhe/abas'
 import { EstudoDetalhePage } from '../pages/estudos/detalhe/EstudoDetalhePage'
 import { EstudoFormPage } from '../pages/estudos/EstudoFormPage'
@@ -71,7 +75,7 @@ export const rotas: RouteObject[] = [
                 path: 'criterios',
                 element: (
                   <RequerPerfil perfis={perfisDaAba('criterios')}>
-                    <AbaProvisoria titulo="Critérios de inclusão e exclusão" />
+                    <AbaCriterios />
                   </RequerPerfil>
                 ),
               },
@@ -79,7 +83,7 @@ export const rotas: RouteObject[] = [
                 path: 'visitas',
                 element: (
                   <RequerPerfil perfis={perfisDaAba('visitas')}>
-                    <AbaProvisoria titulo="Visitas previstas e atividades" />
+                    <AbaVisitas />
                   </RequerPerfil>
                 ),
               },
@@ -87,7 +91,16 @@ export const rotas: RouteObject[] = [
                 path: 'candidatos',
                 element: (
                   <RequerPerfil perfis={perfisDaAba('candidatos')}>
-                    <AbaProvisoria titulo="Candidatos" />
+                    <AbaCandidatos />
+                  </RequerPerfil>
+                ),
+              },
+              // Ficha do candidato (T52); recebe as seções de avaliação, consentimento e inclusão
+              {
+                path: 'candidatos/:candidatoId',
+                element: (
+                  <RequerPerfil perfis={perfisDaAba('candidatos')}>
+                    <FichaCandidatoPage />
                   </RequerPerfil>
                 ),
               },

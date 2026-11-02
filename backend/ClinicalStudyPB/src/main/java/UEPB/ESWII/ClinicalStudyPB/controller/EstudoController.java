@@ -6,8 +6,6 @@ import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,9 +18,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.EstudoRequest;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Estudo;
-import UEPB.ESWII.ClinicalStudyPB.domain.enums.StatusEstudo;
 import UEPB.ESWII.ClinicalStudyPB.service.EstudoService;
-import UEPB.ESWII.ClinicalStudyPB.service.EstudoTransicaoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -31,7 +27,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 
 @RestController
 @RequestMapping("/api/estudos")
@@ -43,11 +38,9 @@ public class EstudoController {
     private static final String ESCRITA = "hasRole('PESQUISADOR')";
 
     private final EstudoService estudoService;
-    private final EstudoTransicaoService transicaoService;
 
-    public EstudoController(EstudoService estudoService, EstudoTransicaoService transicaoService) {
+    public EstudoController(EstudoService estudoService) {
         this.estudoService = estudoService;
-        this.transicaoService = transicaoService;
     }
 
     @GetMapping
@@ -109,29 +102,6 @@ public class EstudoController {
             @PathVariable UUID id,
             @Valid @RequestBody EstudoRequest dados) {
         return estudoService.atualizar(id, dados);
-    }
-
-    public record TransicaoRequest(@NotNull(message = "O novo estado é obrigatório") StatusEstudo novoEstado) {}
-
-    @PostMapping("/{id}/transicoes")
-    @PreAuthorize(ESCRITA)
-    @Operation(summary = "Avançar o estado do estudo",
-            description = "Avança um estado por vez, valida critérios e visitas e registra usuário e data no histórico.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Estudo atualizado"),
-            @ApiResponse(responseCode = "400", description = "Novo estado ausente ou inválido",
-                    content = @Content(mediaType = "application/json", schema = @Schema(type = "object"))),
-            @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content),
-            @ApiResponse(responseCode = "403", description = "Somente o pesquisador pode avançar",
-                    content = @Content(mediaType = "application/json", schema = @Schema(type = "object"))),
-            @ApiResponse(responseCode = "404", description = "Estudo inexistente",
-                    content = @Content(mediaType = "application/json", schema = @Schema(type = "object"))),
-            @ApiResponse(responseCode = "409", description = "Transição inválida ou pré-condição não atendida",
-                    content = @Content(mediaType = "application/json", schema = @Schema(type = "object")))
-    })
-    public Estudo transicionar(@PathVariable UUID id, @Valid @RequestBody TransicaoRequest dados,
-            @AuthenticationPrincipal Jwt jwt) {
-        return transicaoService.avancar(id, dados.novoEstado(), Autenticacao.idDe(jwt));
     }
 
     @DeleteMapping("/{id}")

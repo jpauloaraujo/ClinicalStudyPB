@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'public/mockServiceWorker.js', 'src/api/schema.d.ts']),
   {
     files: ['src/**/*.{ts,tsx}', 'vite.config.ts'],
     extends: [

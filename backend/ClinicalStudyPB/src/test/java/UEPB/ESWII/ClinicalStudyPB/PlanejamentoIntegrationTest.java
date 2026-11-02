@@ -44,7 +44,7 @@ class PlanejamentoIntegrationTest {
 
     private String criar() throws Exception {
         var resposta = mvc.perform(post("/api/estudos").header("Authorization", pesquisador)
-                .contentType(MediaType.APPLICATION_JSON).content(dadosEstudo("ENCERRADO")))
+                .contentType(MediaType.APPLICATION_JSON).content(dadosEstudo("PLANEJAMENTO")))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("PLANEJAMENTO"))
                 .andReturn().getResponse();
         return JsonPath.read(resposta.getContentAsString(), "$.id");
@@ -91,7 +91,7 @@ class PlanejamentoIntegrationTest {
         String id = criar();
         mvc.perform(put("/api/estudos/" + id).header("Authorization", pesquisador)
                 .contentType(MediaType.APPLICATION_JSON).content(dadosEstudo("ENCERRADO")))
-                .andExpect(status().isConflict()).andExpect(jsonPath("$.codigoRegra").value("ESTADO_EXIGE_TRANSICAO"));
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.codigoRegra").value("ESTADO_ALTERADO_FORA_DA_TRANSICAO"));
         mvc.perform(get("/api/estudos/" + id).header("Authorization", pesquisador))
                 .andExpect(jsonPath("$.status").value("PLANEJAMENTO"));
         assertThat(historico.findByEstudoIdOrderByDataHoraAsc(UUID.fromString(id))).isEmpty();
@@ -114,13 +114,13 @@ class PlanejamentoIntegrationTest {
                 .andExpect(jsonPath("$.codigoRegra").value("RECURSO_NAO_ENCONTRADO"));
         mvc.perform(post("/api/estudos/" + id + "/transicoes").header("Authorization", pesquisador)
                 .contentType(MediaType.APPLICATION_JSON).content("{}"))
-                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.errosCampo[0].campo").value("novoEstado"));
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.errosCampo[0].campo").value("destino"));
         transicao(id, "INVALIDO", pesquisador).andExpect(status().isBadRequest());
         mvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
-                .andExpect(jsonPath("$.paths['/api/estudos/{id}/transicoes'].post").exists())
-                .andExpect(jsonPath("$.paths['/api/estudos/{id}/transicoes'].post.responses['409'].content['application/json'].schema.type")
+                .andExpect(jsonPath("$.paths['/api/estudos/{estudoId}/transicoes'].post").exists())
+                .andExpect(jsonPath("$.paths['/api/estudos/{estudoId}/transicoes'].post.responses['409'].content['application/json'].schema.type")
                         .value("object"))
-                .andExpect(jsonPath("$.paths['/api/estudos/{id}/transicoes'].post.responses['401'].content").doesNotExist());
+                .andExpect(jsonPath("$.paths['/api/estudos/{estudoId}/transicoes'].post.responses['401'].content").doesNotExist());
     }
 
     @Test

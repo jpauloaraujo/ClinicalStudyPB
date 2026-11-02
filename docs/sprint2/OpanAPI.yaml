@@ -7,16 +7,16 @@ info:
 security:
   - bearerAuth: []
 paths:
-  /api/estudos/{id}/transicoes:
+  /api/estudos/{estudoId}/transicoes:
     parameters:
-      - $ref: '#/components/parameters/ResourceId'
+      - $ref: '#/components/parameters/EstudoId'
     post:
       summary: Avança o estudo para o próximo estado (T42)
       description: >-
         Somente pesquisador. Não permite pular, repetir ou voltar estados.
         A saída de PLANEJAMENTO exige um critério de inclusão e uma visita prevista.
         Registra usuário e data no histórico. O cadastro sempre inicia em PLANEJAMENTO;
-        alterar o status pelo PUT comum é recusado com 409 ESTADO_EXIGE_TRANSICAO.
+        alterar o status pelo PUT comum é recusado com 409 ESTADO_ALTERADO_FORA_DA_TRANSICAO.
       requestBody:
         required: true
         content:
@@ -469,7 +469,7 @@ components:
   schemas:
     StudyStatusUpdateDTO:
       type: object
-      required: [novoEstado]
+      required: [destino]
       properties:
         novoEstado:
           type: string

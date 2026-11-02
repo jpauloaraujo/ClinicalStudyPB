@@ -392,7 +392,7 @@ class RecrutamentoIntegrationTest {
     }
 
     @Test
-    @DisplayName("Critério já usado em avaliação não pode ser excluído")
+    @DisplayName("Critério já usado em avaliação não pode ser excluído (o estudo já saiu de planejamento)")
     void criterioEmUsoNaoEExcluido() throws Exception {
         String[] estudo = estudoEmRecrutamento(2);
         String candidato = criarCandidato(estudo[0], "S. T.");

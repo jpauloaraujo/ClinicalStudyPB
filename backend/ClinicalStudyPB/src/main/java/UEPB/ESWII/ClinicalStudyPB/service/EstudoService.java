@@ -42,6 +42,11 @@ public class EstudoService {
     }
 
     public Estudo criar(EstudoRequest dados) {
+        // RF07: o estado só muda pela máquina de estados (POST /api/estudos/{id}/transicoes)
+        if (dados.status() != StatusEstudo.PLANEJAMENTO) {
+            throw new ConflitoRegraException("ESTUDO_DEVE_COMECAR_EM_PLANEJAMENTO",
+                    "Todo estudo começa em planejamento; use a transição de estado para avançá-lo");
+        }
         Estudo estudo = new Estudo();
         preencher(estudo, dados);
         estudo.setStatus(StatusEstudo.PLANEJAMENTO);
@@ -54,7 +59,7 @@ public class EstudoService {
         Estudo estudo = estudoRepository.buscarComBloqueio(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Estudo não encontrado: " + id));
         if (dados.status() != estudo.getStatus()) {
-            throw new ConflitoRegraException("ESTADO_EXIGE_TRANSICAO",
+            throw new ConflitoRegraException("ESTADO_ALTERADO_FORA_DA_TRANSICAO",
                     "Use o endpoint de transições para alterar o estado do estudo");
         }
         preencher(estudo, dados);
