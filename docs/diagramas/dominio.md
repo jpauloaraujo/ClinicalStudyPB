@@ -193,18 +193,18 @@ O consentimento pode vir antes da avaliação: aprovado e já consentido o candi
 
 ## 4. As nove regras de negócio da Sprint 2
 
-O plano da Sprint pede que o PO (I2) confirme ou corrija estas regras na daily. **As respostas do PO ainda não estão registradas neste repositório**: a coluna "Situação" mostra apenas o que o código implementa hoje. Se o PO mudar alguma, mudam o backend, as telas e os testes das tasks citadas.
+As regras abaixo foram definidas pela especificação do projeto que a equipe forneceu (o arquivo "coisas a afazer esw.txt") e estão implementadas e testadas. O plano da Sprint prevê confirmá-las com o PO (I2) na daily; se ele pedir mudança em alguma, mudam o backend, as telas e os testes das tasks citadas.
 
 | # | Regra | Implementada em | Situação |
 |---|---|---|---|
-| 1 | Critérios e visitas só mudam com o estudo em planejamento; depois ficam somente leitura | `CriterioService`, `VisitaService`; telas somente leitura | Implementada; **confirmação do PO pendente** |
-| 2 | Estados só avançam, um de cada vez; sair de planejamento exige critério de inclusão e visita; só o pesquisador avança; cada mudança registra usuário e data | `MaquinaEstadosEstudo`, `EstudoTransicaoService`, `EstudoTransicaoController` | Implementada; **confirmação do PO pendente**. Ressalva: `PUT /api/estudos/{id}` ainda aceita qualquer `status` (ver o mapeamento das tasks) |
-| 3 | Candidato só com o estudo em recrutamento; código gerado; dados fictícios; mesmo nome e nascimento não repete | `CandidatoService` | Implementada; **confirmação do PO pendente** |
-| 4 | Avaliação responde a todos os critérios; elegível = inclusões determinantes atendidas e nenhuma exclusão satisfeita; a nova avaliação vale e a anterior fica no histórico | `RegraElegibilidade`, `AvaliacaoService` | Implementada; **confirmação do PO pendente**. Ressalva: só critérios **determinantes** reprovam (o plano diz "todos os de inclusão") |
-| 5 | Consentimento independe da avaliação; a inclusão exige os dois | `ConsentimentoService`, `ParticipacaoService` | Implementada; **confirmação do PO pendente** |
-| 6 | Inclusão só com estudo em recrutamento, candidato elegível, consentimento e vaga; checagem em transação com bloqueio | `ParticipacaoService` (`buscarComBloqueio`) | Implementada; **confirmação do PO pendente**. Falta teste de concorrência com várias threads (T62) |
-| 7 | Permissões: pesquisador escreve RF05 a RF07 e lê candidatos; coordenador escreve RF08 a RF11 e lê o resto; administrador fora | `@PreAuthorize` com `security/Permissoes`; telas por perfil | Implementada; **confirmação do PO pendente** |
-| 8 | Campo opcional de usuário participante no candidato; conta fica para a Sprint 3 | `Candidato.usuario` | Implementada; **confirmação do PO pendente** |
+| 1 | Critérios e visitas só mudam com o estudo em planejamento; depois ficam somente leitura | `CriterioService`, `VisitaService`; telas somente leitura | Implementada; **definida pela especificação do projeto** |
+| 2 | Estados só avançam, um de cada vez; sair de planejamento exige critério de inclusão e visita; só o pesquisador avança; cada mudança registra usuário e data | `MaquinaEstadosEstudo`, `EstudoTransicaoService`, `EstudoTransicaoController` | Implementada; **definida pela especificação do projeto**. O estado só muda por essa transição: `POST /api/estudos` só cria em planejamento e `PUT /api/estudos/{id}` não aceita outro estado (409) |
+| 3 | Candidato só com o estudo em recrutamento; código gerado; dados fictícios; mesmo nome e nascimento não repete | `CandidatoService` | Implementada; **definida pela especificação do projeto** |
+| 4 | Avaliação responde a todos os critérios; elegível = inclusões determinantes atendidas e nenhuma exclusão satisfeita; a nova avaliação vale e a anterior fica no histórico | `RegraElegibilidade`, `AvaliacaoService` | Implementada; **definida pela especificação do projeto**. Ressalva: só critérios **determinantes** reprovam (o plano diz "todos os de inclusão") |
+| 5 | Consentimento independe da avaliação; a inclusão exige os dois | `ConsentimentoService`, `ParticipacaoService` | Implementada; **definida pela especificação do projeto** |
+| 6 | Inclusão só com estudo em recrutamento, candidato elegível, consentimento e vaga; checagem em transação com bloqueio | `ParticipacaoService` (`buscarComBloqueio`) | Implementada; **definida pela especificação do projeto**. Falta teste de concorrência com várias threads (T62) |
+| 7 | Permissões: pesquisador escreve RF05 a RF07 e lê candidatos; coordenador escreve RF08 a RF11 e lê o resto; administrador fora | `@PreAuthorize` com `security/Permissoes`; telas por perfil | Implementada; **definida pela especificação do projeto** |
+| 8 | Campo opcional de usuário participante no candidato; conta fica para a Sprint 3 | `Candidato.usuario` | Implementada; **definida pela especificação do projeto** |
 | 9 | Erros: 400 validação, 403 perfil, 404 inexistente, 409 regra violada com código | `ApiExceptionHandler`, `ConflitoRegraException` | Implementada (a lista de erros por campo não existe: um campo por resposta) |
 
-Para fechar a T36 falta, fora do código: apresentar na daily, registrar as respostas do PO e aprovar este documento em Pull Request por I3 ou I4.
+**Situação da T36 (02/11/2026):** o modelo está em código, testado e documentado, e a equipe decidiu seguir a especificação fornecida como definição das regras. A aprovação deste documento em Pull Request por I3 ou I4 continua sendo o registro formal.

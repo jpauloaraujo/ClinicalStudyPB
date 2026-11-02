@@ -151,3 +151,11 @@ npm run dev:mock
 # E2E (backend e web no ar, ver o README, seção "Testes E2E")
 npm run test:e2e
 ```
+
+## 8. Atualização de 02/11/2026: T36, T37 e T38
+
+Decisão da equipe: as tasks estão funcionais e testadas, então ficam como **concluídas**, com estas anotações.
+
+- **T36:** as nove regras seguem a especificação fornecida pela equipe ("coisas a afazer esw.txt"), não uma resposta registrada do PO. A ressalva sobre o `PUT` de estudos deixou de valer (corrigida em 02/11). Ver [dominio.md](../diagramas/dominio.md).
+- **T37:** o contrato oficial é [docs/api/openapi-sprint2.yaml](../api/openapi-sprint2.yaml), mantido pelo `ContratoOpenApiTest` (regra: divergência se corrige no YAML, no mesmo PR). O `docs/sprint2/OpanAPI.yaml` antigo **não é mais usado** e fica só como histórico; não foi alterado nem apagado por ser de outro integrante. O formato de erro foi mantido como está (um campo por resposta de validação), e o conversor da web aceita lista de erros caso a API passe a devolvê-la.
+- **T38:** migrations V4 e V5 e entidades testadas no H2 (inclusive a migração de um banco da Sprint 1 em `MigracaoSeguraTest`). **Não foi provado em PostgreSQL real por mim**: o Docker local não subiu. O job `backend-postgres` do CI faz essa prova; o resultado dele no GitHub é a confirmação final.

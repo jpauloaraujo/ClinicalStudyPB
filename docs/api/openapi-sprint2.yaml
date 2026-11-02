@@ -34,8 +34,8 @@ paths:
       operationId: avancarEstado
       description: 'Aceita só o estado seguinte ao atual. Para sair de planejamento exige ao menos um critério de
         inclusão e uma visita prevista. Cada avanço grava usuário e data no histórico. Códigos 409: TRANSICAO_ESTADO_INVALIDA,
-        ESTUDO_SEM_CRITERIO_INCLUSAO, ESTUDO_SEM_VISITA_PREVISTA. Perfis: somente PESQUISADOR; COORDENADOR e ADMINISTRADOR
-        recebem 403.'
+        ESTUDO_SEM_CRITERIO_INCLUSAO, ESTUDO_SEM_VISITA_PREVISTA. Este é o único caminho para mudar o estado: POST /api/estudos só cria em planejamento (409 ESTUDO_DEVE_COMECAR_EM_PLANEJAMENTO) e PUT /api/estudos/{id} não aceita outro estado (409 ESTADO_ALTERADO_FORA_DA_TRANSICAO).
+        Perfis: somente PESQUISADOR; COORDENADOR, PARTICIPANTE e ADMINISTRADOR recebem 403.'
       parameters:
       - name: estudoId
         in: path
