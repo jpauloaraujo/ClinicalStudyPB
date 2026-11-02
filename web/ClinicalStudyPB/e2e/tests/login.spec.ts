@@ -20,7 +20,7 @@ test.describe('login', () => {
     await paginaLogin.goto()
     await paginaLogin.login(email, 'senha-incorreta-123')
 
-    await paginaLogin.expectErrorMessage('Credenciais inválidas')
+    await paginaLogin.expectErrorMessage('FALHA PROPOSITAL (T65): texto que não existe')
     await paginaLogin.expectOnLoginPage()
     expect(await paginaLogin.lerToken()).toBeNull()
   })
