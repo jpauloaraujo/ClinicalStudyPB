@@ -13,6 +13,8 @@ public interface VisitaPlanejadaRepository extends JpaRepository<VisitaPlanejada
     @EntityGraph(attributePaths = "acoes")
     List<VisitaPlanejada> findByEstudoIdOrderByOrdemAsc(UUID estudoId);
 
+    long countByEstudoId(UUID estudoId);
+
     boolean existsByEstudoIdAndDiaPrevisto(UUID estudoId, int diaPrevisto);
 
     boolean existsByEstudoIdAndDiaPrevistoAndIdNot(UUID estudoId, int diaPrevisto, UUID id);
