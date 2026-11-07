@@ -21,8 +21,8 @@ Aba Candidatos com lista paginada, filtro por situação e cadastro, e a ficha d
 | `web/ClinicalStudyPB/src/pages/estudos/detalhe/abas/AbaCandidatos.tsx` | Existente | Lista paginada, filtro, formulário de cadastro e botão desabilitado fora de recrutamento |
 | `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/FichaCandidatoPage.tsx` | Existente | Dados do candidato e as três seções |
 | `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/SecaoAvaliacao.tsx` | Existente | Entregue na T55 |
-| `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/SecaoConsentimento.tsx` | Espaço reservado | A T58 troca o corpo deste componente |
-| `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/SecaoInclusao.tsx` | Espaço reservado | A T61 troca o corpo deste componente |
+| `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/SecaoConsentimento.tsx` | Existente (entregue na T58) | A T58 troca o corpo deste componente |
+| `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/SecaoInclusao.tsx` | Existente (entregue na T61) | A T61 troca o corpo deste componente |
 | `web/ClinicalStudyPB/src/api/candidatos.ts` | Existente | `candidatosApi` (listar com filtro e página, buscar, criar, atualizar) |
 | `web/ClinicalStudyPB/src/pages/estudos/detalhe/abas/AbaCandidatos.test.tsx, web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/FichaCandidatoPage.test.tsx` | Existente | Testes de componente |
 
@@ -30,7 +30,7 @@ Aba Candidatos com lista paginada, filtro por situação e cadastro, e a ficha d
 
 ### Padrão de seção
 
-- Hoje a ficha monta `<SecaoAvaliacao estudo candidato aoAvaliar={recarregar} />`, `<SecaoConsentimento candidato />` e `<SecaoInclusao candidato />`; `aoAvaliar` é o `recarregar` da ficha. A T58 acrescenta `aoRegistrar` e a T61 acrescenta `estudo` e `aoIncluir`, no mesmo padrão.
+- A ficha monta `<SecaoAvaliacao estudo candidato aoAvaliar={recarregar} />`; `aoAvaliar` é o `recarregar` da ficha. A T58 acrescentou `aoRegistrar` e a T61 acrescentou `estudo` e `aoIncluir`, no mesmo padrão; hoje a ficha monta `<SecaoConsentimento candidato aoRegistrar />` e `<SecaoInclusao estudo candidato aoIncluir />`.
 
 ## 6. Testes
 

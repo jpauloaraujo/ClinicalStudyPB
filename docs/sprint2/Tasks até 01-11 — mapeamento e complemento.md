@@ -159,3 +159,13 @@ Decisão da equipe: as tasks estão funcionais e testadas, então ficam como **c
 - **T36:** as nove regras seguem a especificação fornecida pela equipe ("coisas a afazer esw.txt"), não uma resposta registrada do PO. A ressalva sobre o `PUT` de estudos deixou de valer (corrigida em 02/11). Ver [dominio.md](../diagramas/dominio.md).
 - **T37:** o contrato oficial é [docs/api/openapi-sprint2.yaml](../api/openapi-sprint2.yaml), mantido pelo `ContratoOpenApiTest` (regra: divergência se corrige no YAML, no mesmo PR). O `docs/sprint2/OpanAPI.yaml` antigo **não é mais usado** e fica só como histórico; não foi alterado nem apagado por ser de outro integrante. O formato de erro foi mantido como está (um campo por resposta de validação), e o conversor da web aceita lista de erros caso a API passe a devolvê-la.
 - **T38:** migrations V4 e V5 e entidades testadas no H2 (inclusive a migração de um banco da Sprint 1 em `MigracaoSeguraTest`). **Não foi provado em PostgreSQL real por mim**: o Docker local não subiu. O job `backend-postgres` do CI faz essa prova; o resultado dele no GitHub é a confirmação final.
+
+## 9. Atualização de 07/11/2026
+
+As tasks ficaram assim depois das entregas posteriores a este mapeamento (o texto acima permanece como o registro de 01/11 e 02/11):
+
+- **T52 e a ficha do candidato:** as seções reservadas foram substituídas pelas telas reais, **T58** (consentimento) e **T61** (inclusão e aba Participantes). A aba provisória foi removida.
+- **T64:** o bloqueio de 80% está ligado no CI (`COBERTURA_BLOQUEAR: 'true'`); a cobertura de domínio e serviços é 98,3%.
+- **T42:** `POST` e `PUT /api/estudos` deixaram de poder mudar o estado; só a transição muda.
+- **T44, T47, T50, T59, T65 e T66:** testes e E2E implementados (ver [T50, T55, T59, T65 e T66 — implementação.md](<T50, T55, T59, T65 e T66 — implementação.md>)). Números atuais: backend 333 testes, web 126, E2E 29.
+- **Continuam abertas:** T37 (formato de erro com `status` e lista por campo), T53, T56 e T62 (suítes de testes), T63 (dados de demonstração), T67 e T68 (ambiente completo e integração), T70, T71 e T72 (README final, README da release e tag). Os guias estão em `docs/design/sprint2/`.

@@ -11,7 +11,7 @@ Na ficha do candidato, a seção Consentimento: texto do termo simulado, confirm
 
 ## 2. Contexto: o que já existe e deve ser reaproveitado
 
-- O espaço já existe: `SecaoConsentimento.tsx` mostra só um texto provisório e hoje recebe só `{candidato}`; a T58 acrescenta a prop `aoRegistrar`.
+- `SecaoConsentimento.tsx` ocupava o espaço reservado da ficha com um texto provisório e recebia só `{candidato}`; a T58 o substituiu e acrescentou a prop `aoRegistrar`.
 - API pronta: `consentimentoApi.buscar(candidatoId)` (404 enquanto não registrado) e `consentimentoApi.registrar(candidatoId, dados)`.
 - Padrão a imitar: `SecaoAvaliacao.tsx` (carrega, envia, trata erros e recarrega).
 - Hook de carga: `hooks/useCarregamento` (`dados`, `erro`, `statusErro`, `carregando`, `recarregar`).

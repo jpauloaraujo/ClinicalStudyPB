@@ -11,7 +11,7 @@ Na ficha do candidato, mostrar as quatro pré-condições da inclusão e o botã
 
 ## 2. Contexto: o que já existe e deve ser reaproveitado
 
-- Espaços já existentes: `SecaoInclusao.tsx` (texto provisório; hoje recebe só `{candidato}` e passa a receber também `estudo` e `aoIncluir`) e a rota `participantes` em `router.tsx`, que hoje usa `AbaProvisoria`.
+- `SecaoInclusao.tsx` (texto provisório que recebia só `{candidato}`) e a rota `participantes` (que usava `AbaProvisoria`) foram substituídas pela T61: a seção recebe agora `estudo` e `aoIncluir`, e a rota usa `AbaParticipantes`.
 - API pronta: `participantesApi.listar(estudoId)`, `participantesApi.vagas(estudoId)` e `participantesApi.incluir(estudoId, candidatoId)`.
 - Dados das pré-condições vêm do que já existe: `useEstudoDetalhe().estudo.status`, `candidato.resultadoAvaliacao` e `candidato.consentimentoRegistrado` (resposta de `GET /api/candidatos/{id}`) e `vagas.restantes`.
 - Padrões a imitar: `SecaoAvaliacao.tsx` (seção da ficha) e `AbaCandidatos.tsx` (aba com lista); `Confirmacao.tsx` para o diálogo; `useCarregamento` para carregar.

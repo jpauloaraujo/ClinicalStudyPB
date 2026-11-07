@@ -69,3 +69,7 @@ npx vitest run src/pages/estudos/detalhe/abas/AbaCriterios.test.tsx
 - **T64:** `COBERTURA_BLOQUEAR` está em `'true'` no `ci.yml`; o build falha abaixo de 80% de linhas em domínio e serviços (hoje 93%). Conferido localmente com `-Djacoco.haltOnFailure=true`.
 - **T65:** `web/ClinicalStudyPB/e2e/.auth/*.json` saiu do controle de versão (`git rm --cached`; os arquivos continuam no disco e o `.gitignore` já os ignora). A remoção só vale quando for commitada.
 - **PostgreSQL (T38/T44):** **não executado.** O Docker Desktop foi iniciado mas o motor não respondeu (provavelmente aguardando uma ação na janela dele), então a imagem `postgres:16` não foi baixada.
+
+## Atualização de 07/11/2026
+
+Depois desta entrega entraram os testes das tasks T50 e T59 e as telas T58 e T61. Totais atuais: backend **333 testes**, 0 falhas, cobertura de domínio e serviços **98,3%**; web **126** testes de componente; E2E **29** testes. Detalhes em [T50, T55, T59, T65 e T66 — implementação.md](<T50, T55, T59, T65 e T66 — implementação.md>).

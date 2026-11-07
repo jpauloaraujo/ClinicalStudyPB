@@ -38,7 +38,7 @@ Definir as visitas previstas de um estudo (dia, tolerância, ordem) e as ativida
 
 ## 6. Testes
 
-- `RecrutamentoIntegrationTest.visitasEAcoes`; suíte dedicada prevista na T50.
+- `RecrutamentoIntegrationTest.visitasEAcoes`; suítes dedicadas na T50: `VisitaServiceTest`, `VisitaRequestValidacaoTest` e `VisitaEndpointTest`.
 
 ## 7. Critérios de aceite
 

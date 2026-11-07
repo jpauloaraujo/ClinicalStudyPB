@@ -54,4 +54,4 @@ flowchart TB
 | Autorização | Matriz por perfil em `security/Permissoes`; sem token 401, perfil sem permissão 403 |
 | Erros | `{"erro", "codigo?"}`; 409 para regra de negócio violada, sempre com `codigo` |
 | Concorrência | A inclusão de participantes e a geração do código do candidato bloqueiam o estudo (`PESSIMISTIC_WRITE`) |
-| Cobertura | JaCoCo mede domínio e serviços; mínimo de 80% de linhas, hoje só informado (bloqueio previsto para 05/11) |
+| Cobertura | JaCoCo mede domínio e serviços; mínimo de 80% de linhas, com bloqueio ligado no CI (`COBERTURA_BLOQUEAR: 'true'`) |

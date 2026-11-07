@@ -35,7 +35,7 @@ Registrar o consentimento simulado de um candidato, com comprovante de data, res
 
 ## 6. Testes
 
-- `RecrutamentoIntegrationTest.consentimentoPodeVirAntesDaAvaliacao`; suíte dedicada prevista na T59.
+- `RecrutamentoIntegrationTest.consentimentoPodeVirAntesDaAvaliacao`; suítes dedicadas na T59: `ConsentimentoServiceTest` e `ConsentimentoEndpointTest`.
 
 ## 7. Critérios de aceite
 
@@ -44,7 +44,7 @@ Registrar o consentimento simulado de um candidato, com comprovante de data, res
 
 ## 8. Cuidados e fora de escopo
 
-- Não existe teste de serviço dedicado ainda; é o escopo da T59.
+- Os testes dedicados de serviço e de endpoint foram escritos na T59.
 
 ---
 Parte do conjunto de documentos de design da Sprint 2: [índice](README.md).
