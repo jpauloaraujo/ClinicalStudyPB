@@ -557,5 +557,6 @@ ClinicalStudyPB/
 - [Contrato OpenAPI da Sprint 2](docs/api/openapi-sprint2.yaml) — endpoints de recrutamento e de estado do estudo (T37).
 - [Diagramas do domínio](docs/diagramas/dominio.md), [casos de uso](docs/diagramas/casos-de-uso.md), [sequência: avançar o estado](docs/diagramas/sequencia-avancar-estado.md), [sequência: incluir participante](docs/diagramas/sequencia-inclusao-participante.md) e [arquitetura](docs/diagramas/arquitetura.md) (T36 e T69).
 - [Backlog da Sprint 2 para o Azure Boards](docs/azure-boards/README.md) — CSV de importação com os 10 PBIs e as 37 tasks.
+- [Documentos de design da Sprint 1](docs/design/sprint1/README.md) e [da Sprint 2](docs/design/sprint2/README.md) — um guia por task: o que implementar, em qual arquivo e em que ordem (as já implementadas descrevem o código existente).
 - [Protótipo navegável do mobile (Figma)](https://www.figma.com/design/IqDUJYAEp8GvSMO6vaEoNd/Clinical-Studies-Mobile-Design?node-id=39-568&t=t88dh0uGIHa60Db9-1) — telas do aplicativo do participante com o fluxo de navegação para demonstração (T33 e T34).
 - [Protótipo navegável da web no Figma](https://www.figma.com/design/e89syvyxm6LEOzBkeLUtea) — 12 telas (login, administrador, pesquisador, coordenador e acesso negado) com navegação entre elas (T32). Para navegar, abra o arquivo e use o modo *Present*, começando pelo Login.

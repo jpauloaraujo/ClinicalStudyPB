@@ -49,7 +49,7 @@ Cobertura das classes de domínio e serviço do RF07 (JaCoCo, `mvnw verify`):
 
 | Conjunto | Antes | Agora |
 |---|---|---|
-| Backend (JUnit) | 156 | **243**, 0 falhas |
+| Backend (JUnit) | 156 | **246**, 0 falhas (inclui os 3 testes novos do fechamento da T42) |
 | Cobertura de linhas de domínio e serviços | 93,8% | **93,4%** (a regra de 80% segue cumprida) |
 | Web (Vitest) | 78 | **85** |
 
