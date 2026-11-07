@@ -57,6 +57,7 @@ class CriterioServiceTest {
         estudo.setId(UUID.randomUUID());
         estudo.setStatus(StatusEstudo.PLANEJAMENTO);
         when(estudoRepository.findById(estudo.getId())).thenReturn(Optional.of(estudo));
+        when(estudoRepository.buscarComBloqueio(estudo.getId())).thenReturn(Optional.of(estudo));
         when(criterioRepository.findByEstudoIdOrderByTituloAsc(estudo.getId())).thenReturn(List.of());
         when(criterioRepository.save(any(Criterio.class))).thenAnswer(invocacao -> invocacao.getArgument(0));
     }

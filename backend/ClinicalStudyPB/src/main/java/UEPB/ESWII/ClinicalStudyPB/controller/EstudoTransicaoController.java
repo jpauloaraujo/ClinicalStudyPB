@@ -20,6 +20,8 @@ import UEPB.ESWII.ClinicalStudyPB.security.Permissoes;
 import UEPB.ESWII.ClinicalStudyPB.service.EstudoTransicaoService;
 import UEPB.ESWII.ClinicalStudyPB.service.HistoricoStatusService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -44,10 +46,15 @@ public class EstudoTransicaoController {
             description = "Aceita só o estado seguinte ao atual. Para sair de planejamento exige ao menos um critério de inclusão e uma visita prevista. Cada avanço grava usuário e data no histórico. Devolve o estudo já no novo estado.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Estado alterado; devolve o estudo atualizado"),
-            @ApiResponse(responseCode = "400", description = "Estado de destino ausente ou inválido"),
-            @ApiResponse(responseCode = "403", description = "Perfil sem permissão (só o pesquisador avança)"),
-            @ApiResponse(responseCode = "404", description = "Estudo não encontrado"),
-            @ApiResponse(responseCode = "409", description = "Transição inválida ou pré-condição não atendida (TRANSICAO_ESTADO_INVALIDA, ESTUDO_SEM_CRITERIO_INCLUSAO, ESTUDO_SEM_VISITA_PREVISTA)")
+            @ApiResponse(responseCode = "401", description = "Autenticação necessária", content = @Content),
+            @ApiResponse(responseCode = "400", description = "Estado de destino ausente ou inválido",
+                    content = @Content(mediaType = "application/json", schema = @Schema(type = "object"))),
+            @ApiResponse(responseCode = "403", description = "Perfil sem permissão (só o pesquisador avança)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(type = "object"))),
+            @ApiResponse(responseCode = "404", description = "Estudo não encontrado",
+                    content = @Content(mediaType = "application/json", schema = @Schema(type = "object"))),
+            @ApiResponse(responseCode = "409", description = "Transição inválida ou pré-condição não atendida (TRANSICAO_ESTADO_INVALIDA, ESTUDO_SEM_CRITERIO_INCLUSAO, ESTUDO_SEM_VISITA_PREVISTA)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(type = "object")))
     })
     public Estudo avancar(@PathVariable UUID estudoId, @Valid @RequestBody TransicaoRequest dados,
             @AuthenticationPrincipal Jwt jwt) {

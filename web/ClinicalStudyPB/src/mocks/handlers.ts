@@ -165,7 +165,7 @@ export const handlers = [
     const repetido = repeticaoDeCriterio(estudo.id, dados)
     if (repetido) return repetido
     const criado: CriterioResponse = {
-      id: novoId('c'), estudoId: estudo.id, tipo: dados.tipo, titulo: dados.titulo.trim(), descricao: dados.descricao.trim(),
+      id: novoId('c'), estudoId: estudo.id, tipo: dados.tipo, titulo: tituloDoCriterio(dados), descricao: dados.descricao.trim(),
       peso: dados.tipo === 'INCLUSAO' ? (dados.peso ?? 1) : null,
       determinante: dados.tipo === 'INCLUSAO' ? (dados.determinante ?? true) : null,
     }
@@ -187,7 +187,7 @@ export const handlers = [
     if (criterio.tipo !== dados.tipo) return erro(400, 'O tipo de um critério não pode ser alterado; exclua e crie outro')
     const repetido = repeticaoDeCriterio(estudo.id, dados, criterio.id)
     if (repetido) return repetido
-    criterio.titulo = dados.titulo.trim()
+    criterio.titulo = tituloDoCriterio(dados)
     criterio.descricao = dados.descricao.trim()
     if (criterio.tipo === 'INCLUSAO') {
       criterio.peso = dados.peso ?? 1
@@ -508,10 +508,16 @@ function validarCriterio(d: CriterioRequest) {
   return null
 }
 
+// O título é opcional na API: ausente ou em branco, vem dos primeiros 120 caracteres da descrição
+function tituloDoCriterio(d: CriterioRequest): string {
+  const titulo = d.titulo?.trim()
+  return titulo ? titulo : d.descricao.trim().slice(0, 120)
+}
+
 function repeticaoDeCriterio(estudoId: string, d: CriterioRequest, ignorarId?: string) {
   const outros = mock.estado.criterios.filter((c) => c.estudoId === estudoId && c.tipo === d.tipo && c.id !== ignorarId)
   const tipo = d.tipo === 'INCLUSAO' ? 'inclusão' : 'exclusão'
-  if (outros.some((c) => c.titulo.toLowerCase() === d.titulo.trim().toLowerCase())) {
+  if (outros.some((c) => c.titulo.toLowerCase() === tituloDoCriterio(d).toLowerCase())) {
     return conflito('CRITERIO_DUPLICADO', `Já existe um critério de ${tipo} com esse título neste estudo`)
   }
   if (outros.some((c) => c.descricao.toLowerCase() === d.descricao.trim().toLowerCase())) {

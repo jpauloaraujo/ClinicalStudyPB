@@ -1,20 +1,22 @@
-# docs/api/openapi-sprint2.yaml
+# Contrato da Sprint 2; T42/T45/T48/T57 sincronizadas com o backend em português.
 openapi: 3.0.3
 info:
   title: ClinicalStudyPB API - Sprint 2
   version: 2.0.0
   description: Contrato de API para gerenciamento de estudos, critérios, visitas e inclusão de participantes.
+security:
+  - bearerAuth: []
 paths:
-  /api/studies/{studyId}/status:
-    patch:
-      summary: Atualiza o estado do estudo
-      parameters:
-        - name: studyId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+  /api/estudos/{estudoId}/transicoes:
+    parameters:
+      - $ref: '#/components/parameters/EstudoId'
+    post:
+      summary: Avança o estudo para o próximo estado (T42)
+      description: >-
+        Somente pesquisador. Não permite pular, repetir ou voltar estados.
+        A saída de PLANEJAMENTO exige um critério de inclusão e uma visita prevista.
+        Registra usuário e data no histórico. O cadastro sempre inicia em PLANEJAMENTO;
+        alterar o status pelo PUT comum é recusado com 409 ESTADO_ALTERADO_FORA_DA_TRANSICAO.
       requestBody:
         required: true
         content:
@@ -22,8 +24,16 @@ paths:
             schema:
               $ref: '#/components/schemas/StudyStatusUpdateDTO'
       responses:
-        '204':
+        '200':
           description: Estado atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyResponseDTO'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
         '403':
           $ref: '#/components/responses/ForbiddenError'
         '404':
@@ -31,16 +41,36 @@ paths:
         '409':
           $ref: '#/components/responses/ConflictError'
 
-  /api/studies/{studyId}/criteria:
+  /api/estudos/{estudoId}/criterios:
+    parameters:
+      - $ref: '#/components/parameters/EstudoId'
+    get:
+      summary: Lista critérios de inclusão e exclusão (T45)
+      description: Pesquisador e coordenador; a propriedade tipo distingue os dois grupos.
+      responses:
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '200':
+          description: Critérios do estudo, ordenados pelo título
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CriterionResponseDTO'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
     post:
-      summary: Adiciona critério ao estudo
-      parameters:
-        - name: studyId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+      summary: Adiciona critério ao estudo (T45)
+      description: >-
+        Somente pesquisador, com estudo em PLANEJAMENTO. A descrição é normalizada
+        com trim, tem 5 a 500 caracteres e não pode repetir dentro do mesmo tipo e
+        estudo, ignorando maiúsculas. O título é opcional e derivado da descrição
+        quando ausente; peso e determinante são utilizados somente em INCLUSAO.
       requestBody:
         required: true
         content:
@@ -50,19 +80,99 @@ paths:
       responses:
         '201':
           description: Critério criado
+          headers:
+            Location:
+              description: URL do critério criado
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CriterionResponseDTO'
         '400':
           $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
 
-  /api/studies/{studyId}/planned-visits:
+  /api/estudos/{estudoId}/criterios/{id}:
+    parameters:
+      - $ref: '#/components/parameters/EstudoId'
+      - $ref: '#/components/parameters/ResourceId'
+    put:
+      summary: Edita critério (T45)
+      description: Somente pesquisador em PLANEJAMENTO; o tipo não pode ser alterado.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriterionRequestDTO'
+      responses:
+        '200':
+          description: Critério atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CriterionResponseDTO'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+    delete:
+      summary: Remove critério (T45)
+      description: Somente pesquisador em PLANEJAMENTO; recusa critério já usado em avaliações.
+      responses:
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '204':
+          description: Critério removido
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /api/estudos/{estudoId}/visitas:
+    parameters:
+      - $ref: '#/components/parameters/EstudoId'
+    get:
+      summary: Lista visitas ordenadas, com suas atividades (T48)
+      description: Pesquisador e coordenador; atividades são retornadas na propriedade acoes.
+      responses:
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '200':
+          description: Visitas em ordem crescente de diaPrevisto
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlannedVisitResponseDTO'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
     post:
-      summary: Adiciona visita planejada e suas atividades
-      parameters:
-        - name: studyId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+      summary: Adiciona visita planejada (T48)
+      description: Somente pesquisador em PLANEJAMENTO; dia repetido no estudo resulta em 409.
       requestBody:
         required: true
         content:
@@ -72,6 +182,144 @@ paths:
       responses:
         '201':
           description: Visita criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlannedVisitResponseDTO'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /api/estudos/{estudoId}/visitas/{id}:
+    parameters:
+      - $ref: '#/components/parameters/EstudoId'
+      - $ref: '#/components/parameters/ResourceId'
+    put:
+      summary: Edita visita planejada (T48)
+      description: Somente pesquisador em PLANEJAMENTO; recalcula a ordem derivada do dia previsto.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlannedVisitRequestDTO'
+      responses:
+        '200':
+          description: Visita atualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlannedVisitResponseDTO'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+    delete:
+      summary: Remove visita e suas atividades em cascata (T48)
+      description: Somente pesquisador em PLANEJAMENTO.
+      responses:
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '204':
+          description: Visita e atividades removidas
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /api/visitas/{visitaId}/acoes:
+    parameters:
+      - $ref: '#/components/parameters/VisitaId'
+    post:
+      summary: Adiciona atividade à visita (T48)
+      description: Somente pesquisador em PLANEJAMENTO; consulte as atividades na listagem de visitas.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityRequestDTO'
+      responses:
+        '201':
+          description: Atividade criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityResponseDTO'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /api/visitas/{visitaId}/acoes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/VisitaId'
+      - $ref: '#/components/parameters/ResourceId'
+    put:
+      summary: Edita atividade de uma visita (T48)
+      description: Somente pesquisador em PLANEJAMENTO.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityRequestDTO'
+      responses:
+        '200':
+          description: Atividade atualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityResponseDTO'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+    delete:
+      summary: Remove atividade de uma visita (T48)
+      description: Somente pesquisador em PLANEJAMENTO.
+      responses:
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '204':
+          description: Atividade removida
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
 
   /api/studies/{studyId}/capacity-summary:
     get:
@@ -115,18 +363,36 @@ paths:
         '409':
           $ref: '#/components/responses/ConflictError'
 
-  /api/candidates/{candidateId}/consents:
+  /api/candidatos/{candidatoId}/consentimento:
+    parameters:
+      - $ref: '#/components/parameters/CandidatoId'
+    get:
+      summary: Consulta comprovante de consentimento (T57)
+      description: Pesquisador e coordenador; retorna 404 se ainda não registrado.
+      responses:
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '200':
+          description: Comprovante do consentimento simulado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentResponseDTO'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
     post:
-      summary: Registra consentimento do candidato
-      parameters:
-        - name: candidateId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+      summary: Registra consentimento simulado (T57)
+      description: >-
+        Somente coordenador, com estudo em RECRUTAMENTO e candidato ainda não incluído.
+        Um registro por candidato; não depende da avaliação de elegibilidade.
+        Responsável obtido do token. Sem corpo, usa agora e a versão configurada do termo.
+        Data futura retorna 400; duplicidade, estado indevido ou candidato incluído retornam 409.
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
@@ -134,6 +400,20 @@ paths:
       responses:
         '201':
           description: Consentimento registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentResponseDTO'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
 
   /api/candidates/{candidateId}/participations:
     post:
@@ -152,23 +432,105 @@ paths:
           $ref: '#/components/responses/ConflictError'
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ResourceId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    EstudoId:
+      name: estudoId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    VisitaId:
+      name: visitaId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CandidatoId:
+      name: candidatoId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
   schemas:
     StudyStatusUpdateDTO:
       type: object
+      required: [destino]
       properties:
         novoEstado:
           type: string
           enum: [PLANEJAMENTO, RECRUTAMENTO, EXECUCAO, ENCERRADO]
           example: "RECRUTAMENTO"
 
+    StudyResponseDTO:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        titulo:
+          type: string
+        objetivo:
+          type: string
+        responsavel:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            nome:
+              type: string
+            email:
+              type: string
+            perfil:
+              type: string
+              enum: [ADMINISTRADOR, PESQUISADOR, COORDENADOR, PARTICIPANTE]
+            ativo:
+              type: boolean
+        dataInicio:
+          type: string
+          format: date
+          nullable: true
+        dataFim:
+          type: string
+          format: date
+          nullable: true
+        limiteParticipantes:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [PLANEJAMENTO, RECRUTAMENTO, EXECUCAO, ENCERRADO]
+
     CriterionRequestDTO:
       type: object
+      required: [tipo, descricao]
       properties:
         titulo:
           type: string
+          nullable: true
+          maxLength: 120
+          description: Opcional; se omitido ou vazio, deriva dos primeiros 120 caracteres da descrição.
           example: "Faixa Etária"
         descricao:
           type: string
+          minLength: 5
+          maxLength: 500
+          description: Trim aplicado antes da validação; única no mesmo tipo e estudo, ignorando maiúsculas.
           example: "Paciente deve ter mais de 18 anos"
         tipo:
           type: string
@@ -177,41 +539,98 @@ components:
         peso:
           type: number
           format: float
+          nullable: true
+          minimum: 0
+          exclusiveMinimum: true
+          description: Somente inclusão; padrão 1 quando ausente.
           example: 1.0
         determinante:
           type: boolean
+          nullable: true
+          description: Somente inclusão; padrão true quando ausente.
           example: true
+
+    CriterionResponseDTO:
+      allOf:
+        - $ref: '#/components/schemas/CriterionRequestDTO'
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            estudoId:
+              type: string
+              format: uuid
 
     PlannedVisitRequestDTO:
       type: object
-      properties:
-        ordem:
-          type: integer
-          example: 1
-        diaPrevisto:
-          type: integer
-          example: 30
-        tolerancia:
-          type: integer
-          example: 5
-        atividades:
-          type: array
-          items:
-            $ref: '#/components/schemas/ActivityRequestDTO'
-
-    ActivityRequestDTO:
-      type: object
+      required: [nome, diaPrevisto, tolerancia]
       properties:
         nome:
           type: string
+          minLength: 1
+          maxLength: 100
+          example: Triagem inicial
+        diaPrevisto:
+          type: integer
+          minimum: 0
+          example: 30
+        tolerancia:
+          type: integer
+          minimum: 0
+          maximum: 30
+          example: 5
+
+    PlannedVisitResponseDTO:
+      allOf:
+        - $ref: '#/components/schemas/PlannedVisitRequestDTO'
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            estudoId:
+              type: string
+              format: uuid
+            ordem:
+              type: integer
+              minimum: 1
+              description: Posição calculada a partir do dia previsto; não é recebida na escrita.
+            acoes:
+              type: array
+              items:
+                $ref: '#/components/schemas/ActivityResponseDTO'
+
+    ActivityRequestDTO:
+      type: object
+      required: [nome, categoria]
+      properties:
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 100
           example: "Coleta de Sangue"
         descricao:
           type: string
+          nullable: true
+          maxLength: 500
           example: "Hemograma completo"
         categoria:
           type: string
           enum: [AVALIACAO_CLINICA, EXAME_LABORATORIAL, EXAME_IMAGEM, QUESTIONARIO, MEDICACAO, OUTROS]
           example: "EXAME_LABORATORIAL"
+
+    ActivityResponseDTO:
+      allOf:
+        - $ref: '#/components/schemas/ActivityRequestDTO'
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            visitaId:
+              type: string
+              format: uuid
 
     CapacitySummaryDTO:
       type: object
@@ -257,25 +676,47 @@ components:
       properties:
         dataHora:
           type: string
-          format: date-time
-          example: "2026-11-01T10:30:00Z"
-        responsavelId:
-          type: string
-          format: uuid
-          example: "c9d8e7f6-4321-8765-cba9-0987654321fe"
+          pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,9})?)?$'
+          nullable: true
+          description: Data/hora local não futura; padrão agora. Responsável vem do token, não do corpo.
+          example: "2026-11-01T10:30:00"
         versaoTermo:
           type: string
-          example: "v2.1"
+          nullable: true
+          maxLength: 60
+          description: Padrão configurado por app.consentimento.versao-termo.
+          example: "TCLE-SIMULADO v1"
+
+    ConsentResponseDTO:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        candidatoId:
+          type: string
+          format: uuid
+        dataHora:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,9})?)?$'
+          example: "2026-11-01T10:30:00"
+        responsavel:
+          type: string
+          description: Nome do coordenador autenticado que registrou o consentimento.
+        versaoTermo:
+          type: string
+          example: "TCLE-SIMULADO v1"
 
     ApiError:
       type: object
+      required: [status, codigoRegra, mensagem, errosCampo, erro, codigo]
       properties:
         status:
           type: integer
           example: 400
         codigoRegra:
           type: string
-          example: "VAL-001"
+          example: "VALIDACAO_CAMPOS"
         mensagem:
           type: string
           example: "Erro de validação nos dados enviados."
@@ -283,6 +724,12 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FieldError'
+        erro:
+          type: string
+          description: Alias de mensagem, preservado para a aplicação web existente.
+        codigo:
+          type: string
+          description: Alias de codigoRegra, preservado para os clientes existentes.
     FieldError:
       type: object
       properties:
@@ -294,6 +741,8 @@ components:
           example: "O peso não pode ser negativo ou vazio."
 
   responses:
+    UnauthorizedError:
+      description: Token Bearer ausente, inválido ou expirado (401)
     ValidationError:
       description: Erro de validação nos dados (400)
       content:
@@ -320,6 +769,8 @@ components:
             $ref: '#/components/schemas/ApiError'
           example:
             status: 409
-            codigoRegra: "EST-005"
-            mensagem: "Inclusão rejeitada: O limite de vagas deste estudo foi atingido."
+            codigoRegra: "ESTUDO_FORA_DE_PLANEJAMENTO"
+            mensagem: "Critérios e visitas só podem ser alterados com o estudo em planejamento"
             errosCampo: []
+            erro: "Critérios e visitas só podem ser alterados com o estudo em planejamento"
+            codigo: "ESTUDO_FORA_DE_PLANEJAMENTO"

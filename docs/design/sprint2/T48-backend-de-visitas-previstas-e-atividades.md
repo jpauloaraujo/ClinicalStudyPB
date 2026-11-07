@@ -32,6 +32,10 @@ Definir as visitas previstas de um estudo (dia, tolerância, ordem) e as ativida
 - Qualquer alteração exige estudo em planejamento (409 `ESTUDO_FORA_DE_PLANEJAMENTO`).
 - A listagem devolve as visitas ordenadas, cada uma com suas ações.
 
+### Atualização (unificação de 07/11/2026)
+
+- Toda escrita de visita e de ação passou a carregar o estudo com bloqueio de escrita (`buscarComBloqueio`); as operações de ação descobrem o estudo por `VisitaPlanejadaRepository.buscarEstudoId`. Testes de integração adicionais: `VisitaConsentimentoIntegrationTest`.
+
 ## 5. Contrato, regras e códigos de erro
 
 - Escrita: pesquisador. Leitura: pesquisador e coordenador.

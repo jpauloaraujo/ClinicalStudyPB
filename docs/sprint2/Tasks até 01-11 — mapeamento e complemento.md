@@ -168,4 +168,5 @@ As tasks ficaram assim depois das entregas posteriores a este mapeamento (o text
 - **T64:** o bloqueio de 80% está ligado no CI (`COBERTURA_BLOQUEAR: 'true'`); a cobertura de domínio e serviços é 98,3%.
 - **T42:** `POST` e `PUT /api/estudos` deixaram de poder mudar o estado; só a transição muda.
 - **T44, T47, T50, T59, T65 e T66:** testes e E2E implementados (ver [T50, T55, T59, T65 e T66 — implementação.md](<T50, T55, T59, T65 e T66 — implementação.md>)). Números atuais: backend 333 testes, web 126, E2E 29.
-- **Continuam abertas:** T37 (formato de erro com `status` e lista por campo), T53, T56 e T62 (suítes de testes), T63 (dados de demonstração), T67 e T68 (ambiente completo e integração), T70, T71 e T72 (README final, README da release e tag). Os guias estão em `docs/design/sprint2/`.
+- **Vindas da `main` na unificação:** T53 (testes de candidatos), T57 (testes de consentimento), T63 (dados de demonstração) e o formato de erro com `status` e `errosCampo` (T37).
+- **Continuam abertas:** T56 e T62 (suítes de testes), T67 e T68 (ambiente completo e integração), T70, T71 e T72 (README final, README da release e tag). Os guias estão em `docs/design/sprint2/`.

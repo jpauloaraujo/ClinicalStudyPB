@@ -12,6 +12,8 @@ import UEPB.ESWII.ClinicalStudyPB.controller.dto.ConsentimentoResponse;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoCandidato;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Candidato;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Consentimento;
+import UEPB.ESWII.ClinicalStudyPB.domain.model.Estudo;
+import UEPB.ESWII.ClinicalStudyPB.repository.CandidatoRepository;
 import UEPB.ESWII.ClinicalStudyPB.repository.ConsentimentoRepository;
 
 /**
@@ -24,23 +26,29 @@ public class ConsentimentoService {
 
     private final ConsentimentoRepository consentimentoRepository;
     private final CandidatoService candidatoService;
+    private final CandidatoRepository candidatoRepository;
     private final EstudoAcesso estudoAcesso;
     private final UsuarioAutenticado usuarioAutenticado;
     private final String versaoPadraoDoTermo;
 
     public ConsentimentoService(ConsentimentoRepository consentimentoRepository, CandidatoService candidatoService,
+            CandidatoRepository candidatoRepository,
             EstudoAcesso estudoAcesso, UsuarioAutenticado usuarioAutenticado,
             @Value("${app.consentimento.versao-termo:TCLE-SIMULADO v1}") String versaoPadraoDoTermo) {
         this.consentimentoRepository = consentimentoRepository;
         this.candidatoService = candidatoService;
+        this.candidatoRepository = candidatoRepository;
         this.estudoAcesso = estudoAcesso;
         this.usuarioAutenticado = usuarioAutenticado;
         this.versaoPadraoDoTermo = versaoPadraoDoTermo;
     }
 
     public ConsentimentoResponse registrar(UUID candidatoId, ConsentimentoRequest dados, UUID responsavelId) {
+        UUID estudoId = candidatoRepository.buscarEstudoId(candidatoId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Candidato não encontrado: " + candidatoId));
+        Estudo estudo = estudoAcesso.buscarComBloqueio(estudoId);
         Candidato candidato = candidatoService.buscarEntidade(candidatoId);
-        estudoAcesso.exigirRecrutamento(candidato.getEstudo());
+        estudoAcesso.exigirRecrutamento(estudo);
         if (candidato.estaIncluido()) {
             throw new ConflitoRegraException("CANDIDATO_JA_INCLUIDO",
                     "O candidato já foi incluído no estudo; o consentimento não pode mais ser registrado");

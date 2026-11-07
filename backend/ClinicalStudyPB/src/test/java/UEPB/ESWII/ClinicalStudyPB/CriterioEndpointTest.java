@@ -118,7 +118,6 @@ class CriterioEndpointTest {
     @CsvSource(delimiter = '|', value = {
             "descrição curta|{\"tipo\":\"INCLUSAO\",\"titulo\":\"Idade\",\"descricao\":\"abc\"}|descricao",
             "descrição ausente|{\"tipo\":\"INCLUSAO\",\"titulo\":\"Idade\"}|descricao",
-            "título ausente|{\"tipo\":\"INCLUSAO\",\"descricao\":\"Maior de 18 anos\"}|titulo",
             "tipo ausente|{\"titulo\":\"Idade\",\"descricao\":\"Maior de 18 anos\"}|tipo",
             "peso zero|{\"tipo\":\"INCLUSAO\",\"titulo\":\"Idade\",\"descricao\":\"Maior de 18 anos\",\"peso\":0}|peso" })
     @DisplayName("400 com o nome do campo e a mensagem quando os dados são inválidos")
@@ -126,6 +125,15 @@ class CriterioEndpointTest {
         enviar("POST", url(), pesquisador, json).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.erro", startsWith(campo + ": ")));
         mockMvc.perform(get(url()).header("Authorization", pesquisador)).andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("Título ausente ou em branco é derivado da descrição")
+    void tituloOpcional() throws Exception {
+        enviar("POST", url(), pesquisador, "{\"tipo\":\"INCLUSAO\",\"descricao\":\"Maior de 18 anos\"}")
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.titulo").value("Maior de 18 anos"));
+        enviar("POST", url(), pesquisador, corpo("EXCLUSAO", "   ", "Em gestação"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.titulo").value("Em gestação"));
     }
 
     @Test

@@ -3,7 +3,7 @@
 > **Sprint 2** · PBI-09 · Fundamentos  
 > **Responsável:** I1 · **Estimativa:** 3h · **Prazo:** Qui 29/10  
 > **Depende de:** T36  
-> **Situação:** 🟡 Parcialmente implementada (o documento separa o que existe do que falta)
+> **Situação:** ✅ Implementada (este documento descreve o que existe, para manter a coerência)
 
 ## 1. Objetivo
 
@@ -37,7 +37,7 @@ Ter um contrato único dos endpoints da Sprint 2, escrito antes do código, para
 ### Formato de erro
 
 - `{"erro": "mensagem", "codigo": "REGRA"}`: 400 validação, 401 sem token, 403 perfil, 404 inexistente, 409 regra violada (sempre com `codigo`).
-- O plano pede também `status` e a lista de erros por campo, que a API ainda não devolve (hoje: um campo por resposta, no texto `campo: mensagem`). O bloco "Lacuna em relação ao plano" abaixo descreve a mudança compatível que fecha isso.
+- O formato agora traz também `status` e a lista de erros por campo (`errosCampo`), conforme o plano; `erro` e `codigo` foram mantidos. Veja o bloco "Formato de erro implementado" abaixo.
 
 ### Regra de manutenção
 
@@ -48,14 +48,12 @@ Ter um contrato único dos endpoints da Sprint 2, escrito antes do código, para
 
 - 1. Descrever no YAML (tag, `operationId`, parâmetros, corpo, respostas, perfis). 2. Implementar o endpoint. 3. Atualizar a contagem esperada no `ContratoOpenApiTest`. 4. Gerar os tipos e criar o handler do mock.
 
-### Lacuna em relação ao plano e como fechá-la (formato de erro)
+### Formato de erro implementado (vindo da main, unificado em 07/11/2026)
 
-- O plano pede um formato único de erro com **status, código da regra, mensagem e lista de erros por campo**. Hoje a API devolve `{"erro", "codigo"?}`; falta `status` e a lista por campo.
-- Mudança compatível (nada que já funciona deixa de funcionar): o corpo passa a ser `{"status": 400, "erro": "campo: mensagem", "codigo": "REGRA"?, "erros": [{"campo": "descricao", "mensagem": "..."}]}`. `erro` e `codigo` continuam como hoje; `erros` é uma lista vazia fora de validação.
-- 1. `controller/ApiExceptionHandler.java`: os handlers passam a devolver `Map<String, Object>`/record com `status`; `tratarValidacao` coleta **todos** os `FieldError` em `erros` e mantém o primeiro em `erro`.
-- 2. `docs/api/openapi-sprint2.yaml`: no schema `Erro`, acrescentar `status` (inteiro) e `erros` (lista de `{campo, mensagem}`), com exemplo; rodar `npm run api:tipos`.
-- 3. Web: `src/api/erros.ts` já lê `erros: [{campo, mensagem}]` e continua lendo `erro`; nada a mudar além de `schema.d.ts`. Mock (`src/mocks/handlers.ts`): incluir `status` e `erros` nos corpos de erro.
-- 4. Testes: em `CriterioEndpointTest` (400), conferir `$.status` e `$.erros[0].campo`; um teste de validação com dois campos inválidos deve devolver os dois em `erros`; conferir que o `erro` antigo continua igual (os testes atuais não podem quebrar).
+- `backend/ClinicalStudyPB/src/main/java/UEPB/ESWII/ClinicalStudyPB/controller/ApiExceptionHandler.java` passou a devolver, em todo erro: `status`, `codigoRegra`, `mensagem` e `errosCampo` (lista de `{campo, erro}`; vazia fora da validação), mantendo os aliases `erro` e `codigo` para os clientes existentes.
+- Na validação (400) `errosCampo` traz **todos** os campos inválidos; `erro` continua com o primeiro no formato `campo: mensagem`.
+- O contrato (`docs/api/openapi-sprint2.yaml`, schema `Erro`) documenta os campos novos; `src/api/schema.d.ts` foi regenerado; `src/api/erros.ts` lê `errosCampo` e continua lendo `erro`; o mock devolve o mesmo formato de campos.
+- Testes: `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/PlanejamentoIntegrationTest.validacaoRetornaTodosOsCamposEContratoCompativel` e `web/ClinicalStudyPB/src/api/erros.test.ts`.
 
 ## 6. Testes
 

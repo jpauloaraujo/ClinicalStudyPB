@@ -29,6 +29,11 @@ Registrar o consentimento simulado de um candidato, com comprovante de data, res
 - Se o candidato estava `ELEGIVEL`, a situação passa a `CONSENTIDO`. O consentimento independe da avaliação.
 - `GET` sem consentimento registrado responde 404.
 
+### Atualização (unificação de 07/11/2026)
+
+- `ConsentimentoService.registrar` agora descobre o estudo do candidato (`CandidatoRepository.buscarEstudoId`) e o carrega com bloqueio de escrita antes de validar; o construtor recebeu o `CandidatoRepository`.
+- Testes de integração adicionais vindos da main: `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/VisitaConsentimentoIntegrationTest` (versão configurada e responsável do token, data futura, estado inadequado, candidato incluído e perfil incorreto).
+
 ## 5. Contrato, regras e códigos de erro
 
 - Escrita: coordenador. Leitura: coordenador e pesquisador. Revogação fica fora (RF16, Sprint 3).

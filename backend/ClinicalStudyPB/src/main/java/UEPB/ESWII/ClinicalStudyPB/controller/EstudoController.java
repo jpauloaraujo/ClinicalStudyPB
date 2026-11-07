@@ -21,6 +21,8 @@ import UEPB.ESWII.ClinicalStudyPB.domain.model.Estudo;
 import UEPB.ESWII.ClinicalStudyPB.service.EstudoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -70,7 +72,7 @@ public class EstudoController {
     @PreAuthorize(ESCRITA)
     @Operation(
             summary = "Cadastrar novo estudo clínico",
-            description = "Registra um novo estudo clínico vinculado a um pesquisador responsável, validando datas e limite mínimo de participantes.")
+            description = "Registra um novo estudo clínico em PLANEJAMENTO vinculado a um pesquisador responsável, validando datas e limite mínimo de participantes.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Estudo clínico cadastrado com sucesso"),
             @ApiResponse(responseCode = "400", description = "Violação de validação ou data final anterior à data inicial"),
@@ -87,11 +89,13 @@ public class EstudoController {
     @PreAuthorize(ESCRITA)
     @Operation(
             summary = "Atualizar estudo clínico",
-            description = "Atualiza as informações principais, datas, limite de vagas, responsável ou estado de um estudo clínico.")
+            description = "Atualiza os dados cadastrais. O estado deve ser mantido; use o endpoint de transições para avançá-lo.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Estudo clínico atualizado com sucesso"),
             @ApiResponse(responseCode = "400", description = "Dados inválidos ou violação de regra de negócio"),
-            @ApiResponse(responseCode = "404", description = "Estudo ou responsável não encontrado")
+            @ApiResponse(responseCode = "404", description = "Estudo ou responsável não encontrado"),
+            @ApiResponse(responseCode = "409", description = "O estado só pode mudar pelo endpoint de transições",
+                    content = @Content(mediaType = "application/json", schema = @Schema(type = "object")))
     })
     public Estudo atualizar(
             @Parameter(description = "UUID do estudo clínico a ser atualizado", example = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")

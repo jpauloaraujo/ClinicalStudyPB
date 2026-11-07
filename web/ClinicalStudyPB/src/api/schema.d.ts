@@ -15,7 +15,7 @@ export interface paths {
         put?: never;
         /**
          * Avançar o estado do estudo
-         * @description Aceita só o estado seguinte ao atual. Para sair de planejamento exige ao menos um critério de inclusão e uma visita prevista. Cada avanço grava usuário e data no histórico. Códigos 409: TRANSICAO_ESTADO_INVALIDA, ESTUDO_SEM_CRITERIO_INCLUSAO, ESTUDO_SEM_VISITA_PREVISTA. Perfis: somente PESQUISADOR; COORDENADOR e ADMINISTRADOR recebem 403.
+         * @description Aceita só o estado seguinte ao atual. Para sair de planejamento exige ao menos um critério de inclusão e uma visita prevista. Cada avanço grava usuário e data no histórico. Códigos 409: TRANSICAO_ESTADO_INVALIDA, ESTUDO_SEM_CRITERIO_INCLUSAO, ESTUDO_SEM_VISITA_PREVISTA. Este é o único caminho para mudar o estado: POST /api/estudos só cria em planejamento (409 ESTUDO_DEVE_COMECAR_EM_PLANEJAMENTO) e PUT /api/estudos/{id} não aceita outro estado (409 ESTADO_ALTERADO_FORA_DA_TRANSICAO). Perfis: somente PESQUISADOR; COORDENADOR, PARTICIPANTE e ADMINISTRADOR recebem 403.
          */
         post: operations["avancarEstado"];
         delete?: never;
@@ -363,8 +363,19 @@ export interface components {
         Erro: {
             /** @description Mensagem em português. Em erro de validação (400) vem no formato "campo: mensagem". */
             erro: string;
-            /** @description Código estável da regra de negócio violada. Presente nos 409. */
+            /** @description Código estável da regra de negócio violada. Presente nos 409 e, desde a unificação, em todo erro. */
             codigo?: string;
+            /** @description Status HTTP repetido no corpo. */
+            status?: number;
+            /** @description Mesmo valor de `codigo` (nome do formato novo). */
+            codigoRegra?: string;
+            /** @description Mesmo texto de `erro` (nome do formato novo). */
+            mensagem?: string;
+            /** @description Lista de erros por campo; preenchida na validação (400) com todos os campos inválidos e vazia nos demais erros. */
+            errosCampo?: {
+                campo?: string;
+                erro?: string;
+            }[];
         };
         /** @description Usuário responsável pelo estudo (nunca traz a senha). */
         Responsavel: {
@@ -453,7 +464,8 @@ export interface components {
          */
         CriterioRequest: {
             tipo: components["schemas"]["TipoCriterio"];
-            titulo: string;
+            /** @description Opcional; ausente ou vazio, é derivado da descrição. */
+            titulo: string | null;
             descricao: string;
             /**
              * Format: float

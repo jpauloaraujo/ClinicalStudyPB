@@ -14,7 +14,7 @@ Registro de 07/11/2026. Antes de escrever qualquer coisa, conferi o que já exis
 | **T65** Infraestrutura E2E | ✅ Completa no código | Verificação de ambiente; execução local conferida | Só o que depende do GitHub e de pessoas (seção 6) |
 | **T66** E2E do fluxo completo | ✅ Completa no código | Toda a base e todos os cenários, já ligados às telas reais | Ver o job verde no GitHub e o Azure Boards |
 
-Números de 07/11/2026: backend **333 testes**, 0 falhas, cobertura de domínio e serviços **98,3%**; web **126** testes de componente; E2E **29 passam, nenhum ignorado**.
+Números de 07/11/2026 (depois de unir a `main`, seção 9): backend **376 testes**, 0 falhas, cobertura de domínio e serviços **99,2%**; web **127** testes de componente; E2E **29 passam, nenhum ignorado**.
 
 ## 1. T50, testes do RF06
 
@@ -111,3 +111,16 @@ cd web/ClinicalStudyPB && npm run test:e2e
 ```
 
 Com PostgreSQL local, use o procedimento da seção "Testes E2E" do README.
+
+## 9. Junção com a `main` (branch `fix/unir-main-e-develop`)
+
+A `main` tinha trabalho de outra pessoa que a `develop` não tinha (T53, T57 e T63, mais mudanças no backend). Como o backend da `main` já estava funcionando, **o código de produção da `main` foi mantido como está**; só os meus testes foram adaptados a ele.
+
+| O que veio da `main` | O que fiz |
+|---|---|
+| `ConsentimentoService` recebeu `CandidatoRepository` e passou a carregar o estudo com bloqueio de escrita | `ConsentimentoServiceTest` ajustado: novo construtor e os stubs de `buscarEstudoId` e `buscarComBloqueio` |
+| `VisitaService` passou a usar `buscarComBloqueio` e `VisitaPlanejadaRepository.buscarEstudoId` | `VisitaServiceTest` ajustado com os mesmos stubs |
+| Formato de erro novo (`status`, `codigoRegra`, `mensagem`, `errosCampo` e os aliases `erro` e `codigo`), título de critério opcional, `novoEstado` como alias de `destino` | Contrato (`Erro`) atualizado, tipos regenerados, `converterErro` lê `errosCampo` (com teste novo) e o mock aceita critério sem título |
+| Testes novos: `CandidatoServiceTest`, `CandidatoIntegrationTest`, `PlanejamentoIntegrationTest`, `VisitaConsentimentoIntegrationTest`, `DemoDataIntegrationTest`; carga `R__dados_demonstracao.sql` e perfil `demo` | Mantidos; T53 e T63 passam a contar como concluídas |
+
+**Verificação depois da junção:** backend `verify` com o bloqueio de 80% ligado: 376 testes, 0 falhas; web: 127 testes, `tsc`, `eslint` e `build` limpos; E2E contra o backend unificado: 29 passam (e 83 em `--repeat-each=3`).

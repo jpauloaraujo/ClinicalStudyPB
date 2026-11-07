@@ -49,4 +49,23 @@ describe('converterErro', () => {
     expect(converterErro(new AxiosError('Network Error', 'ERR_NETWORK')).mensagem).toMatch(/conectar à API/)
     expect(converterErro(new Error('qualquer')).mensagem).toBe('Erro inesperado. Tente novamente.')
   })
+
+  it('lê a lista de erros por campo (errosCampo) do formato novo do backend, com todos os campos de uma vez', () => {
+    const erro = converterErro(
+      erroDaApi(400, {
+        status: 400,
+        codigoRegra: 'VALIDACAO_CAMPOS',
+        mensagem: 'descricao: A descrição é obrigatória',
+        erro: 'descricao: A descrição é obrigatória',
+        codigo: 'VALIDACAO_CAMPOS',
+        errosCampo: [
+          { campo: 'descricao', erro: 'A descrição é obrigatória' },
+          { campo: 'tipo', erro: 'O tipo é obrigatório' },
+        ],
+      }),
+    )
+
+    expect(erro.campos).toEqual({ descricao: 'A descrição é obrigatória', tipo: 'O tipo é obrigatório' })
+    expect(erro.status).toBe(400)
+  })
 })

@@ -3,7 +3,7 @@
 > **Sprint 2** · PBI-13 · RF08 Cadastro de candidatos  
 > **Responsável:** I4 · **Estimativa:** 3h · **Prazo:** Qui 05/11  
 > **Depende de:** T51  
-> **Situação:** 🟡 Parcialmente implementada (o documento separa o que existe do que falta)
+> **Situação:** ✅ Implementada (este documento descreve o que existe, para manter a coerência)
 
 ## 1. Objetivo
 
@@ -17,10 +17,8 @@ Cobrir as regras de candidatos com testes dedicados, no padrão de `CriterioServ
 
 | Arquivo | Ação | Responsabilidade |
 |---|---|---|
-| `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/CandidatoServiceTest.java` | Criar | Regras do serviço com repositórios simulados |
-| `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/CandidatoRequestValidacaoTest.java` | Criar | Limites do DTO |
-| `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/CandidatoEndpointTest.java` | Criar | Endpoints com MockMvc e tokens reais |
-| `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/CandidatoCodigoSequencialTest.java` | Criar | Geração do código em cadastros seguidos e em estudos diferentes |
+| `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/CandidatoServiceTest.java` | Existente (vindo da main) | Duplicidade sem salvar, edição de candidato incluído, edição que duplicaria outro, atualização preservando código e estudo, inexistente, nascimento hoje ou futuro |
+| `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/CandidatoIntegrationTest.java` | Existente (vindo da main) | Cadastro, consulta e edição com código gerado; códigos sequenciais por estudo; duplicidade; 400; 409 após a inclusão; 401 e permissões; 404; paginação e filtro sem misturar estudos |
 
 ## 4. O que fazer em cada arquivo
 
@@ -52,6 +50,11 @@ Cobrir as regras de candidatos com testes dedicados, no padrão de `CriterioServ
 - `avancar(mvc, tokenPesquisador, estudoId, destino)`: `POST /api/estudos/{id}/transicoes`. `estudoEmRecrutamento(mvc, tokenPesquisador, limite)` → id: cria um critério de inclusão, uma visita e avança para recrutamento.
 - `criarCandidato(mvc, tokenCoordenador, estudoId, nome)` → id; `avaliarAprovado(mvc, tokenCoordenador, candidatoId, estudoId)`: responde "se aplica" a todos os critérios de inclusão e "não se aplica" aos de exclusão; `consentir(mvc, tokenCoordenador, candidatoId)`.
 - Quem chegar primeiro cria a classe com essas assinaturas; os demais só a reutilizam, sem mudar as assinaturas.
+
+### Situação (unificação de 07/11/2026)
+
+- Os testes desta task já existiam na branch `main`, escritos por outra pessoa, e cobrem o que o plano pede. Não foram duplicados.
+- Se a equipe quiser reforçar, o que ainda não tem teste dedicado é o 403 de pesquisador e participante em cada escrita (hoje coberto de forma geral por `RecrutamentoIntegrationTest.permissoesPorPerfil`).
 
 ## 7. Critérios de aceite
 

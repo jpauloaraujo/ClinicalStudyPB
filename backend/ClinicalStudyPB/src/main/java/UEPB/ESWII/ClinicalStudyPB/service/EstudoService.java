@@ -49,15 +49,18 @@ public class EstudoService {
         }
         Estudo estudo = new Estudo();
         preencher(estudo, dados);
+        estudo.setStatus(StatusEstudo.PLANEJAMENTO);
         estudo.setId(null);
         return estudoRepository.save(estudo);
     }
 
     public Estudo atualizar(UUID id, EstudoRequest dados) {
-        Estudo estudo = buscarPorId(id);
+        // Participa do mesmo bloqueio da transição para não restaurar um estado antigo em um PUT concorrente.
+        Estudo estudo = estudoRepository.buscarComBloqueio(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Estudo não encontrado: " + id));
         if (dados.status() != estudo.getStatus()) {
             throw new ConflitoRegraException("ESTADO_ALTERADO_FORA_DA_TRANSICAO",
-                    "O estado do estudo só muda pela transição de estado (POST /api/estudos/{id}/transicoes)");
+                    "Use o endpoint de transições para alterar o estado do estudo");
         }
         preencher(estudo, dados);
         return estudoRepository.save(estudo);

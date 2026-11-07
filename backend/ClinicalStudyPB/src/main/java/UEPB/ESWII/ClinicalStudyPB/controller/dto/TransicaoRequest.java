@@ -1,5 +1,6 @@
 package UEPB.ESWII.ClinicalStudyPB.controller.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.StatusEstudo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
@@ -9,5 +10,6 @@ import jakarta.validation.constraints.NotNull;
 public record TransicaoRequest(
         @Schema(description = "Estado para o qual o estudo deve ir", example = "RECRUTAMENTO")
         @NotNull(message = "O estado de destino é obrigatório")
+        @JsonAlias("novoEstado")
         StatusEstudo destino) {
 }

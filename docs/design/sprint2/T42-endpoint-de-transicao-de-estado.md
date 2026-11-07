@@ -36,6 +36,10 @@ Permitir que o pesquisador avance o estudo um estado por vez pela API e consulte
 - `TRANSICAO_ESTADO_INVALIDA`, `ESTUDO_SEM_CRITERIO_INCLUSAO`, `ESTUDO_SEM_VISITA_PREVISTA`.
 - 400 para destino ausente ou inválido; 404 para estudo inexistente; 403 para coordenador, participante e administrador.
 
+### Atualização (unificação de 07/11/2026)
+
+- `TransicaoRequest` aceita também o nome `novoEstado` (`@JsonAlias`) além de `destino`. O `PUT` de estudo usa o mesmo bloqueio da transição para não restaurar um estado antigo. Testes: `PlanejamentoIntegrationTest.percorreSequenciaPorHttpComHistoricoSemPermitirDesvios` e `putNaoAlteraEstadoNemCriaHistorico`.
+
 ## 5. Contrato, regras e códigos de erro
 
 - Contrato: `docs/api/openapi-sprint2.yaml`, operações `avancarEstado` e do histórico.

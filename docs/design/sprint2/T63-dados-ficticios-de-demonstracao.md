@@ -3,7 +3,7 @@
 > **Sprint 2** · PBI-17 · Qualidade, integração e dados de demonstração  
 > **Responsável:** I4 · **Estimativa:** 3h · **Prazo:** Qui 05/11  
 > **Depende de:** T45, T48, T51, T57  
-> **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
+> **Situação:** ✅ Implementada (este documento descreve o que existe, para manter a coerência)
 
 ## 1. Objetivo
 
@@ -20,9 +20,9 @@ Ter, em um perfil `demo`, dois estudos prontos (um em planejamento e outro em re
 
 | Arquivo | Ação | Responsabilidade |
 |---|---|---|
-| `backend/ClinicalStudyPB/src/main/resources/db/demo/R__dados_demonstracao.sql` | Criar | Migration **repetível** (prefixo `R__`) com os dados; roda de novo só se o conteúdo mudar |
-| `backend/ClinicalStudyPB/src/main/resources/application-demo.properties` | Criar | Perfil `demo`: `spring.flyway.locations=classpath:db/migration,classpath:db/demo` |
-| `README.md` | Alterar | Como ligar o perfil (`SPRING_PROFILES_ACTIVE=demo`) e a tabela de usuários e estudos de demonstração |
+| `backend/ClinicalStudyPB/src/main/resources/db/demo/R__dados_demonstracao.sql` | Existente (vindo da main) | Carga repetível: usuários, 2 estudos (planejamento e recrutamento, com uma última vaga), critérios, visitas, ações, candidatos, avaliações, consentimentos, participação e histórico |
+| `backend/ClinicalStudyPB/src/main/resources/application-demo.properties` | Existente (vindo da main) | Perfil `demo`: `spring.flyway.locations=classpath:db/migration,classpath:db/demo` |
+| `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/DemoDataIntegrationTest.java` | Existente (vindo da main) | O perfil normal não carrega a demonstração; o perfil `demo` cria os dados; rodar de novo não duplica nem desfaz alterações |
 
 ## 4. O que fazer em cada arquivo
 
@@ -53,6 +53,11 @@ Ter, em um perfil `demo`, dois estudos prontos (um em planejamento e outro em re
 - `consentimentos`: id, candidato_id (único), data_hora, responsavel_id, versao_termo. `participacoes`: id, candidato_id (único), estudo_id, data_inclusao, incluido_por_id. `historico_status_estudo`: id, estudo_id, estado_anterior, estado_novo, usuario_id, data_hora.
 - Coerência: candidato `INCLUIDO` tem avaliação vigente `APROVADO`, consentimento e participação; `CONSENTIDO` tem avaliação aprovada e consentimento; `ELEGIVEL` só avaliação aprovada; `NAO_ELEGIVEL` avaliação reprovada; `CADASTRADO` nada. O estudo B tem um registro de histórico para a passagem PLANEJAMENTO → RECRUTAMENTO.
 - Usar como `avaliador_id`, `responsavel_id` e `incluido_por_id` o coordenador do seed V2 e como responsável do estudo o pesquisador do seed V2 (UUIDs em `V2__seed_initial_data.sql`).
+
+### Situação (unificação de 07/11/2026)
+
+- Implementada na branch `main` por outra pessoa; o guia acima descreve a mesma ideia e as colunas continuam valendo como referência.
+- Para usar: `SPRING_PROFILES_ACTIVE=demo`. Falta apenas conferir se as credenciais de demonstração estão listadas no README (parte da T70).
 
 ## 6. Testes
 

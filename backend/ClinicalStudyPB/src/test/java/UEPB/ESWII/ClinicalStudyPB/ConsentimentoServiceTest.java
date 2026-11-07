@@ -28,6 +28,7 @@ import UEPB.ESWII.ClinicalStudyPB.domain.model.Candidato;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Consentimento;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Estudo;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Usuario;
+import UEPB.ESWII.ClinicalStudyPB.repository.CandidatoRepository;
 import UEPB.ESWII.ClinicalStudyPB.repository.ConsentimentoRepository;
 import UEPB.ESWII.ClinicalStudyPB.repository.EstudoRepository;
 import UEPB.ESWII.ClinicalStudyPB.service.CandidatoService;
@@ -48,6 +49,7 @@ class ConsentimentoServiceTest {
 
     private ConsentimentoRepository consentimentoRepository;
     private CandidatoService candidatoService;
+    private CandidatoRepository candidatoRepository;
     private ConsentimentoService service;
     private Estudo estudo;
     private Candidato candidato;
@@ -57,9 +59,11 @@ class ConsentimentoServiceTest {
     void configurar() {
         consentimentoRepository = mock(ConsentimentoRepository.class);
         candidatoService = mock(CandidatoService.class);
+        candidatoRepository = mock(CandidatoRepository.class);
+        EstudoRepository estudoRepository = mock(EstudoRepository.class);
         UsuarioAutenticado usuarioAutenticado = mock(UsuarioAutenticado.class);
-        service = new ConsentimentoService(consentimentoRepository, candidatoService,
-                new EstudoAcesso(mock(EstudoRepository.class)), usuarioAutenticado, VERSAO_PADRAO);
+        service = new ConsentimentoService(consentimentoRepository, candidatoService, candidatoRepository,
+                new EstudoAcesso(estudoRepository), usuarioAutenticado, VERSAO_PADRAO);
 
         estudo = new Estudo();
         estudo.setId(UUID.randomUUID());
@@ -70,6 +74,9 @@ class ConsentimentoServiceTest {
         candidato.setEstudo(estudo);
         candidato.setSituacao(SituacaoCandidato.CADASTRADO);
         when(candidatoService.buscarEntidade(candidato.getId())).thenReturn(candidato);
+        // O serviço descobre o estudo do candidato e o carrega com bloqueio de escrita antes de validar
+        when(candidatoRepository.buscarEstudoId(candidato.getId())).thenReturn(Optional.of(estudo.getId()));
+        when(estudoRepository.buscarComBloqueio(estudo.getId())).thenReturn(Optional.of(estudo));
 
         coordenador = new Usuario();
         coordenador.setId(UUID.randomUUID());

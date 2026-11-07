@@ -9,7 +9,7 @@ Cada task tem um documento que diz **o que implementar, em qual arquivo e em que
 | Task | Título | Resp. | Situação | Documento de design |
 |---|---|---|---|---|
 | T36 | Modelo de domínio e regras de negócio | I1 | ✅ | [Design da T36](T36-modelo-de-dominio-e-regras-de-negocio.md)<br>[Implementação do modelo de domínio de recrutamento](../../sprint2/Implementa%C3%A7%C3%A3o%20do%20modelo%20de%20dom%C3%ADnio%20de%20recrutamento.md) (já existia)<br>[Diagrama de classes, estados e regras](../../diagramas/dominio.md) (já existia) |
-| T37 | Contrato OpenAPI dos endpoints da Sprint | I1 | 🟡 | [Design da T37](T37-contrato-openapi-dos-endpoints-da-sprint.md)<br>[Contrato OpenAPI (YAML)](../../api/openapi-sprint2.yaml) (já existia)<br>[Mapeamento, seção 3.1](../../sprint2/Tasks%20at%C3%A9%2001-11%20%E2%80%94%20mapeamento%20e%20complemento.md) (já existia) |
+| T37 | Contrato OpenAPI dos endpoints da Sprint | I1 | ✅ | [Design da T37](T37-contrato-openapi-dos-endpoints-da-sprint.md)<br>[Contrato OpenAPI (YAML)](../../api/openapi-sprint2.yaml) (já existia)<br>[Mapeamento, seção 3.1](../../sprint2/Tasks%20at%C3%A9%2001-11%20%E2%80%94%20mapeamento%20e%20complemento.md) (já existia) |
 | T38 | Migrations Flyway e entidades JPA | I3 | ✅ | [Design da T38](T38-migrations-flyway-e-entidades-jpa.md)<br>[T38 · T41 · T51](../../sprint2/T38-T41-T51-implementacao.md) (já existia)<br>[Modelo de domínio de recrutamento, seção 2.2](../../sprint2/Implementa%C3%A7%C3%A3o%20do%20modelo%20de%20dom%C3%ADnio%20de%20recrutamento.md) (já existia) |
 | T39 | Página de detalhe do estudo com abas | I6 | ✅ | [Design da T39](T39-pagina-de-detalhe-do-estudo-com-abas.md) |
 | T40 | Tipos TypeScript e mocks a partir do contrato | I5 | ✅ | [Design da T40](T40-tipos-typescript-e-mocks-a-partir-do-contrato.md) |
@@ -25,7 +25,7 @@ Cada task tem um documento que diz **o que implementar, em qual arquivo e em que
 | T50 | Testes do RF06 (visitas previstas e atividades) | I7 | ✅ | [Design da T50](T50-testes-do-rf06-visitas-previstas-e-atividades.md) |
 | T51 | Backend de candidatos | I3 | ✅ | [Design da T51](T51-backend-de-candidatos.md)<br>[T38 · T41 · T51, seção T51](../../sprint2/T38-T41-T51-implementacao.md) (já existia) |
 | T52 | Tela de candidatos e ficha do candidato | I5 | ✅ | [Design da T52](T52-tela-de-candidatos-e-ficha-do-candidato.md) |
-| T53 | Testes do RF08 (candidatos) | I4 | 🟡 | [Design da T53](T53-testes-do-rf08-candidatos.md) |
+| T53 | Testes do RF08 (candidatos) | I4 | ✅ | [Design da T53](T53-testes-do-rf08-candidatos.md) |
 | T54 | Backend de elegibilidade | I3 | ✅ | [Design da T54](T54-backend-de-elegibilidade.md) |
 | T55 | Tela de avaliação de elegibilidade | I7 | ✅ | [Design da T55](T55-tela-de-avaliacao-de-elegibilidade.md) |
 | T56 | Testes do RF09 (elegibilidade) | I2 | 🟡 | [Design da T56](T56-testes-do-rf09-elegibilidade.md) |
@@ -35,7 +35,7 @@ Cada task tem um documento que diz **o que implementar, em qual arquivo e em que
 | T60 | Backend de inclusão de participantes | I1 | ✅ | [Design da T60](T60-backend-de-inclusao-de-participantes.md) |
 | T61 | Tela de inclusão e lista de participantes | I6 | ✅ | [Design da T61](T61-tela-de-inclusao-e-lista-de-participantes.md) |
 | T62 | Testes do RF11 (limite de vagas e concorrência) | I2 | 🟡 | [Design da T62](T62-testes-do-rf11-limite-de-vagas-e-concorrencia.md) |
-| T63 | Dados fictícios de demonstração | I4 | ⬜ | [Design da T63](T63-dados-ficticios-de-demonstracao.md) |
+| T63 | Dados fictícios de demonstração | I4 | ✅ | [Design da T63](T63-dados-ficticios-de-demonstracao.md) |
 | T64 | Cobertura mínima de 80% no CI (JaCoCo) | I1 | ✅ | [Design da T64](T64-cobertura-minima-de-80-no-ci-jacoco.md) |
 | T65 | Infraestrutura de testes E2E (Playwright) | I7 | ✅ | [Design da T65](T65-infraestrutura-de-testes-e2e-playwright.md)<br>[Requisitos e critérios de aceite](../../sprint2/T65%20%E2%80%94%20Requisitos%20e%20crit%C3%A9rios%20de%20aceite%20%28E2E%20com%20Playwright%29.md) (já existia)<br>[Implementação da infraestrutura E2E](../../sprint2/T65%20%E2%80%94%20Implementa%C3%A7%C3%A3o%20da%20infraestrutura%20E2E.md) (já existia) |
 | T66 | E2E do fluxo completo da Release 1 | I7 | ✅ | [Design da T66](T66-e2e-do-fluxo-completo-da-release-1.md)<br>[Requisitos e critérios de aceite (checklist por dia)](../../sprint2/T66%20%E2%80%94%20Requisitos%20e%20crit%C3%A9rios%20de%20aceite%20%28E2E%20do%20fluxo%20completo%20da%20Release%201%29.md) (já existia) |

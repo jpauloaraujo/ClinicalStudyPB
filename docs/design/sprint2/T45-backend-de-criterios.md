@@ -32,6 +32,10 @@ Cadastrar, editar, excluir e listar critérios de inclusão e exclusão de um es
 - O tipo não muda na edição (400). Inclusão sem peso recebe 1 e é determinante por padrão.
 - Critério já usado em avaliação não é excluído (409 `CRITERIO_EM_USO`; na prática o estado bloqueia antes).
 
+### Atualização (unificação de 07/11/2026)
+
+- O **título do critério passou a ser opcional**: quando ausente, é derivado dos primeiros 120 caracteres da descrição. A duplicidade de título só é verificada quando ele é informado. A escrita também carrega o estudo com bloqueio. Testes: `PlanejamentoIntegrationTest`, `CriterioEndpointTest` e `CriterioRequestValidacaoTest` já refletem isso. A tela de critérios continua pedindo o título.
+
 ## 5. Contrato, regras e códigos de erro
 
 - Escrita: pesquisador. Leitura: pesquisador e coordenador. 400, 401, 403, 404, 409 conforme o YAML.

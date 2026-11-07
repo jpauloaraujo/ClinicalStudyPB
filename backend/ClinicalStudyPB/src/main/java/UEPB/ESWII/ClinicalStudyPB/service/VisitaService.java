@@ -42,7 +42,7 @@ public class VisitaService {
     }
 
     public VisitaResponse criar(UUID estudoId, VisitaRequest dados) {
-        Estudo estudo = estudoAcesso.buscar(estudoId);
+        Estudo estudo = estudoAcesso.buscarComBloqueio(estudoId);
         estudoAcesso.exigirPlanejamento(estudo);
         if (visitaRepository.existsByEstudoIdAndDiaPrevisto(estudoId, dados.diaPrevisto())) {
             throw diaRepetido();
@@ -58,8 +58,9 @@ public class VisitaService {
     }
 
     public VisitaResponse atualizar(UUID estudoId, UUID id, VisitaRequest dados) {
+        Estudo estudo = estudoAcesso.buscarComBloqueio(estudoId);
         VisitaPlanejada visita = buscarDoEstudo(estudoId, id);
-        estudoAcesso.exigirPlanejamento(visita.getEstudo());
+        estudoAcesso.exigirPlanejamento(estudo);
         if (visitaRepository.existsByEstudoIdAndDiaPrevistoAndIdNot(estudoId, dados.diaPrevisto(), id)) {
             throw diaRepetido();
         }
@@ -72,16 +73,18 @@ public class VisitaService {
 
     /** Remove a visita e, em cascata, todas as suas ações. */
     public void excluir(UUID estudoId, UUID id) {
+        Estudo estudo = estudoAcesso.buscarComBloqueio(estudoId);
         VisitaPlanejada visita = buscarDoEstudo(estudoId, id);
-        estudoAcesso.exigirPlanejamento(visita.getEstudo());
+        estudoAcesso.exigirPlanejamento(estudo);
         visitaRepository.delete(visita);
         visitaRepository.flush();
         reordenar(estudoId);
     }
 
     public AcaoResponse criarAcao(UUID visitaId, AcaoRequest dados) {
+        Estudo estudo = bloquearEstudoDaVisita(visitaId);
         VisitaPlanejada visita = buscarVisita(visitaId);
-        estudoAcesso.exigirPlanejamento(visita.getEstudo());
+        estudoAcesso.exigirPlanejamento(estudo);
 
         Acao acao = new Acao();
         acao.setVisita(visita);
@@ -91,17 +94,25 @@ public class VisitaService {
     }
 
     public AcaoResponse atualizarAcao(UUID visitaId, UUID id, AcaoRequest dados) {
+        Estudo estudo = bloquearEstudoDaVisita(visitaId);
         Acao acao = buscarAcaoDaVisita(visitaId, id);
-        estudoAcesso.exigirPlanejamento(acao.getVisita().getEstudo());
+        estudoAcesso.exigirPlanejamento(estudo);
         preencher(acao, dados);
         return AcaoResponse.de(acaoRepository.saveAndFlush(acao));
     }
 
     public void excluirAcao(UUID visitaId, UUID id) {
+        Estudo estudo = bloquearEstudoDaVisita(visitaId);
         Acao acao = buscarAcaoDaVisita(visitaId, id);
-        estudoAcesso.exigirPlanejamento(acao.getVisita().getEstudo());
+        estudoAcesso.exigirPlanejamento(estudo);
         acao.getVisita().getAcoes().remove(acao);
         acaoRepository.delete(acao);
+    }
+
+    private Estudo bloquearEstudoDaVisita(UUID visitaId) {
+        UUID estudoId = visitaRepository.buscarEstudoId(visitaId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Visita não encontrada: " + visitaId));
+        return estudoAcesso.buscarComBloqueio(estudoId);
     }
 
     private VisitaPlanejada buscarVisita(UUID id) {

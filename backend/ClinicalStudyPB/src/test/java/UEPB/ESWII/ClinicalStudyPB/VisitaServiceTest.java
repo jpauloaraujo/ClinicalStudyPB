@@ -60,6 +60,8 @@ class VisitaServiceTest {
         estudo.setId(UUID.randomUUID());
         estudo.setStatus(StatusEstudo.PLANEJAMENTO);
         when(estudoRepository.findById(estudo.getId())).thenReturn(Optional.of(estudo));
+        // Escritas carregam o estudo com bloqueio de escrita (concorrência com a transição de estado)
+        when(estudoRepository.buscarComBloqueio(estudo.getId())).thenReturn(Optional.of(estudo));
 
         banco = new ArrayList<>();
         when(visitaRepository.findByEstudoIdOrderByOrdemAsc(estudo.getId())).thenAnswer(i -> new ArrayList<>(banco));
@@ -100,6 +102,7 @@ class VisitaServiceTest {
         v.setDiaPrevisto(dia);
         banco.add(v);
         when(visitaRepository.findById(v.getId())).thenReturn(Optional.of(v));
+        when(visitaRepository.buscarEstudoId(v.getId())).thenReturn(Optional.of(estudo.getId()));
         return v;
     }
 

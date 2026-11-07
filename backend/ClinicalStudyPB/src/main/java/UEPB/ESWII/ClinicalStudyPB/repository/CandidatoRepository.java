@@ -1,15 +1,21 @@
 package UEPB.ESWII.ClinicalStudyPB.repository;
 
 import java.util.UUID;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoCandidato;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Candidato;
 
 public interface CandidatoRepository extends JpaRepository<Candidato, UUID> {
+
+    @Query("select c.estudo.id from Candidato c where c.id = :candidatoId")
+    Optional<UUID> buscarEstudoId(@Param("candidatoId") UUID candidatoId);
 
     Page<Candidato> findByEstudoId(UUID estudoId, Pageable pagina);
 

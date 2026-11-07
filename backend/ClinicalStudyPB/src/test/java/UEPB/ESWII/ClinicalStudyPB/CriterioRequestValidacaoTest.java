@@ -73,10 +73,10 @@ class CriterioRequestValidacaoTest {
     }
 
     @Test
-    @DisplayName("Título ausente ou em branco é inválido")
+    @DisplayName("Título opcional pode ser derivado da descrição pelo serviço")
     void tituloAusente() {
-        assertThat(camposInvalidos(new CriterioRequest(TipoCriterio.INCLUSAO, null, "Maior de 18 anos", null, null))).contains("titulo");
-        assertThat(camposInvalidos(new CriterioRequest(TipoCriterio.INCLUSAO, "   ", "Maior de 18 anos", null, null))).contains("titulo");
+        assertThat(camposInvalidos(new CriterioRequest(TipoCriterio.INCLUSAO, null, "Maior de 18 anos", null, null))).isEmpty();
+        assertThat(camposInvalidos(new CriterioRequest(TipoCriterio.INCLUSAO, "   ", "Maior de 18 anos", null, null))).isEmpty();
     }
 
     @ParameterizedTest(name = "peso {0}: inválido = {1}")

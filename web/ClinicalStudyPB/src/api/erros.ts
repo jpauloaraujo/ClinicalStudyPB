@@ -14,6 +14,11 @@ type CorpoErro = {
   codigo?: string
   // Lista por campo, aceita caso a API passe a devolvê-la além do formato atual
   erros?: { campo: string; mensagem: string }[]
+  // Lista por campo que o backend devolve em todo erro de validação (400): [{campo, erro}]
+  errosCampo?: { campo: string; erro: string }[]
+  // Aliases do formato novo; "erro" e "codigo" continuam presentes para os clientes existentes
+  mensagem?: string
+  codigoRegra?: string
 }
 
 const MENSAGENS_POR_STATUS: Record<number, string> = {
@@ -41,7 +46,12 @@ export function converterErro(erro: unknown): ErroContrato {
       campos[item.campo] = item.mensagem
     }
   }
-  let mensagem = corpo.erro ?? MENSAGENS_POR_STATUS[status] ?? `Erro ${status} na API.`
+  if (Array.isArray(corpo.errosCampo)) {
+    for (const item of corpo.errosCampo) {
+      campos[item.campo] ??= item.erro
+    }
+  }
+  let mensagem = corpo.erro ?? corpo.mensagem ?? MENSAGENS_POR_STATUS[status] ?? `Erro ${status} na API.`
 
   if (status === 400 && corpo.erro) {
     const separador = corpo.erro.indexOf(': ')
@@ -51,5 +61,5 @@ export function converterErro(erro: unknown): ErroContrato {
       campos[campo] ??= mensagem
     }
   }
-  return { mensagem, codigo: corpo.codigo, status, campos }
+  return { mensagem, codigo: corpo.codigo ?? (status === 409 ? corpo.codigoRegra : undefined), status, campos }
 }

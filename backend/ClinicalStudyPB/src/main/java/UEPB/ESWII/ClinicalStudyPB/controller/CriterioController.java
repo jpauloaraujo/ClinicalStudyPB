@@ -21,6 +21,8 @@ import UEPB.ESWII.ClinicalStudyPB.controller.dto.CriterioResponse;
 import UEPB.ESWII.ClinicalStudyPB.security.Permissoes;
 import UEPB.ESWII.ClinicalStudyPB.service.CriterioService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -46,11 +48,13 @@ public class CriterioController {
 
     @PostMapping
     @PreAuthorize(Permissoes.ESCRITA_PLANEJAMENTO)
-    @Operation(summary = "Cadastrar critério", description = "Cria um critério de inclusão (com peso e flag determinante) ou de exclusão.")
+    @Operation(summary = "Cadastrar critério", description = "Cria um critério de inclusão ou exclusão em planejamento. A descrição de 5 a 500 caracteres é única por tipo e estudo, ignorando maiúsculas; título opcional.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Critério criado"),
-            @ApiResponse(responseCode = "400", description = "Dados inválidos"),
-            @ApiResponse(responseCode = "409", description = "Estudo fora de planejamento ou título repetido")
+            @ApiResponse(responseCode = "400", description = "Dados inválidos",
+                    content = @Content(mediaType = "application/json", schema = @Schema(type = "object"))),
+            @ApiResponse(responseCode = "409", description = "Estudo fora de planejamento ou descrição repetida",
+                    content = @Content(mediaType = "application/json", schema = @Schema(type = "object")))
     })
     public ResponseEntity<CriterioResponse> criar(@PathVariable UUID estudoId, @Valid @RequestBody CriterioRequest dados) {
         CriterioResponse criado = criterioService.criar(estudoId, dados);

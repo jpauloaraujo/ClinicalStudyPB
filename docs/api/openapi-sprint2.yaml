@@ -1005,7 +1005,26 @@ components:
           description: 'Mensagem em português. Em erro de validação (400) vem no formato "campo: mensagem".'
         codigo:
           type: string
-          description: Código estável da regra de negócio violada. Presente nos 409.
+          description: Código estável da regra de negócio violada. Presente nos 409 e, desde a unificação, em todo erro.
+        status:
+          type: integer
+          description: Status HTTP repetido no corpo.
+        codigoRegra:
+          type: string
+          description: Mesmo valor de `codigo` (nome do formato novo).
+        mensagem:
+          type: string
+          description: Mesmo texto de `erro` (nome do formato novo).
+        errosCampo:
+          type: array
+          description: Lista de erros por campo; preenchida na validação (400) com todos os campos inválidos e vazia nos demais erros.
+          items:
+            type: object
+            properties:
+              campo:
+                type: string
+              erro:
+                type: string
       required:
       - erro
       example:
@@ -1138,6 +1157,8 @@ components:
           $ref: '#/components/schemas/TipoCriterio'
         titulo:
           type: string
+          nullable: true
+          description: Opcional; ausente ou vazio, é derivado da descrição.
           maxLength: 120
         descricao:
           type: string
