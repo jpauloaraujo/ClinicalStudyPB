@@ -3,7 +3,7 @@
 > **Sprint 2** · PBI-16 · RF11 Inclusão de participantes  
 > **Responsável:** I6 · **Estimativa:** 5h · **Prazo:** Sex 06/11  
 > **Depende de:** T52, T60  
-> **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
+> **Situação:** ✅ Implementada (este documento descreve o que existe, para manter a coerência)
 
 ## 1. Objetivo
 
@@ -20,14 +20,14 @@ Na ficha do candidato, mostrar as quatro pré-condições da inclusão e o botã
 
 | Arquivo | Ação | Responsabilidade |
 |---|---|---|
-| `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/SecaoInclusao.tsx` | Alterar | Lista das 4 pré-condições, botão Incluir com confirmação e mensagem do erro |
-| `web/ClinicalStudyPB/src/pages/estudos/detalhe/abas/AbaParticipantes.tsx` | Criar | Lista de participantes e contador "X de N vagas" |
-| `web/ClinicalStudyPB/src/pages/estudos/detalhe/mensagensInclusao.ts` | Criar | Tradução dos códigos de erro da inclusão em frases claras |
-| `web/ClinicalStudyPB/src/routes/router.tsx` | Alterar | Trocar `<AbaProvisoria titulo="Participantes" />` por `<AbaParticipantes />` |
-| `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/FichaCandidatoPage.tsx` | Alterar (mínimo) | Passar `estudo={estudo}` e `aoIncluir={recarregar}` a `<SecaoInclusao>`, no mesmo padrão da `SecaoAvaliacao`, para atualizar a situação depois de incluir |
-| `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/SecaoInclusao.test.tsx` | Criar | Testes da seção |
-| `web/ClinicalStudyPB/src/pages/estudos/detalhe/abas/AbaParticipantes.test.tsx` | Criar | Testes da aba |
-| `web/ClinicalStudyPB/src/pages/estudos/detalhe/abas/AbaProvisoria.tsx` | Remover (se ficar sem uso) | Só a aba Participantes a usava |
+| `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/SecaoInclusao.tsx` | Existente (ampliado na implementação) | Lista das 4 pré-condições, botão Incluir com confirmação e mensagem do erro |
+| `web/ClinicalStudyPB/src/pages/estudos/detalhe/abas/AbaParticipantes.tsx` | Existente (criado na implementação) | Lista de participantes e contador "X de N vagas" |
+| `web/ClinicalStudyPB/src/pages/estudos/detalhe/mensagensInclusao.ts` | Existente (criado na implementação) | Tradução dos códigos de erro da inclusão em frases claras |
+| `web/ClinicalStudyPB/src/routes/router.tsx` | Existente (ampliado na implementação) | Trocar `<AbaProvisoria titulo="Participantes" />` por `<AbaParticipantes />` |
+| `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/FichaCandidatoPage.tsx` | Existente (ampliado na implementação) | Passar `estudo={estudo}` e `aoIncluir={recarregar}` a `<SecaoInclusao>`, no mesmo padrão da `SecaoAvaliacao`, para atualizar a situação depois de incluir |
+| `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/SecaoInclusao.test.tsx` | Existente (criado na implementação) | Testes da seção |
+| `web/ClinicalStudyPB/src/pages/estudos/detalhe/abas/AbaParticipantes.test.tsx` | Existente (criado na implementação) | Testes da aba |
+| `web/ClinicalStudyPB/src/pages/estudos/detalhe/abas/AbaProvisoria.tsx` | Removido na implementação | Só a aba Participantes a usava |
 
 ## 4. O que fazer em cada arquivo
 
@@ -46,6 +46,14 @@ Na ficha do candidato, mostrar as quatro pré-condições da inclusão e o botã
 
 - Carregar `listar` e `vagas`; tabela com código, nome fictício, data de inclusão (`formatarData`) e quem incluiu; cabeçalho "X de N vagas" (`incluidos` de `limite`); estados de carregamento, vazio e erro.
 - Atualizar depois de uma inclusão: a aba é recarregada ao ser aberta, pois cada aba é uma rota.
+
+### Nomes acessíveis que o E2E (T66) usa na inclusão e em Participantes (implementados)
+
+- A seção continua com `aria-label="Inclusão"` (região "Inclusão").
+- Botão de nome exato "Incluir no estudo", habilitado só com as quatro pré-condições atendidas; ao clicar abre um `role=dialog` com o botão "Confirmar".
+- Sem vaga, a pré-condição "Vaga disponível" aparece pendente com o texto "Vagas esgotadas" e o botão fica desabilitado. Sem consentimento, o texto da pré-condição contém "consentimento" e o botão fica desabilitado.
+- Depois de incluir, a seção contém "incluído" e a situação do candidato na ficha passa a "Incluído".
+- Aba Participantes: uma tabela com o código e o nome fictício de cada participante e um texto no formato "1 de 5 vagas" (incluídos de limite).
 
 ## 5. Contrato, regras e códigos de erro
 

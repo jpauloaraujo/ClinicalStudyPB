@@ -13,8 +13,10 @@ vi.mock('../../../../api/visitas', () => ({
 
 const listar = vi.mocked(visitasApi.listar)
 const criar = vi.mocked(visitasApi.criar)
+const atualizar = vi.mocked(visitasApi.atualizar)
 const excluir = vi.mocked(visitasApi.excluir)
 const criarAcao = vi.mocked(acoesApi.criar)
+const atualizarAcao = vi.mocked(acoesApi.atualizar)
 const excluirAcao = vi.mocked(acoesApi.excluir)
 
 const inicial: VisitaResponse = {
@@ -143,5 +145,103 @@ describe('AbaVisitas (T49)', () => {
     renderizarAba(<AbaVisitas />, { perfil: 'PESQUISADOR' })
 
     expect(await screen.findByText(/Nenhuma visita prevista/)).toBeInTheDocument()
+  })
+
+  // T50: lacunas dos testes de T49
+  it('mostra o erro de carregamento e não exibe a lista nem o formulário de visitas vazio', async () => {
+    listar.mockRejectedValue(erroHttp(500, 'Erro interno do servidor'))
+    renderizarAba(<AbaVisitas />, { perfil: 'PESQUISADOR' })
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Erro interno do servidor')
+    expect(screen.queryByText(/^Dia \d+ · /)).not.toBeInTheDocument()
+  })
+
+  it('indica o carregamento enquanto a lista não chega', async () => {
+    listar.mockReturnValue(new Promise(() => {}))
+    renderizarAba(<AbaVisitas />, { perfil: 'PESQUISADOR' })
+
+    expect(await screen.findByText('Carregando visitas…')).toBeInTheDocument()
+  })
+
+  it('mostra o erro do servidor (500) ao criar a visita e mantém o que foi digitado', async () => {
+    criar.mockRejectedValue(erroHttp(500, 'Erro interno do servidor'))
+    renderizarAba(<AbaVisitas />, { perfil: 'PESQUISADOR' })
+    await screen.findByText('Dia 0 · Triagem')
+    const formulario = screen.getByRole('form', { name: 'Nova visita' })
+
+    await userEvent.type(within(formulario).getByLabelText(/^Nome da visita/), 'Semana 4')
+    await userEvent.type(within(formulario).getByLabelText(/^Dia previsto/), '28')
+    await userEvent.click(within(formulario).getByRole('button', { name: 'Adicionar visita' }))
+
+    expect(await within(formulario).findByRole('alert')).toHaveTextContent('Erro interno do servidor')
+    expect(within(formulario).getByLabelText(/^Nome da visita/)).toHaveValue('Semana 4')
+  })
+
+  it('mostra no campo o erro de validação devolvido pelo servidor', async () => {
+    criar.mockRejectedValue(erroHttp(400, 'nome: O nome deve ter no máximo 100 caracteres'))
+    renderizarAba(<AbaVisitas />, { perfil: 'PESQUISADOR' })
+    await screen.findByText('Dia 0 · Triagem')
+    const formulario = screen.getByRole('form', { name: 'Nova visita' })
+
+    await userEvent.type(within(formulario).getByLabelText(/^Nome da visita/), 'Visita')
+    await userEvent.type(within(formulario).getByLabelText(/^Dia previsto/), '5')
+    await userEvent.click(within(formulario).getByRole('button', { name: 'Adicionar visita' }))
+
+    expect(await screen.findByText('O nome deve ter no máximo 100 caracteres')).toBeInTheDocument()
+    expect(within(formulario).queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('edita uma visita com os dados atuais preenchidos e envia a atualização', async () => {
+    atualizar.mockResolvedValue(retorno)
+    renderizarAba(<AbaVisitas />, { perfil: 'PESQUISADOR' })
+    await screen.findByText('Dia 30 · Retorno mensal')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Editar visita Retorno mensal' }))
+
+    const formulario = screen.getByRole('form', { name: 'Editar visita' })
+    expect(within(formulario).getByLabelText(/^Nome da visita/)).toHaveValue('Retorno mensal')
+    expect(within(formulario).getByLabelText(/^Dia previsto/)).toHaveValue('30')
+    await userEvent.clear(within(formulario).getByLabelText(/^Tolerância/))
+    await userEvent.type(within(formulario).getByLabelText(/^Tolerância/), '7')
+    await userEvent.click(within(formulario).getByRole('button', { name: /Salvar/ }))
+
+    expect(atualizar).toHaveBeenCalledWith(estudoBase.id, 'v-2', { nome: 'Retorno mensal', diaPrevisto: 30, tolerancia: 7 })
+    expect(listar).toHaveBeenCalledTimes(2)
+  })
+
+  it('edita uma atividade existente', async () => {
+    atualizarAcao.mockResolvedValue(inicial.acoes[0])
+    renderizarAba(<AbaVisitas />, { perfil: 'PESQUISADOR' })
+    await screen.findByText('Dia 0 · Triagem')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Editar atividade' }))
+
+    const formulario = screen.getByRole('form', { name: 'Editar atividade da visita Triagem' })
+    expect(within(formulario).getByLabelText(/^Nome da atividade/)).toHaveValue('Aferição de pressão')
+    await userEvent.clear(within(formulario).getByLabelText(/^Nome da atividade/))
+    await userEvent.type(within(formulario).getByLabelText(/^Nome da atividade/), 'Pressão arterial')
+    await userEvent.click(within(formulario).getByRole('button', { name: /Salvar/ }))
+
+    expect(atualizarAcao).toHaveBeenCalledWith('v-1', 'a-1', expect.objectContaining({ nome: 'Pressão arterial', categoria: 'AVALIACAO_CLINICA' }))
+  })
+
+  it('mostra o motivo quando o servidor recusa a exclusão da visita (409)', async () => {
+    excluir.mockRejectedValue(erroHttp(409, 'Critérios e visitas só podem ser alterados com o estudo em planejamento', 'ESTUDO_FORA_DE_PLANEJAMENTO'))
+    renderizarAba(<AbaVisitas />, { perfil: 'PESQUISADOR' })
+    await screen.findByText('Dia 30 · Retorno mensal')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir visita Retorno mensal' }))
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'Excluir visita?' })).getByRole('button', { name: 'Excluir' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('só podem ser alterados com o estudo em planejamento')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByText('Dia 30 · Retorno mensal')).toBeInTheDocument()
+  })
+
+  it('para o coordenador e fora de planejamento não oferece editar visita nem atividade', async () => {
+    renderizarAba(<AbaVisitas />, { perfil: 'COORDENADOR' })
+
+    expect(await screen.findByText('Dia 0 · Triagem')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Editar/ })).not.toBeInTheDocument()
   })
 })

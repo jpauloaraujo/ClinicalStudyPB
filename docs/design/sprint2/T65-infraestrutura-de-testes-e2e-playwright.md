@@ -45,6 +45,11 @@ Ter testes de ponta a ponta no navegador rodando localmente e no CI, com sessão
 
 - Ver o job `e2e` verde no GitHub, quebrar um teste de propósito para ver o job vermelho e o trace, revisão do PR, alguém rodar só pelo README e atualizar o Azure Boards.
 
+### Verificação de 07/11/2026
+
+- A suíte E2E foi executada localmente contra o backend real (H2 em memória) e a web: 25 passam e 4 ficam ignorados (pendentes de T58/T61), em duas execuções seguidas e com `--repeat-each=5` (117 passam, nenhuma falha).
+- Foi acrescentada a verificação de ambiente `e2e/setup/ambiente.setup.ts` (backend responde, web abre, MSW desligado), que roda junto do setup de sessões.
+
 ## 6. Testes
 
 - 10 testes E2E passam localmente (`login.spec.ts` e `sessao.spec.ts`).

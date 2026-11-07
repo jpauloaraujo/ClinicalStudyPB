@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { avaliacoesApi } from '../../../../api/avaliacoes'
 import { candidatosApi } from '../../../../api/candidatos'
+import { consentimentoApi } from '../../../../api/consentimento'
 import { criteriosApi } from '../../../../api/criterios'
+import { participantesApi } from '../../../../api/participantes'
 import type { AvaliacaoResponse, CandidatoResponse, CriterioResponse } from '../../../../api/tipos'
 import { erroHttp, estudoBase, renderizarAba } from '../../../../test/ambiente'
 import type { Estudo } from '../../../../types/estudo'
@@ -16,11 +18,15 @@ vi.mock('../../../../api/criterios', () => ({
   criteriosApi: { listar: vi.fn(), criar: vi.fn(), atualizar: vi.fn(), excluir: vi.fn() },
 }))
 vi.mock('../../../../api/avaliacoes', () => ({ avaliacoesApi: { historico: vi.fn(), avaliar: vi.fn() } }))
+vi.mock('../../../../api/consentimento', () => ({ consentimentoApi: { buscar: vi.fn(), registrar: vi.fn() } }))
+vi.mock('../../../../api/participantes', () => ({ participantesApi: { listar: vi.fn(), vagas: vi.fn(), incluir: vi.fn() } }))
 
 const buscar = vi.mocked(candidatosApi.buscar)
 const listarCriterios = vi.mocked(criteriosApi.listar)
 const historico = vi.mocked(avaliacoesApi.historico)
 const avaliar = vi.mocked(avaliacoesApi.avaliar)
+const buscarConsentimento = vi.mocked(consentimentoApi.buscar)
+const vagas = vi.mocked(participantesApi.vagas)
 
 const estudo: Estudo = { ...estudoBase, status: 'RECRUTAMENTO' }
 
@@ -64,9 +70,11 @@ describe('FichaCandidatoPage e SecaoAvaliacao (T52 e T55)', () => {
     buscar.mockResolvedValue(candidato)
     listarCriterios.mockResolvedValue([idade, gestante])
     historico.mockResolvedValue([])
+    buscarConsentimento.mockRejectedValue(erroHttp(404, 'Consentimento não registrado para o candidato'))
+    vagas.mockResolvedValue({ incluidos: 0, limite: 30, restantes: 30 })
   })
 
-  it('mostra os dados do candidato e os espaços reservados das próximas tasks', async () => {
+  it('mostra os dados do candidato e as três seções do funil (avaliação, consentimento e inclusão)', async () => {
     renderizar()
 
     expect(await screen.findByRole('heading', { level: 2, name: 'CAND-001 · J. S.' })).toBeInTheDocument()
@@ -75,8 +83,8 @@ describe('FichaCandidatoPage e SecaoAvaliacao (T52 e T55)', () => {
     expect(within(dados).getByText('12/04/1990')).toBeInTheDocument()
     expect(within(dados).getByText('js@example.test')).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Avaliação de elegibilidade' })).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Consentimento' })).toHaveTextContent('T58')
-    expect(screen.getByRole('region', { name: 'Inclusão' })).toHaveTextContent('T61')
+    expect(await screen.findByRole('button', { name: 'Registrar' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Incluir no estudo' })).toBeDisabled()
     expect(buscar).toHaveBeenCalledWith('cand-1')
   })
 

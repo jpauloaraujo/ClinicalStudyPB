@@ -3,7 +3,7 @@ import { AppLayout } from '../components/layout/AppLayout'
 import { PublicLayout } from '../components/layout/PublicLayout'
 import { AbaCandidatos } from '../pages/estudos/detalhe/abas/AbaCandidatos'
 import { AbaCriterios } from '../pages/estudos/detalhe/abas/AbaCriterios'
-import { AbaProvisoria } from '../pages/estudos/detalhe/abas/AbaProvisoria'
+import { AbaParticipantes } from '../pages/estudos/detalhe/abas/AbaParticipantes'
 import { AbaResumo } from '../pages/estudos/detalhe/abas/AbaResumo'
 import { AbaVisitas } from '../pages/estudos/detalhe/abas/AbaVisitas'
 import { FichaCandidatoPage } from '../pages/estudos/detalhe/candidato/FichaCandidatoPage'
@@ -108,7 +108,7 @@ export const rotas: RouteObject[] = [
                 path: 'participantes',
                 element: (
                   <RequerPerfil perfis={perfisDaAba('participantes')}>
-                    <AbaProvisoria titulo="Participantes" />
+                    <AbaParticipantes />
                   </RequerPerfil>
                 ),
               },

@@ -3,7 +3,7 @@
 > **Sprint 2** · PBI-12 · RF06 Visitas previstas e atividades  
 > **Responsável:** I7 · **Estimativa:** 3h · **Prazo:** Qui 05/11  
 > **Depende de:** T48, T49  
-> **Situação:** 🟡 Parcialmente implementada (o documento separa o que existe do que falta)
+> **Situação:** ✅ Implementada (este documento descreve o que existe, para manter a coerência)
 
 ## 1. Objetivo
 
@@ -19,10 +19,10 @@ Cobrir as regras de visitas e atividades com testes dedicados, no mesmo padrão 
 
 | Arquivo | Ação | Responsabilidade |
 |---|---|---|
-| `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/VisitaServiceTest.java` | Criar | Regras do serviço com repositórios simulados |
-| `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/VisitaRequestValidacaoTest.java` | Criar | Limites do DTO, sem Spring |
-| `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/VisitaEndpointTest.java` | Criar | Endpoints de visitas e ações com MockMvc |
-| `web/ClinicalStudyPB/src/pages/estudos/detalhe/abas/AbaVisitas.test.tsx` | Alterar | Revisar e completar lacunas (lista vazia, erro 500) |
+| `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/VisitaServiceTest.java` | Existente (criado na implementação) | Regras do serviço com repositórios simulados |
+| `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/VisitaRequestValidacaoTest.java` | Existente (criado na implementação) | Limites do DTO, sem Spring |
+| `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/VisitaEndpointTest.java` | Existente (criado na implementação) | Endpoints de visitas e ações com MockMvc |
+| `web/ClinicalStudyPB/src/pages/estudos/detalhe/abas/AbaVisitas.test.tsx` | Existente (ampliado na implementação) | Revisar e completar lacunas (lista vazia, erro 500) |
 
 ## 4. O que fazer em cada arquivo
 
@@ -53,7 +53,7 @@ Cobrir as regras de visitas e atividades com testes dedicados, no mesmo padrão 
 
 ## 6. Testes
 
-- Meta: cada regra da seção "Regras" da T48 tem um teste que falha se ela for removida.
+- Resultado (07/11/2026): VisitaServiceTest (14), VisitaRequestValidacaoTest (19) e VisitaEndpointTest (24) passam; AbaVisitas.test.tsx foi de 9 para 17 testes. Cada regra da T48 tem teste.
 
 ## 7. Critérios de aceite
 

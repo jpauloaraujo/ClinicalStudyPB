@@ -3,7 +3,7 @@
 > **Sprint 2** · PBI-17 · Qualidade, integração e dados de demonstração  
 > **Responsável:** I7 · **Estimativa:** 4h · **Prazo:** Sex 06/11  
 > **Depende de:** T61, T63, T65  
-> **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
+> **Situação:** ✅ Implementada (este documento descreve o que existe, para manter a coerência)
 
 ## 1. Objetivo
 
@@ -19,16 +19,16 @@ Provar por testes de ponta a ponta o fluxo da Release 1: o pesquisador planeja e
 
 | Arquivo | Ação | Responsabilidade |
 |---|---|---|
-| `web/ClinicalStudyPB/e2e/support/api.ts` | Criar | Helpers que preparam estado pela API com a sessão da T65: criar estudo, critérios, visita, avançar estado, cadastrar candidato, avaliar, registrar consentimento |
-| `web/ClinicalStudyPB/e2e/support/ambiente.ts` | Criar | Verificação de saúde do ambiente antes dos testes (backend e web no ar; mocks desligados) |
-| `web/ClinicalStudyPB/e2e/pages/EstudosPage.ts, EstudoDetalhePage.ts, CriteriosPage.ts, VisitasPage.ts` | Criar | Lista e cadastro de estudos, detalhe e estado, critérios, visitas |
-| `web/ClinicalStudyPB/e2e/pages/CandidatosPage.ts, FichaCandidatoPage.ts, ParticipantesPage.ts` | Criar | Lista e cadastro, ficha (avaliação, consentimento, inclusão) e aba Participantes |
-| `web/ClinicalStudyPB/e2e/pages/UsuariosPage.ts` | Criar | Cadastro de usuário (regressão RF01) |
-| `web/ClinicalStudyPB/e2e/tests/fluxo-completo.spec.ts` | Criar | Cenário feliz em dois contextos (pesquisador e coordenador), com `test.step` |
-| `web/ClinicalStudyPB/e2e/tests/vagas-esgotadas.spec.ts` | Criar | Estudo de limite 1: a segunda inclusão é bloqueada |
-| `web/ClinicalStudyPB/e2e/tests/regressao-sprint1.spec.ts` | Criar | Regressão: cadastro de usuário (RF01) e de estudo, com validação (RF04) |
-| `web/ClinicalStudyPB/e2e/tests/regras-recrutamento.spec.ts, acesso-por-perfil.spec.ts` | Criar (se sobrar tempo) | RQ-12 e RQ-13: erros de regra e acesso por perfil |
-| `.github/workflows/ci.yml` | Alterar | Perfil `demo` carregado, `timeout-minutes` ajustado, artefato com as capturas |
+| `web/ClinicalStudyPB/e2e/support/api.ts` | Existente (criado na implementação) | Helpers que preparam estado pela API com a sessão da T65: criar estudo, critérios, visita, avançar estado, cadastrar candidato, avaliar, registrar consentimento |
+| `web/ClinicalStudyPB/e2e/setup/ambiente.setup.ts` | Existente (criado na implementação) | Verificação do ambiente antes dos testes (backend e web no ar; mocks desligados), junto do setup de sessões da T65 |
+| `web/ClinicalStudyPB/e2e/pages/EstudosPage.ts, EstudoDetalhePage.ts, CriteriosPage.ts, VisitasPage.ts` | Existente (criado na implementação) | Lista e cadastro de estudos, detalhe e estado, critérios, visitas |
+| `web/ClinicalStudyPB/e2e/pages/CandidatosPage.ts, FichaCandidatoPage.ts, ParticipantesPage.ts` | Existente (criado na implementação) | Lista e cadastro, ficha (avaliação, consentimento, inclusão) e aba Participantes |
+| `web/ClinicalStudyPB/e2e/pages/UsuariosPage.ts` | Existente (criado na implementação) | Cadastro de usuário (regressão RF01) |
+| `web/ClinicalStudyPB/e2e/tests/fluxo-completo.spec.ts` | Existente (criado na implementação) | Cenário feliz em dois contextos (pesquisador e coordenador), com `test.step` |
+| `web/ClinicalStudyPB/e2e/tests/vagas-esgotadas.spec.ts` | Existente (criado na implementação) | Estudo de limite 1: a segunda inclusão é bloqueada |
+| `web/ClinicalStudyPB/e2e/tests/regressao-sprint1.spec.ts` | Existente (criado na implementação) | Regressão: cadastro de usuário (RF01) e de estudo, com validação (RF04) |
+| `web/ClinicalStudyPB/e2e/tests/regras-recrutamento.spec.ts, acesso-por-perfil.spec.ts` | Existente (criado na implementação) | RQ-12 e RQ-13: erros de regra e acesso por perfil |
+| `.github/workflows/ci.yml` | Existente (ampliado na implementação) | Perfil `demo` carregado, `timeout-minutes` ajustado, artefato com as capturas |
 
 ## 4. O que fazer em cada arquivo
 
@@ -65,6 +65,12 @@ Provar por testes de ponta a ponta o fluxo da Release 1: o pesquisador planeja e
 ### Ordem sugerida
 
 - Quarta 04/11: ambiente, helpers, page objects de estudos/critérios/visitas e a regressão. Quinta 05/11: page objects de candidatos, avaliação e consentimento e o cenário até as pré-condições. Sexta 06/11: inclusão, vagas esgotadas, capturas, CI e documentação.
+
+### Situação da entrega (07/11/2026)
+
+- Implementado e passando, com todas as telas reais: helpers de API (`support/api.ts`), dados únicos, capturas, 8 page objects, verificação do ambiente, regressão de RF01 e RF04, fluxo completo (planejamento, candidato, avaliação, consentimento, inclusão, participante na lista e contador "1 de N"), vagas esgotadas, regras de recrutamento e controle de acesso por perfil.
+- Resultado local contra o backend real: 29 testes passam, nenhum ignorado; 137 passam com `--repeat-each=5` e 4 trabalhadores; 83 passam com `--repeat-each=3` e 1 trabalhador.
+- A chave `e2e/support/pendencias.ts` ficou com os dois valores em `false` (telas T58 e T61 entregues). Ela permanece no código apenas como mecanismo de desligar testes dependentes de tela futura.
 
 ## 6. Testes
 

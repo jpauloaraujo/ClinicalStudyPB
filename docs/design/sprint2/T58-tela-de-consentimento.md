@@ -3,7 +3,7 @@
 > **Sprint 2** · PBI-15 · RF10 Consentimento simulado  
 > **Responsável:** I5 · **Estimativa:** 3h · **Prazo:** Qui 05/11  
 > **Depende de:** T52, T57  
-> **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
+> **Situação:** ✅ Implementada (este documento descreve o que existe, para manter a coerência)
 
 ## 1. Objetivo
 
@@ -20,11 +20,11 @@ Na ficha do candidato, a seção Consentimento: texto do termo simulado, confirm
 
 | Arquivo | Ação | Responsabilidade |
 |---|---|---|
-| `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/SecaoConsentimento.tsx` | Alterar | Trocar o corpo do componente pelo formulário e pelo comprovante |
-| `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/FichaCandidatoPage.tsx` | Alterar (mínimo) | Passar `aoRegistrar={recarregar}` a `<SecaoConsentimento>`, no mesmo padrão do `aoAvaliar` da `SecaoAvaliacao`, para atualizar a situação do candidato |
-| `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/SecaoConsentimento.test.tsx` | Criar | Testes de componente da seção |
+| `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/SecaoConsentimento.tsx` | Existente (ampliado na implementação) | Trocar o corpo do componente pelo formulário e pelo comprovante |
+| `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/FichaCandidatoPage.tsx` | Existente (ampliado na implementação) | Passar `aoRegistrar={recarregar}` a `<SecaoConsentimento>`, no mesmo padrão do `aoAvaliar` da `SecaoAvaliacao`, para atualizar a situação do candidato |
+| `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/SecaoConsentimento.test.tsx` | Existente (criado na implementação) | Testes de componente da seção |
 | `web/ClinicalStudyPB/src/mocks/handlers.ts` | Conferir | O mock de consentimento já existe; ajustar só se divergir do contrato |
-| `web/ClinicalStudyPB/src/pages/estudos/detalhe/recrutamento.css` | Alterar (opcional) | Estilos do termo rolável e do comprovante |
+| `web/ClinicalStudyPB/src/pages/estudos/detalhe/recrutamento.css` | Existente (ampliado na implementação) | Estilos do termo rolável e do comprovante |
 
 ## 4. O que fazer em cada arquivo
 
@@ -36,6 +36,14 @@ Na ficha do candidato, a seção Consentimento: texto do termo simulado, confirm
 - Com registro: mostrar o comprovante (data e hora, responsável, versão do termo) e esconder o formulário.
 - Só o coordenador registra; para outros perfis a seção é somente leitura.
 - Chamar `aoRegistrar()` depois de registrar para a ficha recarregar a situação do candidato (`CONSENTIDO`).
+
+### Nomes acessíveis que o E2E (T66) usa na seção Consentimento (implementados)
+
+- A seção continua com `aria-label="Consentimento"` (região "Consentimento").
+- Caixa de confirmação: `role=checkbox` com nome contendo "confirm" (por exemplo, "Confirmo o consentimento do candidato").
+- Botão de nome exato "Registrar", desabilitado até a caixa ser marcada.
+- Depois de registrar, aparece o texto "Comprovante" e a versão do termo (`TCLE-SIMULADO v1`); o botão "Registrar" deixa de existir.
+- A situação do candidato na ficha passa a "Consentido" (a ficha é recarregada por `aoRegistrar`).
 
 ## 5. Contrato, regras e códigos de erro
 

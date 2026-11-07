@@ -3,7 +3,7 @@
 > **Sprint 2** · PBI-15 · RF10 Consentimento simulado  
 > **Responsável:** I7 · **Estimativa:** 2h · **Prazo:** Sex 06/11  
 > **Depende de:** T57, T58  
-> **Situação:** 🟡 Parcialmente implementada (o documento separa o que existe do que falta)
+> **Situação:** ✅ Implementada (este documento descreve o que existe, para manter a coerência)
 
 ## 1. Objetivo
 
@@ -17,9 +17,9 @@ Cobrir o consentimento com testes dedicados de serviço, endpoint e componente.
 
 | Arquivo | Ação | Responsabilidade |
 |---|---|---|
-| `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/ConsentimentoServiceTest.java` | Criar | Regras do serviço com Mockito |
-| `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/ConsentimentoEndpointTest.java` | Criar | Endpoints com MockMvc e tokens reais |
-| `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/SecaoConsentimento.test.tsx` | Revisar | Escrito na T58; conferir as lacunas |
+| `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/ConsentimentoServiceTest.java` | Existente (criado na implementação) | Regras do serviço com Mockito |
+| `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/ConsentimentoEndpointTest.java` | Existente (criado na implementação) | Endpoints com MockMvc e tokens reais |
+| `web/ClinicalStudyPB/src/pages/estudos/detalhe/candidato/SecaoConsentimento.test.tsx` | Existente (criado com a T58) | Testes de componente da seção de consentimento, escritos junto da tela da T58 |
 
 ## 4. O que fazer em cada arquivo
 
@@ -42,6 +42,11 @@ Cobrir o consentimento com testes dedicados de serviço, endpoint e componente.
 - `avancar(mvc, tokenPesquisador, estudoId, destino)`: `POST /api/estudos/{id}/transicoes`. `estudoEmRecrutamento(mvc, tokenPesquisador, limite)` → id: cria um critério de inclusão, uma visita e avança para recrutamento.
 - `criarCandidato(mvc, tokenCoordenador, estudoId, nome)` → id; `avaliarAprovado(mvc, tokenCoordenador, candidatoId, estudoId)`: responde "se aplica" a todos os critérios de inclusão e "não se aplica" aos de exclusão; `consentir(mvc, tokenCoordenador, candidatoId)`.
 - Quem chegar primeiro cria a classe com essas assinaturas; os demais só a reutilizam, sem mudar as assinaturas.
+
+### Situação da entrega (07/11/2026)
+
+- Backend: ConsentimentoServiceTest (15 testes) e ConsentimentoEndpointTest (15 testes), incluindo o resumo no detalhe do candidato e o comprovante com `responsavel`.
+- Também feito, depois que a tela da T58 foi entregue: SecaoConsentimento.test.tsx (12 testes: confirmação obrigatória, registro, data editada, comprovante com data, responsável e versão, erros 409 e 400, carregamento, somente leitura por perfil, estado e candidato incluído).
 
 ## 7. Critérios de aceite
 

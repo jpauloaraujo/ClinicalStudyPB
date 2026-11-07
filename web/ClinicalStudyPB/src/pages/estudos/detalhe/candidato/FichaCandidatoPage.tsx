@@ -65,8 +65,8 @@ export function FichaCandidatoPage() {
       </section>
 
       <SecaoAvaliacao estudo={estudo} candidato={candidato} aoAvaliar={recarregar} />
-      <SecaoConsentimento candidato={candidato} />
-      <SecaoInclusao candidato={candidato} />
+      <SecaoConsentimento candidato={candidato} aoRegistrar={recarregar} />
+      <SecaoInclusao estudo={estudo} candidato={candidato} aoIncluir={recarregar} />
     </div>
   )
 }

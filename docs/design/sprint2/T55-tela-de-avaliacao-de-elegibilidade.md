@@ -26,6 +26,11 @@ Na ficha do candidato, formulário para responder cada critério, resultado calc
 - Mostrar o resultado com destaque e os critérios reprovadores; listar o histórico.
 - Tratar 400 e 409 com a mensagem do servidor.
 
+### Verificação de 07/11/2026
+
+- Nada precisou ser refeito: `SecaoAvaliacao` e os 12 testes de `FichaCandidatoPage.test.tsx` cobrem os requisitos (formulário em dois grupos, explicação da exclusão, botão desabilitado, resultado, critérios reprovadores, histórico e erros 400 e 409).
+- O E2E (T66) agora também percorre a avaliação pela interface: elegível, não elegível com critério reprovador e reavaliação preservando o histórico.
+
 ## 6. Testes
 
 - `FichaCandidatoPage.test.tsx`.

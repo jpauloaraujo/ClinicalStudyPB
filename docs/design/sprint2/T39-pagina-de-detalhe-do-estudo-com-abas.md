@@ -22,7 +22,6 @@ Dar a cada estudo uma página própria, com cabeçalho e cinco abas como rotas a
 | `web/ClinicalStudyPB/src/pages/estudos/detalhe/abas.ts` | Existente | Lista das abas (caminho, rótulo, perfis) e `abasDoPerfil` / `perfisDaAba` |
 | `web/ClinicalStudyPB/src/pages/estudos/detalhe/contexto.ts` | Existente | `useEstudoDetalhe()` entrega `{estudo, recarregar}` às abas |
 | `web/ClinicalStudyPB/src/pages/estudos/detalhe/abas/AbaResumo.tsx` | Existente | Dados do estudo |
-| `web/ClinicalStudyPB/src/pages/estudos/detalhe/abas/AbaProvisoria.tsx` | Existente | Conteúdo provisório; hoje só a aba Participantes (T61) ainda a usa |
 | `web/ClinicalStudyPB/src/pages/estudos/detalhe/estudoDetalhe.css` | Existente | Estilos do cabeçalho e das abas |
 | `web/ClinicalStudyPB/src/routes/router.tsx` | Existente | Rotas aninhadas, cada uma com `RequerPerfil(perfisDaAba(...))` |
 | `web/ClinicalStudyPB/src/pages/estudos/detalhe/EstudoDetalhePage.test.tsx` | Existente | Testes de componente |
@@ -40,6 +39,10 @@ Dar a cada estudo uma página própria, com cabeçalho e cinco abas como rotas a
 ### Erros
 
 - Estudo inexistente (404 ou 400 de UUID): mostrar "Estudo não encontrado" com link para a lista.
+
+### Atualização (T61)
+
+- A aba provisória `AbaProvisoria.tsx` foi removida: a aba Participantes agora é a tela real `AbaParticipantes.tsx`.
 
 ## 6. Testes
 
