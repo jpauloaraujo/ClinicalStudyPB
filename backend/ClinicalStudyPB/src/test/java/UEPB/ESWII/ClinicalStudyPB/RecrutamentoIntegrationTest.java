@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -24,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.jayway.jsonpath.JsonPath;
 
 import UEPB.ESWII.ClinicalStudyPB.support.TokenDeTeste;
+import UEPB.ESWII.ClinicalStudyPB.repository.EstudoRepository;
+import UEPB.ESWII.ClinicalStudyPB.domain.enums.StatusEstudo;
 
 /**
  * Fluxo de recrutamento (RF05 a RF11) pela API, com tokens reais: o pesquisador prepara o estudo
@@ -40,6 +43,9 @@ class RecrutamentoIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private EstudoRepository estudoRepository;
 
     private String pesquisador;
     private String coordenador;
@@ -83,12 +89,13 @@ class RecrutamentoIntegrationTest {
     }
 
     private void mudarEstado(String estudoId, int limite, String estado) throws Exception {
-        enviar("PUT", "/api/estudos/" + estudoId, pesquisador, corpoEstudo(limite, estado)).andExpect(status().isOk());
+        enviar("POST", "/api/estudos/" + estudoId + "/transicoes", pesquisador,
+                "{\"novoEstado\":\"" + estado + "\"}").andExpect(status().isOk());
     }
 
     private String criarCriterio(String estudoId, String tipo, String titulo, String extra) throws Exception {
         return id(enviar("POST", "/api/estudos/" + estudoId + "/criterios", pesquisador,
-                "{\"tipo\":\"" + tipo + "\",\"titulo\":\"" + titulo + "\",\"descricao\":\"Descrição do critério\""
+                "{\"tipo\":\"" + tipo + "\",\"titulo\":\"" + titulo + "\",\"descricao\":\"Descrição do critério: " + titulo + "\""
                         + extra + "}").andExpect(status().isCreated()));
     }
 
@@ -157,7 +164,7 @@ class RecrutamentoIntegrationTest {
                 .andExpect(jsonPath("$.determinante").doesNotExist());
 
         enviar("POST", url, pesquisador,
-                "{\"tipo\":\"INCLUSAO\",\"titulo\":\"IDADE ADULTA\",\"descricao\":\"Outra descrição\"}")
+                "{\"tipo\":\"INCLUSAO\",\"titulo\":\"Outro título\",\"descricao\":\"DESCRIÇÃO DO CRITÉRIO: IDADE ADULTA\"}")
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.codigo").value("CRITERIO_DUPLICADO"));
         enviar("POST", url, pesquisador, "{\"tipo\":\"INCLUSAO\",\"titulo\":\"X\",\"descricao\":\"abc\"}")
                 .andExpect(status().isBadRequest());
@@ -385,13 +392,16 @@ class RecrutamentoIntegrationTest {
     }
 
     @Test
-    @DisplayName("Critério já usado em avaliação não pode ser excluído")
+    @DisplayName("Critério já usado em avaliação não pode ser excluído (o estudo já saiu de planejamento)")
     void criterioEmUsoNaoEExcluido() throws Exception {
         String[] estudo = estudoEmRecrutamento(2);
         String candidato = criarCandidato(estudo[0], "S. T.");
         avaliar(candidato, estudo[1], true, estudo[2], false).andExpect(status().isCreated());
 
-        mudarEstado(estudo[0], 2, "PLANEJAMENTO");
+        // Simula um legado inconsistente para exercitar a FK defensiva; a API não permite voltar de estado.
+        var legado = estudoRepository.findById(UUID.fromString(estudo[0])).orElseThrow();
+        legado.setStatus(StatusEstudo.PLANEJAMENTO);
+        estudoRepository.saveAndFlush(legado);
         enviar("DELETE", "/api/estudos/" + estudo[0] + "/criterios/" + estudo[1], pesquisador, null)
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.codigo").value("CRITERIO_EM_USO"));
     }

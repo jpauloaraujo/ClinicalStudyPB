@@ -24,6 +24,7 @@ import UEPB.ESWII.ClinicalStudyPB.domain.model.Usuario;
 import UEPB.ESWII.ClinicalStudyPB.repository.CandidatoRepository;
 import UEPB.ESWII.ClinicalStudyPB.repository.EstudoRepository;
 import UEPB.ESWII.ClinicalStudyPB.repository.UsuarioRepository;
+import UEPB.ESWII.ClinicalStudyPB.service.ConflitoRegraException;
 import UEPB.ESWII.ClinicalStudyPB.service.EstudoService;
 import UEPB.ESWII.ClinicalStudyPB.service.RecursoNaoEncontradoException;
 import UEPB.ESWII.ClinicalStudyPB.service.RegraNegocioException;
@@ -113,14 +114,43 @@ class EstudoServiceTest {
     void atualizaEstudoExistente() {
         Estudo existente = new Estudo();
         existente.setId(UUID.randomUUID());
-        when(estudoRepository.findById(existente.getId())).thenReturn(Optional.of(existente));
+        when(estudoRepository.buscarComBloqueio(existente.getId())).thenReturn(Optional.of(existente));
 
         EstudoRequest dados = new EstudoRequest("Novo título", "Novo objetivo", pesquisador.getId(),
-                null, null, 99, StatusEstudo.RECRUTAMENTO);
+                null, null, 99, StatusEstudo.PLANEJAMENTO);
         Estudo atualizado = service.atualizar(existente.getId(), dados);
 
         assertThat(atualizado.getId()).isEqualTo(existente.getId());
         assertThat(atualizado.getTitulo()).isEqualTo("Novo título");
-        assertThat(atualizado.getStatus()).isEqualTo(StatusEstudo.RECRUTAMENTO);
+        assertThat(atualizado.getStatus()).isEqualTo(StatusEstudo.PLANEJAMENTO);
+    }
+
+    @Test
+    @DisplayName("Editar não muda o estado: pedir outro estado é conflito e nada é gravado (RF07)")
+    void editarNaoMudaOEstado() {
+        Estudo existente = new Estudo();
+        existente.setId(UUID.randomUUID());
+        when(estudoRepository.buscarComBloqueio(existente.getId())).thenReturn(Optional.of(existente));
+
+        EstudoRequest dados = new EstudoRequest("Novo título", "Novo objetivo", pesquisador.getId(),
+                null, null, 99, StatusEstudo.ENCERRADO);
+
+        assertThatThrownBy(() -> service.atualizar(existente.getId(), dados))
+                .isInstanceOfSatisfying(ConflitoRegraException.class,
+                        erro -> assertThat(erro.getCodigo()).isEqualTo("ESTADO_ALTERADO_FORA_DA_TRANSICAO"));
+        assertThat(existente.getStatus()).isEqualTo(StatusEstudo.PLANEJAMENTO);
+        verify(estudoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Um estudo novo só pode nascer em planejamento (RF07)")
+    void estudoNasceEmPlanejamento() {
+        EstudoRequest dados = new EstudoRequest("Título", "Objetivo", pesquisador.getId(),
+                null, null, 10, StatusEstudo.EXECUCAO);
+
+        assertThatThrownBy(() -> service.criar(dados))
+                .isInstanceOfSatisfying(ConflitoRegraException.class,
+                        erro -> assertThat(erro.getCodigo()).isEqualTo("ESTUDO_DEVE_COMECAR_EM_PLANEJAMENTO"));
+        verify(estudoRepository, never()).save(any());
     }
 }

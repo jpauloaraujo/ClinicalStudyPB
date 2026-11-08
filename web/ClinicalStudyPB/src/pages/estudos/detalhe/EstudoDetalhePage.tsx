@@ -6,6 +6,7 @@ import { estudosApi } from '../../../services/recursos'
 import { rotulosStatus } from '../../../types/estudo'
 import { abasDoPerfil } from './abas'
 import type { EstudoDetalheContexto } from './contexto'
+import { IndicadorEstado } from './IndicadorEstado'
 import './estudoDetalhe.css'
 
 // Página de detalhe do estudo com abas (T39). As telas das próximas tasks
@@ -59,6 +60,8 @@ export function EstudoDetalhePage() {
           Estado atual: <span className="etiqueta">{rotulosStatus[estudo.status]}</span>
         </p>
       </header>
+
+      <IndicadorEstado estudo={estudo} perfil={usuario.perfil} aoAvancar={recarregar} />
 
       <nav className="abas" aria-label="Seções do estudo">
         <ul>

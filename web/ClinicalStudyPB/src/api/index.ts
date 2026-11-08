@@ -1,0 +1,10 @@
+// Módulos de API tipados pelo contrato da Sprint 2 (docs/api/openapi-sprint2.yaml)
+export { avaliacoesApi } from './avaliacoes'
+export { candidatosApi, type FiltroCandidatos } from './candidatos'
+export { consentimentoApi } from './consentimento'
+export { criteriosApi } from './criterios'
+export { converterErro, type ErroContrato } from './erros'
+export { estadoEstudoApi } from './estadoEstudo'
+export { participantesApi } from './participantes'
+export { acoesApi, visitasApi } from './visitas'
+export * from './tipos'

@@ -17,13 +17,40 @@ Este material documenta a estrutura inicial do backend Spring Boot (`PBI-02`), c
 
 ## Endpoints iniciais
 
+### Autenticação — `/api/auth/login` (T19 / T20 — Tasks 3060 / 3063)
+
+- `POST /api/auth/login`: autentica usuário por e-mail e senha e retorna o Bearer Token JWT. Rota pública.
+- Todas as demais rotas de `/api/**` agora exigem autenticação via cabeçalho `Authorization: Bearer <token>`.
+
+Exemplo de requisição:
+
+```json
+{
+  "email": "admin@clinicalstudy.test",
+  "senha": "senha-de-teste"
+}
+```
+
+Exemplo de resposta de sucesso (HTTP 200):
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "tipo": "Bearer"
+}
+```
+
+Casos de erro:
+- Corpo inválido ou dados ausentes: HTTP 400 Bad Request (`{"erro": "..."}`).
+- Senha incorreta, e-mail inexistente ou usuário inativo (`ativo = false`): HTTP 401 Unauthorized com mensagem genérica (`{"erro": "Credenciais inválidas"}`).
+
 ### Usuários — `/api/usuarios`
 
-- `GET /api/usuarios`: lista usuários.
-- `GET /api/usuarios/{id}`: consulta usuário por UUID.
-- `POST /api/usuarios`: cadastra usuário.
-- `PUT /api/usuarios/{id}`: atualiza usuário.
-- `DELETE /api/usuarios/{id}`: exclui usuário.
+- `GET /api/usuarios`: lista usuários (requer token JWT).
+- `GET /api/usuarios/{id}`: consulta usuário por UUID (requer token JWT).
+- `POST /api/usuarios`: cadastra usuário (requer token JWT).
+- `PUT /api/usuarios/{id}`: atualiza usuário (requer token JWT).
+- `DELETE /api/usuarios/{id}`: exclui usuário (requer token JWT).
 
 Exemplo de corpo para `POST /api/usuarios`:
 
@@ -36,15 +63,15 @@ Exemplo de corpo para `POST /api/usuarios`:
 }
 ```
 
-**Importante:** o serviço já armazena a senha usando BCrypt e não devolve a senha no JSON. Quando a task de segurança (`T19`) for feita, alinhem a configuração do `PasswordEncoder` e reutilizem `OpenApiConfig.SWAGGER_WHITELIST` na `SecurityFilterChain`.
+O cadastro e a atualização utilizam o bean centralizado `PasswordEncoder` (BCrypt custo 10) injetado no `UsuarioService`.
 
 ### Estudos — `/api/estudos`
 
-- `GET /api/estudos`: lista estudos.
-- `GET /api/estudos/{id}`: consulta estudo por UUID.
-- `POST /api/estudos`: cadastra estudo.
-- `PUT /api/estudos/{id}`: atualiza estudo.
-- `DELETE /api/estudos/{id}`: exclui estudo.
+- `GET /api/estudos`: lista estudos (requer token JWT).
+- `GET /api/estudos/{id}`: consulta estudo por UUID (requer token JWT).
+- `POST /api/estudos`: cadastra estudo (requer token JWT).
+- `PUT /api/estudos/{id}`: atualiza estudo (requer token JWT).
+- `DELETE /api/estudos/{id}`: exclui estudo (requer token JWT).
 
 Exemplo de corpo para `POST /api/estudos`:
 
@@ -62,6 +89,26 @@ Exemplo de corpo para `POST /api/estudos`:
 
 O UUID `22222222-2222-4222-8222-222222222222` já está disponível no banco após a execução automática da migration `V2__seed_initial_data.sql` (`pesquisador@clinicalstudy.test`).
 
+## Segurança e Autenticação por Token (Task 3060 / Task 3063)
+
+A segurança adota o modelo **stateless** do Spring Security com **Resource Server JWT** e assinatura simétrica **HS256**:
+
+- **Contrato do Token JWT:**
+  - `sub`: UUID do usuário autenticado.
+  - `role`: perfil do usuário (`ADMINISTRADOR`, `PESQUISADOR`, `COORDENADOR`, `PARTICIPANTE`), mapeado para autoridade `ROLE_<PERFIL>`.
+  - `iss`: emissor configurado (`jwt.issuer`, padrão `clinicalstudypb`).
+  - `iat`: instante de emissão do token.
+  - `exp`: instante de expiração (validade temporal configurável com padrão de 30 minutos).
+- **Variáveis de ambiente do backend:**
+  - `JWT_SECRET`: segredo obrigatório de pelo menos 256 bits (32 caracteres) para assinatura HS256. Não há valor padrão inseguro versionado no código de produção. Para desenvolvimento local, pode ser configurado em `application-dev.properties` (ignorado pelo Git).
+  - `JWT_ISSUER`: identificador do emissor do token (padrão: `clinicalstudypb`).
+  - `JWT_EXPIRATION_MINUTES`: tempo de validade do token em minutos (padrão: `30`).
+- **Política de Expiração e Logout:**
+  - O token gerado tem validade de **30 minutos**.
+  - Por se tratar de autenticação stateless via Bearer Token, o logout é realizado pelo cliente (SPA Web ou App Mobile) ao descartar o token armazenado localmente.
+  - Um token JWT emitido permanece criptograficamente válido até atingir sua data/hora de expiração (`exp`). A inativação de uma conta bloqueia novos logins imediatamente no endpoint `/api/auth/login`. Não há controle por blacklist ou refresh token nesta versão mínima.
+- **CORS:** configurado para a origem local documentada da aplicação web (`http://localhost:5173`).
+
 ## Documentação OpenAPI / Swagger UI (T10)
 
 Com a aplicação em execução na porta `8081`:
@@ -69,7 +116,7 @@ Com a aplicação em execução na porta `8081`:
 - **Swagger UI:** `http://localhost:8081/swagger-ui.html` (redireciona para `/swagger-ui/index.html`)
 - **OpenAPI JSON:** `http://localhost:8081/v3/api-docs`
 
-O Swagger UI já conta com o botão **Authorize** configurado para o esquema `bearerAuth` (`HTTP Bearer JWT`) e com a propriedade `springdoc.swagger-ui.persist-authorization=true` ativada.
+O Swagger UI é público e já conta com o botão **Authorize** configurado para o esquema `bearerAuth` (`HTTP Bearer JWT`). Cole o token obtido no login no campo de autorização do Swagger para testar endpoints restritos.
 
 ## Decisões de modelagem e banco de dados (T08 / T09)
 
@@ -83,8 +130,16 @@ O Swagger UI já conta com o botão **Authorize** configurado para o esquema `be
 
 ## Como testar localmente
 
-1. Confira `src/main/resources/application.properties` ou crie `src/main/resources/application-dev.properties` a partir de `application-dev.properties.example` para ajustar as credenciais locais do PostgreSQL.
+1. Confira `src/main/resources/application.properties` ou crie `src/main/resources/application-dev.properties` a partir de `application-dev.properties.example` para ajustar as credenciais locais do PostgreSQL e definir `jwt.secret`.
 2. No terminal, entre em `backend/ClinicalStudyPB`.
-3. Execute `./mvnw test` em Linux/macOS ou `mvnw.cmd test` no Windows (os testes executam automaticamente as migrations do Flyway e validam o OpenAPI/Swagger UI usando H2 em modo PostgreSQL).
-4. Para executar a aplicação conectada ao PostgreSQL, use `./mvnw spring-boot:run` ou `mvnw.cmd spring-boot:run`.
-5. Acesse `http://localhost:8081/swagger-ui.html` no navegador ou teste os endpoints com Postman, Insomnia ou `curl`.
+3. Para rodar todos os testes automatizados (com banco H2 em memória e chave de teste isolada):
+   - Linux/macOS: `./mvnw test`
+   - Windows: `mvnw.cmd test`
+4. Para rodar especificamente a suíte de testes de autenticação e segurança:
+   - Linux/macOS: `./mvnw test -Dtest=AuthenticationIntegrationTest`
+   - Windows: `mvnw.cmd test -Dtest=AuthenticationIntegrationTest`
+5. Para executar a aplicação conectada ao PostgreSQL:
+   - Defina a variável de ambiente: `$env:JWT_SECRET="seu-segredo-com-pelo-menos-32-caracteres"` (PowerShell) ou adicione em `application-dev.properties`.
+   - Execute `./mvnw spring-boot:run` ou `mvnw.cmd spring-boot:run`.
+6. Acesse `http://localhost:8081/swagger-ui.html` no navegador ou teste com `curl`/Postman.
+
