@@ -47,7 +47,7 @@ Cada defeito vira um **Bug** no Azure Boards, ligado (Related) à task de origem
 
 | # | Título do Bug | Task de origem | Passos para reproduzir | Esperado | Obtido | Correção |
 |---|---|---|---|---|---|---|
-| B-T67-01 | CORS com origens fixas no código impede servir a web em outra porta ou host | Azure 3060 / 3063 (login JWT e segurança da API, Sprint 1) | Servir a web em uma origem diferente de `localhost:5173` (outra porta no compose, ou o IP da máquina na rede) e fazer login | Origem configurável sem recompilar | Navegador bloqueia a chamada (preflight 403), porque `SecurityConfig` só aceitava `localhost:5173` e `localhost:8082` fixos | Propriedade `app.cors.allowed-origins` / variável `CORS_ALLOWED_ORIGINS`, com os mesmos padrões. Coberto por `CorsIntegrationTest`. **Contrato não muda.** |
+| B-T67-01 | CORS com origens fixas no código impede servir a web em outra porta ou host | Azure 3060 / 3063 (login JWT e segurança da API, Sprint 1) | Servir a web em uma origem diferente de `localhost:5173` (outra porta no compose, ou o IP da máquina na rede) e fazer login | Origem configurável sem recompilar | Navegador bloqueia a chamada (preflight 403), porque `SecurityConfig` só aceitava `localhost:5173` e `localhost:8082` fixos | Propriedade `app.cors.allowed-origins` / variável `CORS_ALLOWED_ORIGINS`, com os mesmos padrões. Coberto por `CorsIntegrationTest` e `CorsOrigensConfiguradasIntegrationTest`. **Contrato não muda.** |
 
 Ainda não há defeitos de contrato, mensagens, estados de carregamento, lista vazia ou permissões visuais registrados. A primeira execução do job no CI e o roteiro manual da seção 2 completam esta tabela; acrescente aqui cada defeito novo com o número do Bug no Azure Boards.
 
