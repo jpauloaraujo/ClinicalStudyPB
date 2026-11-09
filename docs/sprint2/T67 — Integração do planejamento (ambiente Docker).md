@@ -43,11 +43,11 @@ A parte visual não é coberta pelo script e é conferida no navegador, em http:
 
 ## 3. Defeitos encontrados
 
-Cada defeito vira um **Bug** no Azure Boards, ligado (Related) à task de origem e à T67.
+Cada defeito vira um item no Azure Boards ligado (Related) à task de origem e à T67. O projeto usa o processo Basic, que não tem o tipo Bug, e a conta do time não pode criar tags: o defeito entra como **Task** com o título começando por "Bug", filha do mesmo PBI da T67 (#3358), na Sprint 2.
 
-| # | Título do Bug | Task de origem | Passos para reproduzir | Esperado | Obtido | Correção |
-|---|---|---|---|---|---|---|
-| B-T67-01 | CORS com origens fixas no código impede servir a web em outra porta ou host | Azure 3060 / 3063 (login JWT e segurança da API, Sprint 1) | Servir a web em uma origem diferente de `localhost:5173` (outra porta no compose, ou o IP da máquina na rede) e fazer login | Origem configurável sem recompilar | Navegador bloqueia a chamada (preflight 403), porque `SecurityConfig` só aceitava `localhost:5173` e `localhost:8082` fixos | Propriedade `app.cors.allowed-origins` / variável `CORS_ALLOWED_ORIGINS`, com os mesmos padrões. Coberto por `CorsIntegrationTest` e `CorsOrigensConfiguradasIntegrationTest`. **Contrato não muda.** |
+| # | Azure | Título do Bug | Task de origem | Passos para reproduzir | Esperado | Obtido | Correção |
+|---|---|---|---|---|---|---|---|
+| B-T67-01 | [#3706](https://dev.azure.com/engsw2/TEAM1/_workitems/edit/3706) | CORS com origens fixas no código impede servir a web em outra porta ou host | Azure 3060 / 3063 (login JWT e segurança da API, Sprint 1) | Servir a web em uma origem diferente de `localhost:5173` (outra porta no compose, ou o IP da máquina na rede) e fazer login | Origem configurável sem recompilar | Navegador bloqueia a chamada (preflight 403), porque `SecurityConfig` só aceitava `localhost:5173` e `localhost:8082` fixos | Propriedade `app.cors.allowed-origins` / variável `CORS_ALLOWED_ORIGINS`, com os mesmos padrões. Coberto por `CorsIntegrationTest` e `CorsOrigensConfiguradasIntegrationTest`. **Contrato não muda.** |
 
 Ainda não há defeitos de contrato, mensagens, estados de carregamento, lista vazia ou permissões visuais registrados. A primeira execução do job no CI e o roteiro manual da seção 2 completam esta tabela; acrescente aqui cada defeito novo com o número do Bug no Azure Boards.
 
@@ -63,6 +63,5 @@ No GitHub, o job **Ambiente Docker (T67)** do PR precisa estar verde.
 
 ## 5. Pendências
 
-- Job **Ambiente Docker (T67)** verde no GitHub (a primeira execução real das imagens).
 - Roteiro manual da seção 2 na web, com os defeitos visuais registrados como Bug.
-- Registrar o B-T67-01 (e os próximos) no Azure Boards.
+- Fechar o #3706 no Azure Boards quando o PR entrar na `main`; registrar os próximos defeitos do mesmo jeito.
