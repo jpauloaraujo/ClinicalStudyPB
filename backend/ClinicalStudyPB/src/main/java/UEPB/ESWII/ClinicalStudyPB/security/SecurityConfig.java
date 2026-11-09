@@ -61,6 +61,10 @@ public class SecurityConfig {
     @Value("${jwt.issuer:clinicalstudypb}")
     private String jwtIssuer;
 
+    // T67: origens do navegador liberadas no CORS, configuráveis por CORS_ALLOWED_ORIGINS (lista separada por vírgula)
+    @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:8082}")
+    private List<String> origensPermitidas = List.of("http://localhost:5173", "http://localhost:8082");
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -88,8 +92,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // 5173: aplicação web (Vite) · 8082: app mobile rodando no navegador (expo start --web)
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:8082"));
+        // Padrão: 5173 (aplicação web, Vite ou docker compose) · 8082 (app mobile no navegador, expo start --web)
+        configuration.setAllowedOrigins(origensPermitidas.stream().map(String::trim).filter(o -> !o.isEmpty()).toList());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
 

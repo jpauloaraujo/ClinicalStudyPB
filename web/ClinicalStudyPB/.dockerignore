@@ -1,0 +1,10 @@
+node_modules/
+dist/
+playwright-report/
+test-results/
+e2e/.auth/
+.env.local
+.env.*.local
+.env.e2e
+.vscode/
+.idea/
