@@ -213,6 +213,35 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
+  # T67: sobe o ambiente completo do docker-compose.yml (PostgreSQL + backend + web/nginx, sem mocks)
+  # e percorre o fluxo de planejamento e a regressão de RF01 a RF04 pela API
+  docker:
+    name: Ambiente Docker (T67)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Constrói e sobe o ambiente
+        run: docker compose up --build -d --wait --wait-timeout 300
+      - name: Verifica o fluxo de planejamento
+        run: python3 scripts/verificar-ambiente.py
+      - name: Logs dos containers
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs --no-color > docker-compose.log
+      - name: Publica os logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-docker-compose
+          path: docker-compose.log
+          retention-days: 14
+          if-no-files-found: ignore
+      - name: Derruba o ambiente
+        if: always()
+        run: docker compose down -v
+
   mobile:
     name: Mobile (Expo)
     runs-on: ubuntu-latest

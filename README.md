@@ -198,6 +198,25 @@ git clone https://github.com/jpauloaraujo/ClinicalStudyPB.git
 cd ClinicalStudyPB
 ```
 
+### Ambiente completo com Docker Compose (T67)
+
+É o jeito mais rápido de ver o sistema funcionando: só exige o [Docker](https://docs.docker.com/get-docker/) (no Windows, Docker Desktop). Sobe PostgreSQL, backend e web, sem mocks e sem instalar JDK, Node ou PostgreSQL:
+
+```bash
+docker compose up --build -d --wait   # primeira vez: alguns minutos (baixa dependências do Maven e do npm)
+python3 scripts/verificar-ambiente.py # opcional: percorre o planejamento e a regressão RF01–RF04 pela API
+```
+
+| Serviço | Endereço | Observação |
+|---|---|---|
+| Web | http://localhost:5173 | build de produção servido por nginx |
+| API | http://localhost:8081 | Swagger UI em http://localhost:8081/swagger-ui.html |
+| PostgreSQL | `localhost:5433` | porta 5433 no host para não conflitar com um PostgreSQL local |
+
+O backend sobe com o perfil `demo`: migrations comuns + dados fictícios da T63. Entre com qualquer conta do seed `V2` ou do perfil demo (senha `senha-de-teste`, ver "Credenciais de demonstração"). Os dados ficam no volume `dados-postgres`; `docker compose down` para os containers e `docker compose down -v` apaga também o banco. Depois de mudar o código, rode `docker compose up --build -d` de novo.
+
+Os valores padrão são fictícios. Para mudar portas, segredo JWT, perfil (`prod` = só migrations) ou origens do CORS, copie `.env.example` para `.env` (ignorado pelo Git). O app mobile continua fora do Docker: rode-o como em "Aplicativo mobile", com `EXPO_PUBLIC_API_URL=http://<IP-da-máquina>:8081`.
+
 ### Banco de dados e Migrations (Flyway — T09)
 
 1. Crie um banco de dados local no PostgreSQL chamado `clinicalstudypb`:
@@ -229,6 +248,7 @@ No Windows (PowerShell/CMD), use `mvnw.cmd spring-boot:run`. A API sobe por padr
 | `JWT_SECRET` | Chave secreta HS256 (mínimo de 256 bits / 32 caracteres) | — | **Sim** (ou via `application-dev.properties`) |
 | `JWT_ISSUER` | Identificador do emissor do token | `clinicalstudypb` | Não |
 | `JWT_EXPIRATION_MINUTES` | Tempo de validade do token em minutos | `30` | Não |
+| `CORS_ALLOWED_ORIGINS` | Origens do navegador liberadas no CORS, separadas por vírgula (T67) | `http://localhost:5173,http://localhost:8082` | Não |
 
 Para desenvolvimento local, copie `src/main/resources/application-dev.properties.example` para `src/main/resources/application-dev.properties` (ignorado pelo Git) para definir `jwt.secret` sem depender de variáveis do sistema operacional.
 
@@ -424,6 +444,8 @@ npm ci
 npm run dev
 ```
 
+Alternativa aos dois terminais: `docker compose up --build -d --wait` na raiz do repositório sobe backend (8081) e web (5173) nas mesmas portas, com PostgreSQL próprio (ver "Ambiente completo com Docker Compose").
+
 **2. Preparar os testes** (uma vez por máquina):
 
 ```bash
@@ -480,7 +502,7 @@ Explicação do que foi implementado: [docs/sprint2/T50, T55, T59, T65 e T66 —
 
 ### Integração contínua (T05)
 
-O workflow `.github/workflows/ci.yml` roda a cada push e pull request na `main` e na `develop`, com cinco jobs:
+O workflow `.github/workflows/ci.yml` roda a cada push e pull request na `main` e na `develop`, com seis jobs:
 
 | Job | Passos |
 |---|---|
@@ -489,6 +511,7 @@ O workflow `.github/workflows/ci.yml` roda a cada push e pull request na `main` 
 | E2E | PostgreSQL como serviço → backend empacotado e iniciado → web construído e servido → Chromium → `npm run test:e2e` → publica relatório e traces como artefato (ver "Testes E2E") |
 | Web | Node 22 → `npm ci` → `npm run lint` → `npm test` (Vitest) → `npm run build` |
 | Mobile | Node 22 → `npm ci` → `npm run lint` → `npm run typecheck` |
+| Ambiente Docker (T67) | `docker compose up --build --wait` (PostgreSQL + backend + web/nginx) → `python3 scripts/verificar-ambiente.py`, que percorre o planejamento (estudo, critérios, visita, avanço de estado, permissões) e a regressão de RF01 a RF04 pela API → publica os logs dos containers se falhar |
 
 
 ## 7. Documentação da API
@@ -567,6 +590,7 @@ Cada entrega é identificada por uma tag (`release1`, `release2`, `release3`) e 
 ClinicalStudyPB/
 ├── backend/
 │   └── ClinicalStudyPB/          # API REST — Java 21 + Spring Boot (Maven)
+│       ├── Dockerfile            # Imagem do backend (T67)
 │       ├── pom.xml
 │       ├── mvnw / mvnw.cmd
 │       └── src/
@@ -584,6 +608,7 @@ ClinicalStudyPB/
 │           └── test/              # Testes de integração e recursos de teste (H2)
 ├── web/
 │   └── ClinicalStudyPB/          # Aplicação web — React + TypeScript + Vite
+│       ├── Dockerfile / nginx.conf  # Imagem da web servida por nginx (T67)
 │       ├── package.json
 │       ├── .env.example          # VITE_API_URL
 │       └── src/
@@ -605,7 +630,10 @@ ClinicalStudyPB/
 │           └── contexts/         # Sessão do participante
 ├── docs/                         # Especificação, arquitetura, planejamento e guias
 ├── releases/                     # (a criar) Documentação de cada release
-├── .github/workflows/ci.yml      # Pipeline de CI (backend, E2E, web e mobile)
+├── scripts/verificar-ambiente.py # Verificação do ambiente Docker pela API (T67)
+├── docker-compose.yml            # Ambiente completo: PostgreSQL + backend + web (T67)
+├── .env.example                  # Variáveis opcionais do docker-compose
+├── .github/workflows/ci.yml      # Pipeline de CI (backend, E2E, web, mobile e Docker)
 └── README.md
 ```
 

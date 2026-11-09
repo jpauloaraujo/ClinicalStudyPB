@@ -1,0 +1,10 @@
+target/
+.mvn/
+mvnw
+mvnw.cmd
+.idea/
+.vscode/
+*.iml
+HELP.md
+# Configuração local com credenciais (ignorada pelo Git) não entra na imagem
+src/main/resources/application-dev.properties
