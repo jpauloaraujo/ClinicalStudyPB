@@ -4,7 +4,7 @@ Sistema de Gestão de Estudos Clínicos desenvolvido na disciplina de **Engenhar
 
 O ClinicalStudyPB gerencia de forma simplificada o ciclo de vida operacional de estudos clínicos: cadastro de protocolos, recrutamento, elegibilidade, inclusão de participantes, agendamento de visitas, acompanhamento e relatórios. O sistema **não** realiza diagnósticos nem decisões clínicas automatizadas e utiliza apenas **dados fictícios**.
 
-> 🚧 **Projeto em desenvolvimento — Release 1 / Sprint 1 (13/10 a 26/10/2026).** A situação de cada task da sprint, com responsável e arquivos, está em [docs/status-sprint1.md](docs/status-sprint1.md).
+> **Release 1 (Sprints 1 e 2, 13/10 a 09/11/2026):** autenticação, usuários, estudos, planejamento, estados do estudo e recrutamento completo (RF01 a RF11). O relatório da entrega está em [releases/release1/README.md](releases/release1/README.md); a situação das tasks da Sprint 1 está em [docs/sprint1/status-sprint1.md](docs/sprint1/status-sprint1.md).
 
 ## Sumário
 
@@ -41,7 +41,7 @@ O ClinicalStudyPB gerencia de forma simplificada o ciclo de vida operacional de 
 | E — Aplicativo do participante | RF17 – RF20 |
 | F — Monitoramento | RF21 – RF22 |
 
-A descrição completa de cada requisito está em [docs/especificacao-projeto.md](docs/especificacao-projeto.md).
+A descrição completa de cada requisito está em [docs/sprint1/especificacao-projeto.md](docs/sprint1/especificacao-projeto.md).
 
 ### Equipe
 
@@ -123,9 +123,9 @@ Projeto criado com o template React + TypeScript do Vite, com React Compiler hab
 
 ### Organização do mobile
 
-App Expo (SDK 58) com **Expo Router**: cada arquivo em `src/app/` é uma tela. O login fica fora das abas e as abas (`Início`, `Estudos`, `Visitas`, `Perfil`) só aparecem com sessão de **participante** (`Stack.Protected`). O token fica no `expo-secure-store` (ou no `localStorage` quando o app roda no navegador). As telas de estudos e visitas mostram onde entrarão os RF17 a RF20 nas próximas sprints — detalhes em [docs/implementacao-mobile.md](docs/implementacao-mobile.md).
+App Expo (SDK 58) com **Expo Router**: cada arquivo em `src/app/` é uma tela. O login fica fora das abas e as abas (`Início`, `Estudos`, `Visitas`, `Perfil`) só aparecem com sessão de **participante** (`Stack.Protected`). O token fica no `expo-secure-store` (ou no `localStorage` quando o app roda no navegador). As telas de estudos e visitas mostram onde entrarão os RF17 a RF20 nas próximas sprints — detalhes em [docs/sprint1/implementacao-mobile.md](docs/sprint1/implementacao-mobile.md).
 
-Diagramas de arquitetura (Mermaid) — T01 / T03 (ver [docs/arquitetura.md](docs/arquitetura.md)):
+Diagramas de arquitetura (Mermaid) — T01 / T03 (ver [docs/sprint1/arquitetura.md](docs/sprint1/arquitetura.md)):
 
 - [x] Arquitetura (comunicação entre web, mobile, backend e banco de dados)
 - [x] Casos de uso e Matriz RBAC
@@ -136,11 +136,18 @@ Diagramas de arquitetura (Mermaid) — T01 / T03 (ver [docs/arquitetura.md](docs
 
 | RF | Descrição | Interface | Status |
 |---|---|---|---|
-| RF01 | Cadastro e gerenciamento de usuários | Web | ✅ Sprint 1 |
-| RF02 | Autenticação e encerramento de sessão | Web/Mobile | ✅ Sprint 1 (web e mobile) |
-| RF03 | Restrição de funcionalidades por perfil | Web/Mobile | ✅ Sprint 1 (API, web e mobile) |
-| RF04 | Cadastro de estudos | Web | ✅ Sprint 1 |
-| RF05 – RF22 | Demais requisitos | Web/Mobile | ⏳ Sprints futuras |
+| RF01 | Cadastro e gerenciamento de usuários | Web | ✅ Concluído (Sprint 1) |
+| RF02 | Autenticação e encerramento de sessão | Web/Mobile | ✅ Concluído (Sprint 1; web e mobile) |
+| RF03 | Restrição de funcionalidades por perfil | Web/Mobile | ✅ Concluído (Sprint 1; API, web e mobile) |
+| RF04 | Cadastro de estudos | Web | ✅ Concluído (Sprint 1) |
+| RF05 | Critérios de inclusão e exclusão | Web | ✅ Concluído (Sprint 2) |
+| RF06 | Visitas previstas e atividades | Web | ✅ Concluído (Sprint 2) |
+| RF07 | Estados do estudo (planejamento, recrutamento, execução, encerrado) | Web | ✅ Concluído (Sprint 2) |
+| RF08 | Cadastro de candidatos | Web | ✅ Concluído (Sprint 2) |
+| RF09 | Avaliação de elegibilidade | Web | ✅ Concluído (Sprint 2) |
+| RF10 | Consentimento simulado | Web | ✅ Concluído (Sprint 2) |
+| RF11 | Inclusão de participantes e limite de vagas | Web | ✅ Concluído (Sprint 2) |
+| RF12 – RF22 | Acompanhamento, app do participante e monitoramento | Web/Mobile | ⏳ Release 2 e 3 |
 
 | RF | Comportamento | Casos de erro e validação |
 |---|---|---|
@@ -148,8 +155,34 @@ Diagramas de arquitetura (Mermaid) — T01 / T03 (ver [docs/arquitetura.md](docs
 | RF02 | Login com e-mail e senha na web (`/login`) e no app; a sessão é restaurada ao reabrir; "Sair" descarta o token | "Credenciais inválidas" (senha errada, e-mail inexistente ou conta inativa); token expirado leva de volta ao login. A web recusa o participante e o app recusa os demais perfis |
 | RF03 | Menu e rotas conforme o perfil; a API aplica as mesmas regras | Rota sem permissão mostra "Acesso negado"; a API responde `403` |
 | RF04 | O pesquisador cadastra, edita e exclui estudos em `/estudos` (é o responsável pelos estudos que cria; a API só aceita um usuário com perfil pesquisador como responsável); o coordenador só consulta | Título, objetivo e limite (≥ 1) obrigatórios; "A data final não pode ser anterior à data inicial" aparece no campo da data |
+| RF05 | Na aba **Critérios** do estudo, o pesquisador cadastra critérios de inclusão (com peso e se são determinantes) e de exclusão; só em planejamento | Descrição de 5 a 500 caracteres; critério repetido (ignorando maiúsculas e espaços) → `CRITERIO_DUPLICADO`; fora do planejamento ou sem permissão a tela fica só para consulta |
+| RF06 | Na aba **Visitas**, o pesquisador cadastra as visitas previstas (dia e tolerância) e as atividades de cada uma; só em planejamento | Dia repetido → `VISITA_DIA_DUPLICADO`; dia negativo e nomes vazios são recusados com a mensagem no campo |
+| RF07 | No cabeçalho do estudo, o indicador mostra o estado atual e o pesquisador avança para o próximo (planejamento → recrutamento → execução → encerrado) | Sem critério de inclusão ou sem visita → `ESTUDO_SEM_CRITERIO_INCLUSAO` / `ESTUDO_SEM_VISITA_PREVISTA`; pular ou voltar estado → `TRANSICAO_ESTADO_INVALIDA`; o `PUT` do estudo não muda o estado (`ESTADO_ALTERADO_FORA_DA_TRANSICAO`) |
+| RF08 | Na aba **Candidatos**, o coordenador cadastra candidatos com dados fictícios (código `CAND-001...` gerado pelo sistema), com lista paginada, filtro por situação e a ficha do candidato | Só com o estudo em recrutamento (`ESTUDO_FORA_DE_RECRUTAMENTO`); mesmo nome e data de nascimento no estudo → `CANDIDATO_DUPLICADO` |
+| RF09 | Na ficha, o coordenador responde a todos os critérios; o sistema calcula elegível ou não elegível, a pontuação e os critérios reprovadores, e guarda o histórico de reavaliações | "Salvar avaliação" só com todas as respostas; critério de exclusão "se aplica" reprova; candidato já incluído não é reavaliado (`CANDIDATO_JA_INCLUIDO`) |
+| RF10 | Na ficha, o coordenador lê o termo simulado (TCLE-SIMULADO), confirma e registra; depois só o comprovante (data, responsável e versão do termo) é exibido | Botão desabilitado até confirmar; segundo registro → `CONSENTIMENTO_DUPLICADO`; data futura recusada; fora do recrutamento ou para candidato incluído o formulário não aparece |
+| RF11 | A seção **Inclusão** mostra as quatro pré-condições (estudo em recrutamento, elegível, consentido e vaga disponível) e inclui com confirmação; a aba **Participantes** lista os incluídos e o contador "X de N vagas" | Cada pré-condição pendente explica o motivo e mantém o botão desabilitado; o servidor ainda valida: `CANDIDATO_NAO_ELEGIVEL`, `CONSENTIMENTO_AUSENTE`, `VAGAS_ESGOTADAS` (inclusive sob requisições simultâneas, pelo bloqueio do estudo) |
 
-> _Capturas de tela das interfaces ainda precisam ser adicionadas (em `docs/imagens/`) para a entrega da Release 1._
+Todas as telas dos perfis web só mostram o que o perfil pode fazer, e a API responde `403` quando o perfil não tem permissão.
+
+### Capturas de tela
+
+As imagens estão em `docs/imagens/` e foram geradas por `web/ClinicalStudyPB/scripts/capturar-telas.mjs`, percorrendo a aplicação real com os usuários fictícios de demonstração. Para refazê-las: suba o backend com o perfil `demo`, rode `npm run dev` e execute `node scripts/capturar-telas.mjs` em `web/ClinicalStudyPB`.
+
+| Tela | Sucesso | Erro |
+|---|---|---|
+| Login (RF02) | ![Login](docs/imagens/01-login.png) | ![Login com erro](docs/imagens/02-login-erro.png) |
+| Usuários (RF01) | ![Usuários](docs/imagens/03-usuarios.png) | ![Acesso negado](docs/imagens/18-acesso-negado.png) |
+| Estudos (RF04) | ![Estudos](docs/imagens/04-estudos.png) | |
+| Detalhe do estudo e estado (RF07) | ![Resumo do estudo](docs/imagens/05-estudo-resumo.png) | |
+| Critérios (RF05) | ![Critérios](docs/imagens/06-criterios.png) | |
+| Visitas e atividades (RF06) | ![Visitas](docs/imagens/07-visitas.png) | |
+| Candidatos (RF08) | ![Candidatos](docs/imagens/08-candidatos.png) | |
+| Avaliação de elegibilidade (RF09) | ![Ficha antes da avaliação](docs/imagens/09-ficha-avaliacao.png) | ![Avaliação aprovada](docs/imagens/10-avaliacao-aprovada.png) |
+| Consentimento (RF10) | ![Termo](docs/imagens/11-consentimento-termo.png) | ![Comprovante](docs/imagens/12-consentimento-comprovante.png) |
+| Inclusão (RF11) | ![Pré-condições](docs/imagens/13-inclusao-precondicoes.png) | ![Vagas esgotadas](docs/imagens/17-inclusao-vagas-esgotadas.png) |
+| Confirmação e resultado da inclusão | ![Confirmação](docs/imagens/14-inclusao-confirmacao.png) | ![Inclusão concluída](docs/imagens/15-inclusao-concluida.png) |
+| Participantes (RF11) | ![Participantes](docs/imagens/16-participantes.png) | |
 
 ## 4. Stack tecnológico
 
@@ -162,7 +195,7 @@ A equipe adotou a **Stack A**:
 | Backend | Maven (via Maven Wrapper `mvnw`) | 3.10.0 |
 | Backend | Lombok | gerenciada pelo Spring Boot |
 | Documentação da API | springdoc-openapi (Swagger UI) | 3.1.1 |
-| Banco de dados | PostgreSQL (driver JDBC) | _versão do servidor a definir_ |
+| Banco de dados | PostgreSQL (driver JDBC; servidor 16 no Docker Compose e no CI) | 16 |
 | Migrations | Flyway (`flyway-core` + `flyway-database-postgresql`) | 12.4.0 |
 | Web | React | 19.3 |
 | Web | TypeScript | 6.0 |
@@ -173,7 +206,7 @@ A equipe adotou a **Stack A**:
 | Mobile | Expo SDK | 58 |
 | Mobile | React Native | 0.88 |
 | Mobile | Expo Router + expo-secure-store | 58 |
-| Testes | JUnit 5 + Spring Boot Test + MockMvc + Mockito + H2 (backend); web e mobile _a definir_ | — |
+| Testes | JUnit 5 + Spring Boot Test + MockMvc + Mockito + H2 (backend); Vitest + Testing Library + MSW (web); Playwright (E2E) | — |
 | Cobertura | JaCoCo | 0.8.14 |
 | CI | GitHub Actions (`.github/workflows/ci.yml`) | — |
 | Gestão ágil | Azure DevOps (Azure Boards) | — |
@@ -293,7 +326,7 @@ Para desenvolvimento local, copie `src/main/resources/application-dev.properties
    - **E-mail:** é gravado e consultado em minúsculas (`A@x.com` e `a@x.com` são a mesma conta; o login aceita qualquer caixa). A migration `V3` converte os e-mails já existentes. Um cadastro simultâneo com o mesmo e-mail também responde `400` com "Já existe um usuário com esse e-mail".
    - **Contas de administrador:** o administrador logado não pode excluir, desativar nem alterar o perfil da própria conta, e o sistema sempre mantém ao menos um administrador ativo (`400`).
    - **Responsável do estudo:** deve ser um usuário com perfil `PESQUISADOR`; outro perfil responde `400` ("O responsável pelo estudo deve ter o perfil de pesquisador").
-   - **Estudos sem dono:** o RF04 não exige dono, então **qualquer pesquisador pode editar e excluir qualquer estudo**, inclusive os de outro pesquisador. Decisão de produto a validar com a equipe (ver [docs/status-sprint1.md](docs/status-sprint1.md), seção 4).
+   - **Estudos sem dono:** o RF04 não exige dono, então **qualquer pesquisador pode editar e excluir qualquer estudo**, inclusive os de outro pesquisador. Decisão de produto a validar com a equipe (ver [docs/sprint1/status-sprint1.md](docs/sprint1/status-sprint1.md), seção 4).
    - **Erros no mesmo formato:** JSON malformado, valor de enum inválido (perfil, status) e UUID inválido na URL respondem `400` com `{"erro": "..."}`, como as demais validações, com mensagens em português também nos estudos.
 
 ### Aplicação web
@@ -375,7 +408,7 @@ cd backend/ClinicalStudyPB
 
 No Windows (PowerShell): `mvnw.cmd test`. Os testes locais usam H2; a CI roda os mesmos testes também contra PostgreSQL real (job "Backend (testes no PostgreSQL)", abaixo). O relatório de cobertura do JaCoCo é gerado em `target/site/jacoco/index.html`.
 
-**Resultado em 07/11/2026:** 376 testes, 0 falhas, 0 erros. Cobertura de linhas do código de negócio (domínio e serviços, a medida da regra de 80%): **99,2%**; backend inteiro, exceto a classe `main`, `config` e os DTOs: 99,1%. Ficam fora da medição a classe `main`, `config` e os DTOs.
+**Resultado em 09/11/2026:** 419 testes, 0 falhas, 0 erros. Cobertura de linhas do código de negócio (domínio e serviços, a medida da regra de 80%): **99,2%**; backend inteiro, exceto a classe `main`, `config` e os DTOs: 99,1%. Ficam fora da medição a classe `main`, `config` e os DTOs.
 
 Suítes atuais:
 - `ClinicalStudyPbApplicationTests`: validação do contexto Spring Boot, Flyway e Hibernate (`ddl-auto=validate`).
@@ -421,7 +454,7 @@ Comando para rodar exclusivamente os testes de autenticação e segurança:
 
 ### Web e mobile
 
-- **Web, componentes:** Vitest + Testing Library (`npm test` em `web/ClinicalStudyPB`, 127 testes): detalhe do estudo com abas (T39), indicador e avanço de estado (T43), critérios (T46), visitas (T49), candidatos e ficha com a avaliação (T52 e T55), o conversor de erros e as telas rodando sobre o Mock Service Worker (T40). Os testes E2E ficam em `e2e/` e **não** rodam no Vitest.
+- **Web, componentes:** Vitest + Testing Library (`npm test` em `web/ClinicalStudyPB`, 130 testes): detalhe do estudo com abas (T39), indicador e avanço de estado (T43), critérios (T46), visitas (T49), candidatos e ficha com a avaliação (T52 e T55), consentimento (T58), inclusão e participantes (T61), o login com `AuthContext`, o conversor de erros e as telas rodando sobre o Mock Service Worker (T40). Os testes E2E ficam em `e2e/` e **não** rodam no Vitest.
 - **Web, E2E:** Playwright, descrito na próxima seção.
 - **Mobile:** ainda sem testes automatizados; na CI passa por lint e verificação de tipos. O E2E do app mobile está previsto para a Sprint 3.
 
@@ -511,7 +544,7 @@ O workflow `.github/workflows/ci.yml` roda a cada push e pull request na `main` 
 | E2E | PostgreSQL como serviço → backend empacotado e iniciado → web construído e servido → Chromium → `npm run test:e2e` → publica relatório e traces como artefato (ver "Testes E2E") |
 | Web | Node 22 → `npm ci` → `npm run lint` → `npm test` (Vitest) → `npm run build` |
 | Mobile | Node 22 → `npm ci` → `npm run lint` → `npm run typecheck` |
-| Ambiente Docker (T67) | `docker compose up --build --wait` (PostgreSQL + backend + web/nginx) → `python3 scripts/verificar-ambiente.py`, que percorre o planejamento (estudo, critérios, visita, avanço de estado, permissões) e a regressão de RF01 a RF04 pela API → publica os logs dos containers se falhar |
+| Ambiente Docker (T67) | `docker compose up --build --wait` (PostgreSQL + backend + web/nginx) → `python3 scripts/verificar-ambiente.py`, que percorre o planejamento (estudo, critérios, visita, avanço de estado, permissões) e a regressão de RF01 a RF04 pela API → `python3 scripts/verificar-recrutamento.py` (T68), com o recrutamento de RF08 a RF11 nos casos de sucesso e de erro → publica os logs dos containers se falhar |
 
 
 ## 7. Documentação da API
@@ -578,7 +611,7 @@ O conjunto traz dois estudos com critérios e visitas: um em planejamento (`d630
 
 | Release | Sprints | Documento |
 |---|---|---|
-| Release 1 | Sprint 1 – _a definir_ | `releases/release1/README.md` _(a criar)_ |
+| Release 1 | Sprints 1 e 2 (13/10 a 09/11/2026) | [releases/release1/README.md](releases/release1/README.md) |
 | Release 2 | _a definir_ | `releases/release2/README.md` _(a criar)_ |
 | Release 3 | _a definir_ | `releases/release3/README.md` _(a criar)_ |
 
@@ -629,8 +662,8 @@ ClinicalStudyPB/
 │           ├── components/       # Tema e componentes de interface
 │           └── contexts/         # Sessão do participante
 ├── docs/                         # Especificação, arquitetura, planejamento e guias
-├── releases/                     # (a criar) Documentação de cada release
-├── scripts/verificar-ambiente.py # Verificação do ambiente Docker pela API (T67)
+├── releases/                     # Documentação de cada release (release1/README.md)
+├── scripts/                      # verificar-ambiente.py (T67) e verificar-recrutamento.py (T68)
 ├── docker-compose.yml            # Ambiente completo: PostgreSQL + backend + web (T67)
 ├── .env.example                  # Variáveis opcionais do docker-compose
 ├── .github/workflows/ci.yml      # Pipeline de CI (backend, E2E, web, mobile e Docker)
@@ -639,16 +672,18 @@ ClinicalStudyPB/
 
 ## 10. Documentos de referência
 
-- [Especificação do projeto](docs/especificacao-projeto.md) — escopo, perfis, requisitos funcionais, estratégia de testes e regras de entrega.
-- [Documento de Arquitetura de Software (DAS)](docs/arquitetura.md) — diagramas C4, casos de uso, matriz RBAC, classes UML, DER, máquinas de estados e sequência.
-- [Planejamento da Sprint 1](docs/sprint1-plano.md) — PBIs, tasks, responsáveis, capacidade, Definition of Done e riscos.
-- [Implementação do Backend — Sprint 1](docs/implementacao-backend-sprint1.md) — detalhamento das camadas, endpoints, migrations Flyway e documentação OpenAPI.
-- [Status da Sprint 1](docs/status-sprint1.md) — **ponto de partida para retomar o contexto**: situação das 35 tasks, responsáveis, arquivos de cada task e pendências.
-- [Implementação do mobile](docs/implementacao-mobile.md) — estrutura do app Expo, navegação, sessão e como rodar em emulador ou celular.
-- [Requisitos dos protótipos mobile](docs/prototipos-mobile.md) — telas, fluxos de navegação e roteiro de demonstração do aplicativo do participante (T33 e T34).
+- [Especificação do projeto](docs/sprint1/especificacao-projeto.md) — escopo, perfis, requisitos funcionais, estratégia de testes e regras de entrega.
+- [Documento de Arquitetura de Software (DAS)](docs/sprint1/arquitetura.md) — diagramas C4, casos de uso, matriz RBAC, classes UML, DER, máquinas de estados e sequência.
+- [Planejamento da Sprint 1](docs/sprint1/sprint1-plano.md) — PBIs, tasks, responsáveis, capacidade, Definition of Done e riscos.
+- [Implementação do Backend — Sprint 1](docs/sprint1/implementacao-backend-sprint1.md) — detalhamento das camadas, endpoints, migrations Flyway e documentação OpenAPI.
+- [Status da Sprint 1](docs/sprint1/status-sprint1.md) — **ponto de partida para retomar o contexto**: situação das 35 tasks, responsáveis, arquivos de cada task e pendências.
+- [Implementação do mobile](docs/sprint1/implementacao-mobile.md) — estrutura do app Expo, navegação, sessão e como rodar em emulador ou celular.
+- [Requisitos dos protótipos mobile](docs/sprint1/prototipos-mobile.md) — telas, fluxos de navegação e roteiro de demonstração do aplicativo do participante (T33 e T34).
 - [Mapeamento e complemento das tasks da Sprint 2 até 01/11](<docs/sprint2/Tasks até 01-11 — mapeamento e complemento.md>) — o que já estava feito, o que foi acrescentado, como funciona e o que ainda depende de pessoas.
 - [Contrato OpenAPI da Sprint 2](docs/api/openapi-sprint2.yaml) — endpoints de recrutamento e de estado do estudo (T37).
 - [Diagramas do domínio](docs/diagramas/dominio.md), [casos de uso](docs/diagramas/casos-de-uso.md), [sequência: avançar o estado](docs/diagramas/sequencia-avancar-estado.md), [sequência: incluir participante](docs/diagramas/sequencia-inclusao-participante.md) e [arquitetura](docs/diagramas/arquitetura.md) (T36 e T69).
+- [Release 1](releases/release1/README.md) — relatório da entrega: requisitos, resultados dos testes, problemas conhecidos e processo de desenvolvimento.
+- [Integração do planejamento (T67)](<docs/sprint2/T67 — Integração do planejamento (ambiente Docker).md>) e [do recrutamento (T68)](<docs/sprint2/T68 — Integração do recrutamento (roteiro e correções).md>) — roteiros executáveis e defeitos encontrados.
 - [Backlog da Sprint 2 para o Azure Boards](docs/azure-boards/README.md) — CSV de importação com os 10 PBIs e as 37 tasks.
 - [Documentos de design da Sprint 1](docs/design/sprint1/README.md) e [da Sprint 2](docs/design/sprint2/README.md) — um guia por task: o que implementar, em qual arquivo e em que ordem (as já implementadas descrevem o código existente).
 - [Protótipo navegável do mobile (Figma)](https://www.figma.com/design/IqDUJYAEp8GvSMO6vaEoNd/Clinical-Studies-Mobile-Design?node-id=39-568&t=t88dh0uGIHa60Db9-1) — telas do aplicativo do participante com o fluxo de navegação para demonstração (T33 e T34).
