@@ -30,7 +30,7 @@ git tag -a release1 -m "Release 1: planejamento e recrutamento (RF01 a RF11)"
 git push origin release1
 ```
 
-Na página **Releases → Draft a new release**: escolher a tag `release1`, título "Release 1", e no texto colocar o resumo (RF01 a RF11 concluídos, 419 testes de backend com 99,2% de cobertura de negócio, 133 testes web, 29 E2E) e o link `releases/release1/README.md`. Depois da tag, nenhum commit entra na versão avaliada.
+Na página **Releases → Draft a new release**: escolher a tag `release1`, título "Release 1", e no texto colocar o resumo (RF01 a RF11 concluídos, 434 testes de backend com 99,2% de cobertura de negócio, 133 testes web, 29 E2E) e o link `releases/release1/README.md`. Depois da tag, nenhum commit entra na versão avaliada.
 
 ## 3. Ensaio da demonstração
 

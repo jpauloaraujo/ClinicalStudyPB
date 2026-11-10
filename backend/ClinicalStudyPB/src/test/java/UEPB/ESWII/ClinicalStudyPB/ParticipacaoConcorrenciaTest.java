@@ -18,10 +18,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
@@ -36,17 +38,23 @@ import UEPB.ESWII.ClinicalStudyPB.support.TokenDeTeste;
  * mais participantes que o limite, nem o mesmo candidato incluído duas vezes.
  *
  * <p>Este teste não usa {@code @Transactional}: cada requisição precisa da própria transação para que o bloqueio
- * funcione de verdade. Os dados ficam no H2 em memória (cada execução cria estudo e candidatos próprios).</p>
+ * funcione de verdade. Os dados criados são apagados no {@code @AfterEach}, para não sujar os outros testes que contam registros.</p>
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 class ParticipacaoConcorrenciaTest {
 
     private static final int CANDIDATOS = 6;
-    private static final int VAGAS = 2;
+    private static final int VAGAS = 1;
 
     @Autowired
     private MockMvc mvc;
+
+    @Autowired
+    private JdbcTemplate jdbc;
+
+    // Estudos criados pelo teste, apagados no fim para não sujar os outros testes que contam registros
+    private final List<String> estudosCriados = new ArrayList<>();
 
     private String pesquisador;
     private String coordenador;
@@ -55,6 +63,32 @@ class ParticipacaoConcorrenciaTest {
     void preparar() throws Exception {
         pesquisador = TokenDeTeste.bearer(mvc, TokenDeTeste.PESQUISADOR);
         coordenador = TokenDeTeste.bearer(mvc, TokenDeTeste.COORDENADOR);
+    }
+
+    @AfterEach
+    void limpar() {
+        for (String estudo : estudosCriados) {
+            String candidatos = "(SELECT id FROM candidatos WHERE estudo_id = CAST(? AS UUID))";
+            String avaliacoes = "(SELECT id FROM avaliacoes_elegibilidade WHERE candidato_id IN " + candidatos + ")";
+            String visitas = "(SELECT id FROM visitas_planejadas WHERE estudo_id = CAST(? AS UUID))";
+            jdbc.update("DELETE FROM participacoes WHERE estudo_id = CAST(? AS UUID)", estudo);
+            jdbc.update("DELETE FROM consentimentos WHERE candidato_id IN " + candidatos, estudo);
+            jdbc.update("DELETE FROM respostas_avaliacao WHERE avaliacao_id IN " + avaliacoes, estudo);
+            jdbc.update("DELETE FROM avaliacoes_elegibilidade WHERE candidato_id IN " + candidatos, estudo);
+            jdbc.update("DELETE FROM candidatos WHERE estudo_id = CAST(? AS UUID)", estudo);
+            jdbc.update("DELETE FROM acoes WHERE visita_id IN " + visitas, estudo);
+            jdbc.update("DELETE FROM visitas_planejadas WHERE estudo_id = CAST(? AS UUID)", estudo);
+            jdbc.update("DELETE FROM criterios WHERE estudo_id = CAST(? AS UUID)", estudo);
+            jdbc.update("DELETE FROM historico_status_estudo WHERE estudo_id = CAST(? AS UUID)", estudo);
+            jdbc.update("DELETE FROM estudos WHERE id = CAST(? AS UUID)", estudo);
+        }
+        estudosCriados.clear();
+    }
+
+    private String novoEstudo(int limite) throws Exception {
+        String estudo = estudoEmRecrutamento(mvc, pesquisador, limite);
+        estudosCriados.add(estudo);
+        return estudo;
     }
 
     private String candidatoPronto(String estudo, String nome) throws Exception {
@@ -97,9 +131,9 @@ class ParticipacaoConcorrenciaTest {
     }
 
     @Test
-    @DisplayName("Seis inclusões simultâneas para 2 vagas: exatamente 2 dão 201 e as 4 restantes dão 409 VAGAS_ESGOTADAS")
+    @DisplayName("Seis inclusões simultâneas para 1 vaga: exatamente 1 dá 201 e as 5 restantes dão 409 VAGAS_ESGOTADAS")
     void disputaPelasUltimasVagas() throws Exception {
-        String estudo = estudoEmRecrutamento(mvc, pesquisador, VAGAS);
+        String estudo = novoEstudo(VAGAS);
         List<Callable<Object[]>> tarefas = new ArrayList<>();
         for (int i = 0; i < CANDIDATOS; i++) {
             tarefas.add(incluir(estudo, candidatoPronto(estudo, "Candidato Concorrente " + i)));
@@ -120,12 +154,15 @@ class ParticipacaoConcorrenciaTest {
         String lista = enviar(mvc, "GET", "/api/estudos/" + estudo + "/participantes", coordenador, null)
                 .andReturn().getResponse().getContentAsString();
         assertThat(JsonPath.<List<Object>>read(lista, "$")).hasSize(VAGAS);
+        String incluidos = enviar(mvc, "GET", "/api/estudos/" + estudo + "/candidatos?situacao=INCLUIDO", coordenador, null)
+                .andReturn().getResponse().getContentAsString();
+        assertThat(JsonPath.<Integer>read(incluidos, "$.totalElementos")).as("candidatos INCLUIDO").isEqualTo(VAGAS);
     }
 
     @Test
     @DisplayName("O mesmo candidato incluído por várias requisições ao mesmo tempo vira um único participante")
     void mesmoCandidatoVariasVezes() throws Exception {
-        String estudo = estudoEmRecrutamento(mvc, pesquisador, 5);
+        String estudo = novoEstudo(5);
         String candidato = candidatoPronto(estudo, "Candidata Repetida");
         List<Callable<Object[]>> tarefas = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
@@ -145,7 +182,7 @@ class ParticipacaoConcorrenciaTest {
     @Test
     @DisplayName("Com vagas sobrando, inclusões simultâneas de candidatos diferentes são todas aceitas")
     void semDisputaTodasEntram() throws Exception {
-        String estudo = estudoEmRecrutamento(mvc, pesquisador, 5);
+        String estudo = novoEstudo(5);
         List<Callable<Object[]>> tarefas = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
             tarefas.add(incluir(estudo, candidatoPronto(estudo, "Candidato Livre " + i)));

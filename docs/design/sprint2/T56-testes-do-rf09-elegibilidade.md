@@ -3,7 +3,7 @@
 > **Sprint 2** · PBI-14 · RF09 Avaliação de elegibilidade  
 > **Responsável:** I2 · **Estimativa:** 3h · **Prazo:** Qui 05/11  
 > **Depende de:** T54  
-> **Situação:** 🟡 Parcialmente implementada (o documento separa o que existe do que falta)
+> **Situação:** ✅ Implementada (`AvaliacaoEndpointTest`, `AvaliacaoRequestValidacaoTest` e `ElegibilidadeCombinacoesTest`, além dos testes já existentes)
 
 ## 1. Objetivo
 

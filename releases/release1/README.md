@@ -67,13 +67,13 @@ Executados em 09/11/2026 com os mesmos comandos do CI.
 
 | Suíte | Comando | Resultado |
 |---|---|---|
-| Backend (JUnit, MockMvc, Mockito, H2) | `./mvnw -B verify -Djacoco.haltOnFailure=true` | **419 testes, 0 falhas**; cobertura de linhas do código de negócio (domínio e serviços) **99,2%** (584 de 589), com o mínimo de 80% bloqueando o build |
+| Backend (JUnit, MockMvc, Mockito, H2) | `./mvnw -B verify -Djacoco.haltOnFailure=true` | **434 testes, 0 falhas**; cobertura de linhas do código de negócio (domínio e serviços) **99,2%** (584 de 589), com o mínimo de 80% bloqueando o build |
 | Backend contra PostgreSQL | job `Backend (PostgreSQL)` do CI | mesmas migrations e consultas validadas no banco de produção |
 | Web (Vitest + Testing Library + MSW) | `npm test`, `npm run lint`, `npm run build` | **133 testes, 0 falhas**; lint e build sem erros |
 | E2E (Playwright, navegador real contra backend e banco reais) | `npm run test:e2e` | **29 testes**: login, fluxo completo do recrutamento (pesquisador e coordenador), regras de erro, vagas esgotadas, acesso por perfil e regressão da Sprint 1 |
 | Roteiro do planejamento (T67) | `python3 scripts/verificar-ambiente.py` | verificações de ambiente, RF01 a RF04 e RF05 a RF07; executado no job Docker do CI |
 | Roteiro do recrutamento (T68) | `python3 scripts/verificar-recrutamento.py` | **58 de 58** verificações em execução local com os dados de demonstração |
-| Concorrência (T62) | `ParticipacaoConcorrenciaTest` | com 6 inclusões simultâneas para 2 vagas, exatamente 2 são aceitas; sem o bloqueio o teste falha |
+| Inclusão de participantes (T62) | `ParticipacaoEndpointTest` e `ParticipacaoConcorrenciaTest` | endpoints com 201, 400, 401, 403, 404 e um 409 por regra; com 6 inclusões simultâneas para 1 vaga, exatamente 1 é aceita (sem o bloqueio o teste falha) |
 
 O relatório de cobertura do JaCoCo é publicado como artefato `cobertura-jacoco` em cada execução do CI e o relatório do Playwright como `playwright-report`.
 

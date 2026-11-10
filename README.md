@@ -408,7 +408,7 @@ cd backend/ClinicalStudyPB
 
 No Windows (PowerShell): `mvnw.cmd test`. Os testes locais usam H2; a CI roda os mesmos testes também contra PostgreSQL real (job "Backend (testes no PostgreSQL)", abaixo). O relatório de cobertura do JaCoCo é gerado em `target/site/jacoco/index.html`.
 
-**Resultado em 09/11/2026:** 419 testes, 0 falhas, 0 erros. Cobertura de linhas do código de negócio (domínio e serviços, a medida da regra de 80%): **99,2%**; backend inteiro, exceto a classe `main`, `config` e os DTOs: 99,1%. Ficam fora da medição a classe `main`, `config` e os DTOs.
+**Resultado em 09/11/2026:** 434 testes, 0 falhas, 0 erros. Cobertura de linhas do código de negócio (domínio e serviços, a medida da regra de 80%): **99,2%**; backend inteiro, exceto a classe `main`, `config` e os DTOs: 99,1%. Ficam fora da medição a classe `main`, `config` e os DTOs.
 
 Suítes atuais:
 - `ClinicalStudyPbApplicationTests`: validação do contexto Spring Boot, Flyway e Hibernate (`ddl-auto=validate`).
