@@ -1,32 +1,21 @@
-import { createContext, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react'
+import { lerToken, salvarToken } from '../services/api'
+import { AuthContext } from './authContexto'
 
-interface AuthContextType {
-  token: string | null;
-  login: (token: string) => void;
-  logout: () => void;
-  isAuthenticated: boolean;
-}
+// Guarda o token JWT na mesma chave do cliente HTTP (services/api.ts), para que o interceptor
+// envie o cabeçalho Authorization sem nenhuma configuração extra.
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [token, setToken] = useState<string | null>(() => lerToken())
 
-export const AuthContext = createContext<AuthContextType>({} as AuthContextType);
-
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [token, setToken] = useState<string | null>(
-    localStorage.getItem('@ClinicalStudy:token')
-  );
-
-  const login = (newToken: string) => {
-    localStorage.setItem('@ClinicalStudy:token', newToken);
-    setToken(newToken);
-  };
+  const login = (novoToken: string) => {
+    salvarToken(novoToken)
+    setToken(novoToken)
+  }
 
   const logout = () => {
-    localStorage.removeItem('@ClinicalStudy:token');
-    setToken(null);
-  };
+    salvarToken(null)
+    setToken(null)
+  }
 
-  return (
-    <AuthContext.Provider value={{ token, login, logout, isAuthenticated: !!token }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
+  return <AuthContext.Provider value={{ token, login, logout, isAuthenticated: !!token }}>{children}</AuthContext.Provider>
+}

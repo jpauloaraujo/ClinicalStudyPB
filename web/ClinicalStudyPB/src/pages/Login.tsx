@@ -1,61 +1,62 @@
-import { useState, useContext, type FormEvent } from 'react';
-import { AuthContext } from '../contexts/AuthContext';
-import { api } from '../services/api';
+import { useState, type FormEvent } from 'react'
+import { useAuth } from '../contexts/authContexto'
+import { extrairErro } from '../services/erros'
+import { autenticacaoApi } from '../services/recursos'
 
+// Tela de login ligada ao AuthContext. A tela principal da aplicação é a LoginPage (com perfis e rotas);
+// esta usa o mesmo endpoint (/api/auth/login) e a mesma chave de token.
 export function Login() {
-  const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
-  const [erro, setErro] = useState('');
-  const { login, logout, isAuthenticated } = useContext(AuthContext);
+  const [email, setEmail] = useState('')
+  const [senha, setSenha] = useState('')
+  const [erro, setErro] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const { login, logout, isAuthenticated } = useAuth()
 
-  const handleLogin = async (e: FormEvent) => {
-    e.preventDefault();
-    setErro('');
+  const handleLogin = async (evento: FormEvent) => {
+    evento.preventDefault()
+    setErro('')
+    setEnviando(true)
     try {
-      const response = await api.post('/login', { email, senha });
-      login(response.data.token || 'token-demonstracao');
-      alert('Login realizado com sucesso!');
-    } catch (err: any) {
-      setErro('Falha na autenticação. Verifique suas credenciais.');
+      login(await autenticacaoApi.entrar(email.trim(), senha))
+    } catch (falha) {
+      setErro(extrairErro(falha).mensagem)
+    } finally {
+      setEnviando(false)
     }
-  };
+  }
 
   if (isAuthenticated) {
     return (
-      <div style={{ padding: '20px' }}>
+      <div className="pilha">
         <h2>Você está autenticado!</h2>
-        <button onClick={logout}>Sair (Logout)</button>
+        <button type="button" className="botao" onClick={logout}>
+          Sair
+        </button>
       </div>
-    );
+    )
   }
 
   return (
-    <div style={{ padding: '20px', maxWidth: '400px', margin: '0 auto' }}>
+    <div className="pilha">
       <h2>Login - ClinicalStudyPB</h2>
-      {erro && <p style={{ color: 'red' }}>{erro}</p>}
-      <form onSubmit={handleLogin}>
-        <div style={{ marginBottom: '10px' }}>
-          <label>E-mail:</label>
-          <input
-            type="email"
-            style={{ width: '100%', padding: '8px' }}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
-        <div style={{ marginBottom: '10px' }}>
-          <label>Senha:</label>
-          <input
-            type="password"
-            style={{ width: '100%', padding: '8px' }}
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-            required
-          />
-        </div>
-        <button type="submit" style={{ padding: '10px 20px' }}>Entrar</button>
+      {erro && (
+        <p className="alerta alerta--erro" role="alert">
+          {erro}
+        </p>
+      )}
+      <form className="formulario" onSubmit={handleLogin}>
+        <label className="campo">
+          <span>E-mail</span>
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        </label>
+        <label className="campo">
+          <span>Senha</span>
+          <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} required />
+        </label>
+        <button type="submit" className="botao" disabled={enviando}>
+          {enviando ? 'Entrando…' : 'Entrar'}
+        </button>
       </form>
     </div>
-  );
+  )
 }
