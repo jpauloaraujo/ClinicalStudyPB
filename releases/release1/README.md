@@ -69,7 +69,7 @@ Executados em 09/11/2026 com os mesmos comandos do CI.
 |---|---|---|
 | Backend (JUnit, MockMvc, Mockito, H2) | `./mvnw -B verify -Djacoco.haltOnFailure=true` | **419 testes, 0 falhas**; cobertura de linhas do código de negócio (domínio e serviços) **99,2%** (584 de 589), com o mínimo de 80% bloqueando o build |
 | Backend contra PostgreSQL | job `Backend (PostgreSQL)` do CI | mesmas migrations e consultas validadas no banco de produção |
-| Web (Vitest + Testing Library + MSW) | `npm test`, `npm run lint`, `npm run build` | **130 testes, 0 falhas**; lint e build sem erros |
+| Web (Vitest + Testing Library + MSW) | `npm test`, `npm run lint`, `npm run build` | **133 testes, 0 falhas**; lint e build sem erros |
 | E2E (Playwright, navegador real contra backend e banco reais) | `npm run test:e2e` | **29 testes**: login, fluxo completo do recrutamento (pesquisador e coordenador), regras de erro, vagas esgotadas, acesso por perfil e regressão da Sprint 1 |
 | Roteiro do planejamento (T67) | `python3 scripts/verificar-ambiente.py` | verificações de ambiente, RF01 a RF04 e RF05 a RF07; executado no job Docker do CI |
 | Roteiro do recrutamento (T68) | `python3 scripts/verificar-recrutamento.py` | **58 de 58** verificações em execução local com os dados de demonstração |
@@ -83,7 +83,6 @@ O relatório de cobertura do JaCoCo é publicado como artefato `cobertura-jacoco
 |---|---|---|
 | O app mobile só tem o fluxo de login | O participante ainda não consulta visitas nem pede retirada | Escopo das Releases 2 e 3 |
 | O app mobile não tem testes automatizados | Só lint e verificação de tipos no CI | Previsto para a Sprint 3 |
-| `AuthContext` e `Login` (PR #5) não estão ligados ao roteador | A tela usada é a `LoginPage` com `SessaoProvider`; os dois arquivos novos ficam disponíveis, testados, mas sem uso | Decisão do time: remover ou adotar |
 | O job "Ambiente Docker (T67)" depende do Docker do GitHub Actions | O roteiro foi validado fora do Docker (H2 com perfil `demo`); a execução no PostgreSQL do compose é a do CI | Conferir o job verde no PR |
 | Estudo sem dono de edição | Qualquer pesquisador edita e exclui estudos de outro pesquisador (o RF04 não exige dono) | Decisão de produto registrada no README |
 | Cobertura do web não é medida | Há testes, mas sem meta numérica no CI | Melhoria futura |
