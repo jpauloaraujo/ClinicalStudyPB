@@ -77,7 +77,8 @@ Aplicação Spring Boot com pacote raiz `UEPB.ESWII.ClinicalStudyPB`, organizada
 | `config` | Configuração do OpenAPI 3 / Swagger UI (`OpenApiConfig`) e liberação de rotas de documentação | ✅ concluído (T10) |
 | `domain.model` / `domain.enums` | Entidades JPA (`Usuario`, `Estudo`) e enumerações (`PerfilUsuario`, `StatusEstudo`) | ✅ concluído (T08) |
 | `controller` / `service` / `repository` | Endpoints REST, regras de negócio e interfaces Spring Data JPA | ✅ concluído (T06) |
-| `db/migration` | Migrations SQL versionadas do Flyway (`V1__create_initial_tables.sql`, `V2__seed_initial_data.sql`) | ✅ concluído (T09) |
+| `db/migration` | Migrations SQL versionadas do Flyway (`V1` a `V5`: tabelas e seed iniciais, normalização de e-mails, tabelas de recrutamento e histórico de estados do estudo) | ✅ concluído (T09, T38) |
+| `db/demo` | Script repetível com os dados fictícios de demonstração, carregado só com o perfil `demo` | ✅ concluído (T63) |
 | DTOs e validações | Objetos de entrada/saída da API com Bean Validation (`EstudoRequest`, `Usuario*Request`, `Login*Request`) | ✅ concluído (T15 / T27) |
 | Segurança | Configuração do Spring Security (`SecurityConfig`), autenticação stateless por JWT (`TokenService`), endpoints `/api/auth/login` e `/api/auth/me` (`AuthController`) e senhas com BCrypt | ✅ concluído (T19 / T20 — Tasks 3060 / 3063) |
 | Recrutamento (RF05 a RF11) | Critérios (inclusão/exclusão), visitas planejadas e ações, candidatos, avaliação de elegibilidade, consentimento simulado e inclusão de participantes, com migration `V4` e regras próprias; erros de regra respondem `409` com `{"erro", "codigo"}`. Ver [a documentação do domínio](<docs/sprint2/Implementação do modelo de domínio de recrutamento.md>) | ✅ backend concluído (telas ainda não) |
@@ -106,20 +107,22 @@ Sem token válido a API responde `401`; com token de um perfil sem permissão, `
 
 ### Organização da web
 
-Projeto criado com o template React + TypeScript do Vite, com React Compiler habilitado e ESLint. O layout base e a navegação com React Router (T13) estão em `src/components/layout`, `src/routes` e `src/pages` — detalhes em [docs/implementacao-web-layout-navegacao.md](docs/implementacao-web-layout-navegacao.md).
+Projeto criado com o template React + TypeScript do Vite, com React Compiler habilitado e ESLint. O layout base e a navegação com React Router (T13) estão em `src/components/layout`, `src/routes` e `src/pages` — detalhes em [docs/implementacao-web-layout-navegacao.md](docs/sprint1/implementacao-web-layout-navegacao.md).
 
 | Pasta / arquivo | Conteúdo | Task |
 |---|---|---|
 | `src/services/api.ts` | Cliente Axios único, URL via `VITE_API_URL`, envio do token e tratamento de `401` | T14 |
 | `src/services/recursos.ts` | Chamadas da API por recurso (autenticação, usuários, estudos) | T14 / T31 |
 | `src/services/erros.ts` | Converte `{"erro": "..."}` da API em mensagem e campo do formulário | T31 |
-| `src/contexts/` | Sessão real: login, restauração da sessão salva, expiração do token e logout | T21 |
+| `src/contexts/` | `AuthContext`, `AuthProvider` e `useAuth` expõem o usuário logado (nome e perfil), o token e `login`/`logout`; por baixo, o `SessaoProvider` faz o login real, restaura a sessão salva e trata a expiração do token | T21 |
 | `src/routes/RotaProtegida.tsx` | Guards `RequerAutenticacao` e `RequerPerfil` (perfis lidos de `navegacao.ts`) | T25 |
 | `src/pages/usuarios/` | Listagem, cadastro, edição e exclusão de usuários (administrador) | T17 |
 | `src/pages/estudos/` | Listagem (pesquisador e coordenador) e cadastro/edição/exclusão (pesquisador) | T29 / T31 |
 | `src/pages/estudos/detalhe/` | Detalhe do estudo com abas (T39), indicador e avanço de estado (T43), critérios (T46), visitas e atividades (T49), candidatos e ficha do candidato com a avaliação de elegibilidade (T52 e T55). A ficha traz as seções de avaliação, consentimento (T58) e inclusão (T61); a aba Participantes lista os incluídos e o contador de vagas (T61) | T39 / T43 / T46 / T49 / T52 / T55 / T58 / T61 |
 | `src/api/` | Tipos gerados do contrato (`schema.d.ts`), módulos de API tipados (critérios, visitas, candidatos, avaliações, consentimento, participantes, estado do estudo) e o conversor de erros por campo | T40 |
 | `src/mocks/` | Mock Service Worker com respostas fictícias para todos os endpoints do contrato, ligado por `VITE_USE_MOCKS=true` | T40 |
+| `e2e/` | Testes de ponta a ponta com Playwright: page objects, fixtures, dados únicos por execução e sessão guardada por perfil | T65 / T66 |
+| `scripts/capturar-telas.mjs` | Gera as capturas de tela do README em `docs/imagens/` percorrendo a aplicação real | T70 |
 
 ### Organização do mobile
 
@@ -260,6 +263,10 @@ Os valores padrão são fictícios. Para mudar portas, segredo JWT, perfil (`pro
 3. Ao iniciar o backend, o **Flyway** executa automaticamente as migrations em `src/main/resources/db/migration/`:
    - `V1__create_initial_tables.sql`: cria as tabelas `usuarios` e `estudos`, chaves estrangeiras, constraints de domínio e índices.
    - `V2__seed_initial_data.sql`: popula os 4 usuários fictícios de demonstração (um por perfil) e 2 estudos clínicos fictícios.
+   - `V3__normalizar_emails.sql`: normaliza os e-mails para minúsculas.
+   - `V4__create_recruitment_tables.sql`: cria as tabelas de critérios, visitas, atividades, candidatos, avaliações, consentimentos e participações (T38).
+   - `V5__create_study_status_history.sql`: cria o histórico de estados do estudo (T41/T42).
+   - Com `SPRING_PROFILES_ACTIVE=demo`, o Flyway também executa `db/demo` (dados fictícios de demonstração, T63).
 
 ### Backend
 
@@ -412,7 +419,7 @@ No Windows (PowerShell): `mvnw.cmd test`. Os testes locais usam H2; a CI roda os
 
 Suítes atuais:
 - `ClinicalStudyPbApplicationTests`: validação do contexto Spring Boot, Flyway e Hibernate (`ddl-auto=validate`).
-- `FlywayMigrationIntegrationTest`: verificação da execução das migrations `V1` e `V2` (a `V3` normaliza e-mails para minúsculas e a `V4` cria as tabelas do recrutamento), integridade dos usuários de seed (4 perfis + hash BCrypt) e estudos clínicos iniciais.
+- `FlywayMigrationIntegrationTest`: verificação da execução das migrations `V1` a `V5` (a `V3` normaliza e-mails para minúsculas, a `V4` cria as tabelas do recrutamento e a `V5` o histórico de estados), integridade dos usuários de seed (4 perfis + hash BCrypt) e estudos clínicos iniciais.
 - `OpenApiDocumentationIntegrationTest`: verificação da especificação OpenAPI 3 (`/v3/api-docs`), esquema de segurança Bearer JWT e acesso ao Swagger UI (`/swagger-ui/index.html`).
 - `UsuarioDtoValidationTest`: testes unitários de validação Bean Validation dos DTOs de cadastro e atualização de usuários.
 - `UsuarioIntegrationTest`: testes de integração do CRUD de usuários com autenticação simulada (`@WithMockUser`), incluindo o bloqueio da exclusão de um usuário responsável por estudos.
@@ -448,7 +455,7 @@ Comando para rodar exclusivamente os testes de autenticação e segurança:
 | Classe | `AuthenticationIntegrationTest` (`src/test/java/UEPB/ESWII/ClinicalStudyPB/`) |
 | Execução em 26/10/2026 | **13 testes, 0 falhas, 0 erros, 0 ignorados** (`target/surefire-reports`) |
 | Contrato testado | `POST /api/auth/login` (`email`, `senha`) → `200` com `token` e `tipo: Bearer`; credenciais inválidas → `401` com `{"erro": "Credenciais inválidas"}`; corpo inválido → `400`; `/api/**` sem token válido → `401` |
-| Banco dos testes | H2 em memória (modo PostgreSQL), com as migrations Flyway `V1` e `V2`; o usuário `admin@clinicalstudy.test` vem do seed |
+| Banco dos testes | H2 em memória (modo PostgreSQL), com as migrations Flyway `V1` a `V5`; o usuário `admin@clinicalstudy.test` vem do seed |
 | Segredo JWT dos testes | Valor fictício em `src/test/resources/application.properties`, sem depender de variáveis de ambiente |
 | Fora do escopo | Testes da tela de login no React: a T21 está pronta, mas a ferramenta de testes da web ainda não foi escolhida |
 
@@ -549,7 +556,7 @@ O workflow `.github/workflows/ci.yml` roda a cada push e pull request na `main` 
 
 ## 7. Documentação da API
 
-A API é documentada no padrão **OpenAPI 3** com **springdoc-openapi** (`OpenApiConfig`), incluindo metadados do projeto, organização por tags (`Usuários` e `Estudos Clínicos`), exemplos de requisição/resposta e suporte a autenticação **Bearer JWT** (botão **Authorize** no topo do Swagger UI).
+A API é documentada no padrão **OpenAPI 3** com **springdoc-openapi** (`OpenApiConfig`), incluindo metadados do projeto, organização por tags (`Autenticação`, `Usuários`, `Estudos Clínicos`, `Estado do estudo`, `Critérios`, `Visitas planejadas`, `Candidatos`, `Elegibilidade`, `Consentimento` e `Participantes`), exemplos de requisição/resposta e suporte a autenticação **Bearer JWT** (botão **Authorize** no topo do Swagger UI).
 
 Com o backend em execução (porta padrão `8081`):
 
@@ -559,17 +566,20 @@ Com o backend em execução (porta padrão `8081`):
 
 Para testar endpoints protegidos no Swagger, faça o login em `POST /api/auth/login`, copie o `token` e cole em **Authorize**. Cada endpoint exige um perfil (ver a tabela de permissões na seção 2).
 
-### Sprint 2 — T42, T45, T48, T53, T57 e T63
+### Sprint 2 — endpoints do planejamento e do recrutamento (RF05 a RF11)
 
-O contrato dessas operações está em [docs/sprint2/OpanAPI.yaml](docs/sprint2/OpanAPI.yaml). Os caminhos canônicos permanecem em português, como no backend existente:
+O contrato da Sprint 2 (RF05 a RF11) é [docs/api/openapi-sprint2.yaml](docs/api/openapi-sprint2.yaml), mantido junto com o código e comparado com a API pelo `ContratoOpenApiTest` (o rascunho inicial continua em [docs/sprint2/OpanAPI.yaml](docs/sprint2/OpanAPI.yaml)). Os caminhos canônicos permanecem em português, como no backend existente:
 
 | Task | Uso da API |
 |---|---|
 | **T42** | `POST /api/estudos/{estudoId}/transicoes`, com `{"destino":"RECRUTAMENTO"}`, devolve `200` e o estudo atualizado. Só pesquisador; exige o próximo estado e, para sair de planejamento, um critério de inclusão e uma visita. Cada avanço grava usuário e data no histórico. |
 | **T45** | `GET/POST /api/estudos/{estudoId}/criterios`, `PUT/DELETE .../criterios/{id}`. Tipo obrigatório e descrição de 5 a 500 caracteres após `trim`; descrição repetida no mesmo tipo/estudo é recusada ignorando maiúsculas. Título opcional, derivado da descrição quando ausente. |
 | **T48** | `GET/POST /api/estudos/{estudoId}/visitas`, `PUT/DELETE .../visitas/{id}` e `POST /api/visitas/{visitaId}/acoes`, `PUT/DELETE .../acoes/{id}`. A listagem traz as visitas ordenadas pelo dia, com suas atividades em `acoes`; excluir visita remove suas atividades. |
+| **T51** | `GET/POST /api/estudos/{estudoId}/candidatos` (lista paginada com `pagina`, `tamanho` e filtro `situacao`; só com o estudo em recrutamento) e `GET/PUT /api/candidatos/{id}`. O código `CAND-001...` é gerado por estudo; nome e data de nascimento repetidos → `CANDIDATO_DUPLICADO`. |
 | **T53** | Testes de candidatos: regras isoladas, datas, códigos sequenciais por estudo, permissões, paginação, filtro e erros HTTP. |
+| **T54** | `POST/GET /api/candidatos/{candidatoId}/avaliacoes`. A avaliação responde a todos os critérios do estudo; devolve resultado, pontuação, critérios reprovadores e o histórico (a mais recente é a vigente). Só o coordenador avalia. |
 | **T57** | `POST/GET /api/candidatos/{candidatoId}/consentimento`. Registro pelo coordenador; consulta também pelo pesquisador. Corpo opcional `{"dataHora":"2026-11-01T10:30:00","versaoTermo":"TCLE-SIMULADO v1"}`; sem valores, usa agora e `app.consentimento.versao-termo`. Responsável vem do token. |
+| **T60** | `GET/POST /api/estudos/{estudoId}/participantes` e `GET .../participantes/vagas`. A inclusão exige estudo em recrutamento, candidato elegível e consentido e vaga livre, com um código de erro por regra (`ESTUDO_FORA_DE_RECRUTAMENTO`, `CANDIDATO_JA_INCLUIDO`, `CANDIDATO_NAO_ELEGIVEL`, `CONSENTIMENTO_AUSENTE`, `VAGAS_ESGOTADAS`) e bloqueio do estudo para nunca passar do limite. |
 | **T63** | Script repetível Flyway de demonstração, carregado somente com o perfil `demo`. |
 
 O estudo sempre nasce em `PLANEJAMENTO`. O `PUT` comum não avança nem retrocede estados: enviar um status diferente resulta em `409 ESTADO_ALTERADO_FORA_DA_TRANSICAO`. Critérios, visitas e atividades só podem ser alterados em planejamento pelo pesquisador; o coordenador pode consultar. O consentimento exige recrutamento, não aceita data futura nem segundo registro e não depende de avaliação anterior; candidato já incluído não pode registrar consentimento.
@@ -583,7 +593,7 @@ Erros tratados pela API expõem `status`, `codigoRegra`, `mensagem` e `errosCamp
 .\mvnw.cmd '-Dtest=CandidatoServiceTest,CandidatoIntegrationTest' test
 ```
 
-Em Linux/macOS, use `./mvnw` no lugar de `.\mvnw.cmd`. A suíte local usa H2; a execução contra PostgreSQL é configurada no workflow. As telas de outras tasks da Sprint 2 não fazem parte dessas seis entregas.
+Em Linux/macOS, use `./mvnw` no lugar de `.\mvnw.cmd`. A suíte local usa H2; a execução contra PostgreSQL é configurada no workflow. As telas correspondentes (critérios, visitas, estado, candidatos, avaliação, consentimento e inclusão) estão descritas na seção 3, e os testes de cada requisito estão no [relatório de testes](docs/testes/relatorio-de-testes-release1.md).
 
 **Demonstração da T63:** crie um banco PostgreSQL dedicado, por exemplo `clinicalstudypb_demo`, e configure `DB_USERNAME`, `DB_PASSWORD` e `JWT_SECRET` como descrito na seção de instalação. Então, no PowerShell:
 
@@ -637,8 +647,9 @@ ClinicalStudyPB/
 │           ├── main/resources/
 │           │   ├── application.properties
 │           │   ├── application-dev.properties.example
-│           │   └── db/migration/  # Scripts SQL versionados do Flyway (V1, V2)
-│           └── test/              # Testes de integração e recursos de teste (H2)
+│           │   ├── db/migration/  # Scripts SQL versionados do Flyway (V1 a V5)
+│           │   └── db/demo/       # Dados fictícios de demonstração (perfil demo, T63)
+│           └── test/              # Testes de unidade, de integração, de concorrência e recursos (H2)
 ├── web/
 │   └── ClinicalStudyPB/          # Aplicação web — React + TypeScript + Vite
 │       ├── Dockerfile / nginx.conf  # Imagem da web servida por nginx (T67)
@@ -661,7 +672,7 @@ ClinicalStudyPB/
 │           ├── api/              # Cliente HTTP e armazenamento seguro do token
 │           ├── components/       # Tema e componentes de interface
 │           └── contexts/         # Sessão do participante
-├── docs/                         # Especificação, arquitetura, planejamento e guias
+├── docs/                         # Especificação, planejamento, diagramas, design por task, imagens e relatório de testes
 ├── releases/                     # Documentação de cada release (release1/README.md)
 ├── scripts/                      # verificar-ambiente.py (T67) e verificar-recrutamento.py (T68)
 ├── docker-compose.yml            # Ambiente completo: PostgreSQL + backend + web (T67)

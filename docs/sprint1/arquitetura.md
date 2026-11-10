@@ -302,7 +302,7 @@ flowchart LR
 
 ### 5.1. Diagrama de Classes de Domínio (UML)
 
-O modelo abaixo evolui a entidade [`Usuario`](../backend/ClinicalStudyPB/src/main/java/UEPB/ESWII/ClinicalStudyPB/domain/model/Usuario.java) já iniciada no repositório para abranger todo o domínio de estudos clínicos (Módulos A a F), garantindo rastreabilidade e integridade referencial.
+O modelo abaixo evolui a entidade [`Usuario`](../../backend/ClinicalStudyPB/src/main/java/UEPB/ESWII/ClinicalStudyPB/domain/model/Usuario.java) já iniciada no repositório para abranger todo o domínio de estudos clínicos (Módulos A a F), garantindo rastreabilidade e integridade referencial.
 
 ```mermaid
 classDiagram

@@ -4,7 +4,7 @@ Este material documenta a estrutura inicial do backend Spring Boot (`PBI-02`), c
 
 ## Estrutura criada
 
-- `config`: [`OpenApiConfig`](../backend/ClinicalStudyPB/src/main/java/UEPB/ESWII/ClinicalStudyPB/config/OpenApiConfig.java) com metadados da especificação OpenAPI 3, esquema de autenticação Bearer JWT e liberação pública das rotas do Swagger UI.
+- `config`: [`OpenApiConfig`](../../backend/ClinicalStudyPB/src/main/java/UEPB/ESWII/ClinicalStudyPB/config/OpenApiConfig.java) com metadados da especificação OpenAPI 3, esquema de autenticação Bearer JWT e liberação pública das rotas do Swagger UI.
 - `domain/model`: entidades JPA `Usuario` e `Estudo` documentadas com `@Schema`.
 - `domain/enums`: `PerfilUsuario` e `StatusEstudo`.
 - `repository`: interfaces Spring Data JPA (`UsuarioRepository` e `EstudoRepository` com `@EntityGraph` para evitar consultas N+1).
