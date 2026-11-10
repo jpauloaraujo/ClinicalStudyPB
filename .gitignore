@@ -5,3 +5,7 @@
 
 # Variáveis locais do docker-compose (T67); o modelo versionado é .env.example
 .env
+
+# Python
+__pycache__/
+*.pyc
