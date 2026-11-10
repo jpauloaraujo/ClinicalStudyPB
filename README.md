@@ -693,6 +693,7 @@ ClinicalStudyPB/
 - [Mapeamento e complemento das tasks da Sprint 2 até 01/11](<docs/sprint2/Tasks até 01-11 — mapeamento e complemento.md>) — o que já estava feito, o que foi acrescentado, como funciona e o que ainda depende de pessoas.
 - [Contrato OpenAPI da Sprint 2](docs/api/openapi-sprint2.yaml) — endpoints de recrutamento e de estado do estudo (T37).
 - [Diagramas do domínio](docs/diagramas/dominio.md), [casos de uso](docs/diagramas/casos-de-uso.md), [sequência: avançar o estado](docs/diagramas/sequencia-avancar-estado.md), [sequência: incluir participante](docs/diagramas/sequencia-inclusao-participante.md) e [arquitetura](docs/diagramas/arquitetura.md) (T36 e T69).
+- [Relatório de testes da Release 1](docs/testes/relatorio-de-testes-release1.md) — estratégia, ambiente, resultados por suíte, cobertura, rastreabilidade RF × testes, defeitos, riscos e conclusão.
 - [Release 1](releases/release1/README.md) — relatório da entrega: requisitos, resultados dos testes, problemas conhecidos e processo de desenvolvimento.
 - [Integração do planejamento (T67)](<docs/sprint2/T67 — Integração do planejamento (ambiente Docker).md>) e [do recrutamento (T68)](<docs/sprint2/T68 — Integração do recrutamento (roteiro e correções).md>) — roteiros executáveis e defeitos encontrados.
 - [Backlog da Sprint 2 para o Azure Boards](docs/azure-boards/README.md) — CSV de importação com os 10 PBIs e as 37 tasks.
