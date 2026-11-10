@@ -225,6 +225,8 @@ jobs:
         run: docker compose up --build -d --wait --wait-timeout 300
       - name: Verifica o fluxo de planejamento
         run: python3 scripts/verificar-ambiente.py
+      - name: Verifica o fluxo de recrutamento (T68)
+        run: python3 scripts/verificar-recrutamento.py
       - name: Logs dos containers
         if: failure()
         run: |
