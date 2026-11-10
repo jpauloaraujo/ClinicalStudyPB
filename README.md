@@ -454,7 +454,7 @@ Comando para rodar exclusivamente os testes de autenticação e segurança:
 
 ### Web e mobile
 
-- **Web, componentes:** Vitest + Testing Library (`npm test` em `web/ClinicalStudyPB`, 130 testes): detalhe do estudo com abas (T39), indicador e avanço de estado (T43), critérios (T46), visitas (T49), candidatos e ficha com a avaliação (T52 e T55), consentimento (T58), inclusão e participantes (T61), o login com `AuthContext`, o conversor de erros e as telas rodando sobre o Mock Service Worker (T40). Os testes E2E ficam em `e2e/` e **não** rodam no Vitest.
+- **Web, componentes:** Vitest + Testing Library (`npm test` em `web/ClinicalStudyPB`, 133 testes): detalhe do estudo com abas (T39), indicador e avanço de estado (T43), critérios (T46), visitas (T49), candidatos e ficha com a avaliação (T52 e T55), consentimento (T58), inclusão e participantes (T61), o `AuthContext` (login, sessão e logout), o conversor de erros e as telas rodando sobre o Mock Service Worker (T40). Os testes E2E ficam em `e2e/` e **não** rodam no Vitest.
 - **Web, E2E:** Playwright, descrito na próxima seção.
 - **Mobile:** ainda sem testes automatizados; na CI passa por lint e verificação de tipos. O E2E do app mobile está previsto para a Sprint 3.
 
