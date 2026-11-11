@@ -1,0 +1,89 @@
+# T101 · Modelo, migration e contrato da retirada
+
+> **Sprint 3** · PBI-23 · RF16 Retirada de participante  
+> **Responsável:** I4 · **Estimativa:** 3h · **Prazo:** Qua 18/11  
+> **Depende de:** T73  
+> **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
+
+> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task.
+
+## 1. Objetivo
+
+Criar a tabela de retirada e a coluna de situação da participação (`ATIVO` ou `RETIRADO`), as entidades JPA e o contrato do endpoint de retirada. Quando a coluna de situação entrar na `main`, avisar o grupo: a T102 a usa para bloquear ações nos serviços dos PBIs 19, 20 e 21.
+
+## 2. Contexto: o que já existe e deve ser reaproveitado
+
+- `Participacao` (`participacoes`) guarda `candidato`, `estudo`, `dataInclusao` e `incluidoPor`; `ParticipacaoResponse` é o DTO da lista de participantes (Sprint 2).
+- Os participantes incluídos na Sprint 2 e nas Sprints anteriores existem em bancos já populados: a coluna nova precisa ter **padrão `ATIVO`** para eles.
+- Esta task usa a faixa `V6_23_*`; as colunas e nomes estão na seção 5 das convenções. O formato de `RetiradaRequest` e `RetiradaResponse`, na seção 3.
+- O pedido de retirada feito **pelo próprio participante no app (RF20)** é da Sprint 4 e vai reaproveitar o mesmo serviço; por isso o campo `solicitante` aceita `PARTICIPANTE`.
+
+## 3. Onde implementar
+
+| Arquivo | Ação | Responsabilidade |
+|---|---|---|
+| `backend/ClinicalStudyPB/src/main/resources/db/migration/V6_23_1__participant_withdrawal.sql` | Criar | Coluna `participacoes.situacao` e tabela `retiradas_participacao` |
+| `backend/ClinicalStudyPB/src/main/java/UEPB/ESWII/ClinicalStudyPB/domain/enums/SituacaoParticipacao.java` | Criar | `ATIVO`, `RETIRADO` |
+| `backend/ClinicalStudyPB/src/main/java/UEPB/ESWII/ClinicalStudyPB/domain/enums/SolicitanteRetirada.java` | Criar | `PARTICIPANTE`, `PESQUISADOR`, `COORDENACAO` |
+| `backend/ClinicalStudyPB/src/main/java/UEPB/ESWII/ClinicalStudyPB/domain/model/Participacao.java` | Alterar | Campo `situacao` (padrão `ATIVO`) e `estaRetirada()` |
+| `backend/ClinicalStudyPB/src/main/java/UEPB/ESWII/ClinicalStudyPB/domain/model/RetiradaParticipacao.java` | Criar | Entidade JPA da retirada |
+| `backend/ClinicalStudyPB/src/main/java/UEPB/ESWII/ClinicalStudyPB/repository/RetiradaParticipacaoRepository.java` | Criar | `findByParticipacaoId` e `existsByParticipacaoId` |
+| `backend/ClinicalStudyPB/src/main/java/UEPB/ESWII/ClinicalStudyPB/controller/dto/ParticipacaoResponse.java` | Alterar | Acrescenta `situacao` |
+| `docs/api/openapi-sprint2.yaml` | Alterar | Schema `ParticipacaoResponse` ganha o campo `situacao` (só o schema; os caminhos não mudam) |
+| `docs/api/openapi-sprint3.yaml` | Alterar | Operações da retirada, schemas e erros |
+| `backend/ClinicalStudyPB/src/test/java/UEPB/ESWII/ClinicalStudyPB/FlywayMigrationIntegrationTest.java` | Alterar | Coluna, `CHECK`, tabela e `UNIQUE` |
+| `docs/diagramas/dominio.md` | Alterar | Situação da participação e `RetiradaParticipacao` |
+
+## 4. Requisitos a implementar
+
+Cada requisito tem um identificador (`RQ-T101-NN`) para a revisão do Pull Request e para a conferência no fim da task: todos precisam estar atendidos.
+
+### Migration `V6_23_1__participant_withdrawal.sql`
+
+- **RQ-T101-01** Acrescentar a `participacoes` a coluna `situacao VARCHAR(20) NOT NULL DEFAULT 'ATIVO'` com `CHECK` `chk_participacoes_situacao` (`situacao IN ('ATIVO', 'RETIRADO')`). Em bancos populados, **todos os participantes existentes ficam `ATIVO`** (o padrão cobre isso; conferir por teste).
+- **RQ-T101-02** Criar a tabela `retiradas_participacao`: `id UUID` (PK), `participacao_id UUID NOT NULL UNIQUE` (FK para `participacoes`; `uk_retiradas_participacao`), `motivo VARCHAR(500) NOT NULL`, `solicitante VARCHAR(20) NOT NULL` com `CHECK` em `PARTICIPANTE`, `PESQUISADOR`, `COORDENACAO`, `data_retirada DATE NOT NULL`, `registrado_por_id UUID NOT NULL` (FK para `usuarios`) e `registrado_em TIMESTAMP NOT NULL`.
+- **RQ-T101-03** Usar `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` (ou o equivalente compatível com o H2 em modo PostgreSQL e o PostgreSQL 16) e `CREATE TABLE IF NOT EXISTS`; sem `ON DELETE CASCADE`; a migration não apaga nem altera dados existentes.
+
+### Enums e entidades
+
+- **RQ-T101-04** `SituacaoParticipacao` e `SolicitanteRetirada` em `domain.enums`, com Javadoc dizendo que `RETIRADO` é **irreversível**.
+- **RQ-T101-05** `Participacao` ganha `situacao` (`@Enumerated(EnumType.STRING)`, padrão `ATIVO`) e `estaRetirada()`; nenhum setter público deve permitir voltar de `RETIRADO` para `ATIVO` (a regra é do serviço, mas o método de mudança deve se chamar `retirar()` e não existir `reativar()`).
+- **RQ-T101-06** `RetiradaParticipacao` com `participacao` (`@OneToOne LAZY`, único), `motivo`, `solicitante`, `dataRetirada`, `registradoPor` e `registradoEm`.
+- **RQ-T101-07** `ParticipacaoResponse` ganha `situacao` (`ATIVO`/`RETIRADO`); o campo é aditivo, então clientes antigos continuam funcionando. Atualizar também o schema `ParticipacaoResponse` em `openapi-sprint2.yaml` (só o schema).
+
+### Contrato (`openapi-sprint3.yaml`)
+
+- **RQ-T101-08** Descrever `POST /api/participacoes/{participacaoId}/retirada` (só coordenador; 201 `RetiradaResponse`) e `GET /api/participacoes/{participacaoId}/retirada` (leitura; 200 `RetiradaResponse`; 404 se o participante não foi retirado).
+- **RQ-T101-09** Schemas: `RetiradaRequest` (`motivo` 5 a 500 caracteres, `solicitante` com o enum, `dataRetirada` não futura), `RetiradaResponse` (com `visitasCanceladas`), enums `SituacaoParticipacao` e `SolicitanteRetirada`, com os exemplos fictícios das convenções.
+- **RQ-T101-10** Documentar os erros: `400` (`VALIDACAO_CAMPOS`, `CORPO_INVALIDO`, `MOTIVO_OBRIGATORIO`, `DATA_RETIRADA_FUTURA`), `403`, `404` e `409` (`PARTICIPANTE_JA_RETIRADO`, `ESTUDO_ENCERRADO`); explicar o efeito (as visitas futuras `AGENDADA` viram `CANCELADA` com o motivo "retirada do estudo"; a vaga continua ocupada).
+- **RQ-T101-11** Atualizar a contagem do `ContratoOpenApiSprint3Test` (10 + 2 = 12 operações) com o caso `@Disabled("T103")`.
+
+### Verificação e aviso
+
+- **RQ-T101-12** Subir o backend em **banco vazio** e em **banco populado pela Sprint 2** (perfil `demo`), no H2 e no PostgreSQL; conferir que todos os participantes existentes ficam `ATIVO`.
+- **RQ-T101-13** Atualizar `FlywayMigrationIntegrationTest`: a coluna e o `CHECK`, a tabela, o `UNIQUE` (a segunda retirada da mesma participação é recusada) e o `CHECK` do solicitante.
+- **RQ-T101-14** Atualizar `docs/diagramas/dominio.md`.
+- **RQ-T101-15** **Avisar o grupo** quando a coluna de situação entrar na `main`: a T102 a usa nos PBIs 19, 20 e 21.
+
+## 5. Contrato, regras e códigos de erro
+
+- Operações 11 e 12 da seção 2 das convenções; códigos `PARTICIPANTE_JA_RETIRADO`, `ESTUDO_ENCERRADO`, `DATA_RETIRADA_FUTURA` e `MOTIVO_OBRIGATORIO`.
+
+## 6. Testes
+
+- `FlywayMigrationIntegrationTest` (coluna, `CHECK`, tabela, `UNIQUE`) e `RetiradaParticipacaoRepositoryTest`.
+- Teste de que participantes já existentes ficam `ATIVO` depois da migração (banco populado) e de que o `ParticipacaoResponse` traz `situacao`.
+
+## 7. Critérios de aceite
+
+- [ ] A migration roda em banco vazio e em banco populado, no H2 e no PostgreSQL, e os participantes existentes ficam `ATIVO`.
+- [ ] As entidades passam na validação do Hibernate e o `UNIQUE` da retirada está provado por teste.
+- [ ] O contrato descreve o endpoint, os DTOs e os códigos de erro; o grupo foi avisado.
+
+## 8. Cuidados e fora de escopo
+
+- Não implementar regras nem endpoint aqui (T102 e T103).
+- Não adicionar opção de reativar: a retirada é irreversível.
+
+---
+Parte do conjunto de documentos de design da Sprint 3: [índice](README.md) · [convenções e contrato](00-convencoes-e-contrato-compartilhado.md).
