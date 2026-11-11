@@ -5,7 +5,7 @@
 > **Depende de:** T109, T97 (ficha do PBI-22)  
 > **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
 
-> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task.
+> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task. A origem dos requisitos (especificação, critério de aceite do PBI, regras de negócio e o texto original da task) está na [seção 9](#9-origem-dos-requisitos-especificação-e-planejamento).
 
 ## 1. Objetivo
 
@@ -89,6 +89,42 @@ Cada requisito tem um identificador (`RQ-T111-NN`) para a revisão do Pull Reque
 
 - O coordenador não cria contas nem lista usuários em geral: só vê as contas disponíveis.
 - Sem desvincular nesta Sprint.
+
+## 9. Origem dos requisitos (especificação e planejamento)
+
+Esta seção reúne, **sem paráfrase**, o que a especificação do projeto e o planejamento da Sprint 3 exigem para esta task, para que o documento sozinho mostre de onde vem cada requisito da seção 4. Onde o texto original difere das convenções (ajustes 1 a 10, [seção 1](00-convencoes-e-contrato-compartilhado.md#1-ajustes-em-relação-ao-planejamento-e-por-quê)), vale o que está neste documento e nas convenções.
+
+### 9.1 Requisito funcional da especificação
+
+- **RF17** (Módulo E — Aplicativo do participante; interface Mobile): “Permitir ao participante consultar os estudos em que está incluído.”
+- **RF02** (Módulo A — Usuários e autenticação; interface Web/Mobile): “Permitir autenticação e encerramento de sessão.”
+- **RF03** (Módulo A — Usuários e autenticação; interface Web/Mobile): “Restringir funcionalidades conforme o perfil do usuário.”
+- Escopo do planejamento para este PBI: “RF17 e RF18 (Módulo E, interface Mobile), mais o login do participante no app (RF02 e RF03 no mobile)”.
+
+### 9.2 Critério de aceite do PBI (planejamento)
+
+> O participante entra no app com a conta vinculada pelo coordenador, vê a lista dos estudos em que está incluído e o detalhe de cada um, e sai do app; outros perfis são recusados com mensagem clara; o participante nunca vê dados de outro; existe pelo menos um fluxo E2E no app. Ao fechar, em 21/11, este PBI deixa na main o esqueleto do app, os endpoints /me e o vínculo da conta que o PBI-25 usa.
+
+### 9.3 Regras de negócio do planejamento que afetam esta task
+
+| # | Regra proposta | Tasks afetadas (no planejamento) |
+|---|---|---|
+| 7 | A conta do participante é um usuário com perfil participante, criado pelo administrador (RF01) e vinculado pelo coordenador a um candidato já incluído, na relação um para um (o campo opcional previsto na regra 8 da Sprint 2). O participante só enxerga os próprios dados: acessar dados de outro retorna 404 | T109, T111, T116 |
+| 10 | Erros seguem o formato único da Sprint 2 (400 validação, 403 perfil sem permissão, 404 inexistente, 409 regra de negócio, sempre com o código da regra). As migrations usam faixas de versão por PBI (V3_19_* a V3_25_*); antes de começar, confirmar que a maior versão da Sprint 2 é menor que V3_19, senão trocar o prefixo V3 pelo número seguinte ao da última migration | T74 e todas as de backend |
+
+### 9.4 Texto original da task no planejamento
+
+> **T111 · Vínculo da conta do participante (backend e web).** Primeiro crie o endpoint em que o coordenador vincula uma conta de perfil participante a um participante incluído do estudo, usando o campo de usuário participante previsto na Sprint 2: um para um, conta ativa e de perfil participante, participação ativa (409 com código próprio em cada caso). Depois exponha a listagem das contas de participante ainda não vinculadas, para o formulário. Em seguida crie na área de ações da ficha do participante (ponto de encaixe deixado pelo PBI-22) o botão Vincular conta, com a lista de seleção e a conta vinculada exibida depois. Por fim, inclua no script de demonstração V3_24_1__demo_participant_account.sql o vínculo do usuário participante@clinicalstudy.test a um participante com visitas, para o PBI-25 e o E2E mobile.
+
+### 9.5 Requisitos da especificação que atravessam esta task
+
+- Regra 9.2 (tecnologia): “O backend deve disponibilizar uma **API HTTP REST** compartilhada pela web e pelo mobile, documentada no padrão **OpenAPI** (Swagger UI pode ser usado para consulta e testes).”
+- Regra 9.5 e Entregas: “O sistema deve ter persistência de dados e controle de acesso por perfil.” e “Persistência dos dados, com scripts de criação/migração do banco e dados fictícios para demonstração.”
+- Entregas: “Tratamento de erros e validações das regras de negócio.”
+- Estratégia de testes: “Testes automatizados de componentes nas interfaces web e mobile.” Em componentes web, testar o “comportamento das telas: validação de formulários, botões, mensagens de erro”. Regra 9.3: “A interface **web** atende aos perfis de pesquisador, coordenador e administrador.”
+- Entregas: arquivos de configuração para instalar, executar e testar “**sem senhas ou credenciais reais**” (os dados de demonstração são fictícios).
+- **Definition of Done** da Sprint (texto completo na [seção 11 das convenções](00-convencoes-e-contrato-compartilhado.md#11-definition-of-done-e-requisitos-transversais-da-especificação)): os critérios de aceite estão atendidos e demonstráveis com dados fictícios; o código foi revisado, passou no CI e entrou na `main` por Pull Request; há testes automatizados e, no backend, a cobertura do código de negócio permanece em 80% ou mais; erros e validações são tratados com mensagens claras; Swagger e contrato YAML refletem os endpoints; os dados de demonstração estão no perfil `demo`; documentação e capturas estão no repositório; e RF01 a RF11 continuam funcionando.
+
 
 ---
 Parte do conjunto de documentos de design da Sprint 3: [índice](README.md) · [convenções e contrato](00-convencoes-e-contrato-compartilhado.md).

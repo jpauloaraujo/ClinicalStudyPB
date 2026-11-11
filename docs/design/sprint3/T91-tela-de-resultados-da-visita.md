@@ -5,7 +5,7 @@
 > **Depende de:** T88, T90  
 > **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
 
-> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task.
+> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task. A origem dos requisitos (especificação, critério de aceite do PBI, regras de negócio e o texto original da task) está na [seção 9](#9-origem-dos-requisitos-especificação-e-planejamento).
 
 ## 1. Objetivo
 
@@ -77,6 +77,34 @@ Cada requisito tem um identificador (`RQ-T91-NN`) para a revisão do Pull Reques
 
 - Entra pelo encaixe `abasVisita.ts`: não reescrever `VisitaAgendadaPage` nem a agenda.
 - Não há exclusão de resultado.
+
+## 9. Origem dos requisitos (especificação e planejamento)
+
+Esta seção reúne, **sem paráfrase**, o que a especificação do projeto e o planejamento da Sprint 3 exigem para esta task, para que o documento sozinho mostre de onde vem cada requisito da seção 4. Onde o texto original difere das convenções (ajustes 1 a 10, [seção 1](00-convencoes-e-contrato-compartilhado.md#1-ajustes-em-relação-ao-planejamento-e-por-quê)), vale o que está neste documento e nas convenções.
+
+### 9.1 Requisito funcional da especificação
+
+- **RF14** (Módulo D — Acompanhamento; interface Web): “Registrar resultados fictícios das avaliações previstas.”
+
+### 9.2 Critério de aceite do PBI (planejamento)
+
+> O pesquisador registra e edita o resultado de cada atividade da categoria avaliação de uma visita REALIZADA; visitas não realizadas, atividades de outras categorias e estudos encerrados são recusados; o coordenador consulta os resultados em modo somente leitura.
+
+### 9.3 Regras de negócio do planejamento que afetam esta task
+
+| # | Regra proposta | Tasks afetadas (no planejamento) |
+|---|---|---|
+| 4 | Resultados fictícios só existem para visita REALIZADA e só para atividades da categoria avaliação. Quem registra é o pesquisador, com um resultado por atividade, editável enquanto o estudo não estiver encerrado, guardando autor e data da última alteração | T87, T89, T91 |
+
+### 9.4 Texto original da task no planejamento
+
+> **T91 · Tela de resultados da visita.** Primeiro crie, sobre a API da T90, a aba Avaliações da visita REALIZADA (aberta pela agenda), com a lista das atividades da categoria avaliação e, para cada uma, os campos valor, unidade e observação e o selo "pendente" ou "registrado". Depois salve cada atividade separadamente, com feedback e erros do servidor por campo, e mostre o contador "X de N avaliações registradas". Em seguida deixe a aba somente leitura para o coordenador e quando o estudo estiver encerrado, com aviso explicando o motivo (o caso do participante retirado entra na T104). Por fim, escreva os testes de componente. A tela da visita foi entregue pelos PBIs 19 e 20, então a aba entra pelo ponto de encaixe que eles deixaram.
+
+### 9.5 Requisitos da especificação que atravessam esta task
+
+- Estratégia de testes: “Testes automatizados de componentes nas interfaces web e mobile.” Em componentes web, testar o “comportamento das telas: validação de formulários, botões, mensagens de erro”. Regra 9.3: “A interface **web** atende aos perfis de pesquisador, coordenador e administrador.”
+- **Definition of Done** da Sprint (texto completo na [seção 11 das convenções](00-convencoes-e-contrato-compartilhado.md#11-definition-of-done-e-requisitos-transversais-da-especificação)): os critérios de aceite estão atendidos e demonstráveis com dados fictícios; o código foi revisado, passou no CI e entrou na `main` por Pull Request; há testes automatizados e, no backend, a cobertura do código de negócio permanece em 80% ou mais; erros e validações são tratados com mensagens claras; Swagger e contrato YAML refletem os endpoints; os dados de demonstração estão no perfil `demo`; documentação e capturas estão no repositório; e RF01 a RF11 continuam funcionando.
+
 
 ---
 Parte do conjunto de documentos de design da Sprint 3: [índice](README.md) · [convenções e contrato](00-convencoes-e-contrato-compartilhado.md).

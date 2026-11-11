@@ -5,7 +5,7 @@
 > **Depende de:** T77  
 > **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
 
-> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task.
+> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task. A origem dos requisitos (especificação, critério de aceite do PBI, regras de negócio e o texto original da task) está na [seção 9](#9-origem-dos-requisitos-especificação-e-planejamento).
 
 ## 1. Objetivo
 
@@ -63,6 +63,34 @@ Cada requisito tem um identificador (`RQ-T79-NN`) para a revisão do Pull Reques
 
 - Não depender de datas fixas: calcule a janela a partir de hoje.
 - Não montar o estado pela interface (lento e frágil): use `ApiE2E`.
+
+## 9. Origem dos requisitos (especificação e planejamento)
+
+Esta seção reúne, **sem paráfrase**, o que a especificação do projeto e o planejamento da Sprint 3 exigem para esta task, para que o documento sozinho mostre de onde vem cada requisito da seção 4. Onde o texto original difere das convenções (ajustes 1 a 10, [seção 1](00-convencoes-e-contrato-compartilhado.md#1-ajustes-em-relação-ao-planejamento-e-por-quê)), vale o que está neste documento e nas convenções.
+
+### 9.1 Requisito funcional da especificação
+
+- **RF12** (Módulo D — Acompanhamento; interface Web): “Agendar visitas para os participantes incluídos.”
+
+### 9.2 Critério de aceite do PBI (planejamento)
+
+> O coordenador agenda, reagenda e consulta as visitas de um participante ativo, com sugestão de datas a partir da inclusão; datas fora da janela e estudos fora de recrutamento ou execução são recusados com mensagem clara. Ao fechar, em 11/11, este PBI deixa na main a tabela e a agenda da visita agendada que os PBIs 20, 21, 22, 23 e 25 usam.
+
+### 9.3 Regras de negócio do planejamento que afetam esta task
+
+Nenhuma das dez regras numeradas cita esta task diretamente; valem as regras gerais da Sprint (formato único de erro, Definition of Done).
+
+### 9.4 Texto original da task no planejamento
+
+> **T79 · E2E, capturas e documentação do RF12.** Primeiro escreva o cenário Playwright em que o coordenador agenda uma visita com a data sugerida e a reagenda, e o cenário de erro com data fora da janela. Depois salve capturas nomeadas de sucesso e de erro para o README da Release 2. Por fim, atualize o README com o RF12 e zere o Remaining Work da task no Azure Boards.
+
+### 9.5 Requisitos da especificação que atravessam esta task
+
+- Estratégia de testes: “Pelo menos um fluxo E2E automatizado na web e um no mobile.” (exemplo da especificação: “Cadastrar estudo, incluir participante e agendar visita”).
+- README principal, seção 3: “**Funcionalidades desenvolvidas** — requisitos por código RF, comportamento e capturas web e mobile, incluindo casos de sucesso e de erro/validação.”
+- Entregas: “Os requisitos de releases anteriores devem continuar funcionando.” (RF01 a RF11 continuam funcionando).
+- **Definition of Done** da Sprint (texto completo na [seção 11 das convenções](00-convencoes-e-contrato-compartilhado.md#11-definition-of-done-e-requisitos-transversais-da-especificação)): os critérios de aceite estão atendidos e demonstráveis com dados fictícios; o código foi revisado, passou no CI e entrou na `main` por Pull Request; há testes automatizados e, no backend, a cobertura do código de negócio permanece em 80% ou mais; erros e validações são tratados com mensagens claras; Swagger e contrato YAML refletem os endpoints; os dados de demonstração estão no perfil `demo`; documentação e capturas estão no repositório; e RF01 a RF11 continuam funcionando.
+
 
 ---
 Parte do conjunto de documentos de design da Sprint 3: [índice](README.md) · [convenções e contrato](00-convencoes-e-contrato-compartilhado.md).

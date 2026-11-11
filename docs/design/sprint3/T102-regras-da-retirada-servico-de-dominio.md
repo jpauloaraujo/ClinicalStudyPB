@@ -5,7 +5,7 @@
 > **Depende de:** T75, T80, T81, T89, T101  
 > **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
 
-> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task.
+> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task. A origem dos requisitos (especificação, critério de aceite do PBI, regras de negócio e o texto original da task) está na [seção 9](#9-origem-dos-requisitos-especificação-e-planejamento).
 
 ## 1. Objetivo
 
@@ -79,6 +79,37 @@ Cada requisito tem um identificador (`RQ-T102-NN`) para a revisão do Pull Reque
 
 - Os bloqueios nos PBIs 19, 20 e 21 são editados aqui, por design: avisar os donos e manter os testes deles passando.
 - A retirada não apaga histórico: visitas realizadas, ausentes e resultados ficam preservados.
+
+## 9. Origem dos requisitos (especificação e planejamento)
+
+Esta seção reúne, **sem paráfrase**, o que a especificação do projeto e o planejamento da Sprint 3 exigem para esta task, para que o documento sozinho mostre de onde vem cada requisito da seção 4. Onde o texto original difere das convenções (ajustes 1 a 10, [seção 1](00-convencoes-e-contrato-compartilhado.md#1-ajustes-em-relação-ao-planejamento-e-por-quê)), vale o que está neste documento e nas convenções.
+
+### 9.1 Requisito funcional da especificação
+
+- **RF16** (Módulo D — Acompanhamento; interface Web): “Registrar a retirada de um participante do estudo.”
+
+### 9.2 Critério de aceite do PBI (planejamento)
+
+> O coordenador registra a retirada de um participante ativo com motivo, quem solicitou e data; o participante passa a RETIRADO de forma irreversível, as visitas futuras agendadas são canceladas com o motivo "retirada do estudo" na mesma operação, e o histórico fica preservado.
+
+### 9.3 Regras de negócio do planejamento que afetam esta task
+
+| # | Regra proposta | Tasks afetadas (no planejamento) |
+|---|---|---|
+| 1 | Visitas só são agendadas para participante incluído e ativo (não retirado), com o estudo em recrutamento ou execução; estudo encerrado bloqueia qualquer agendamento | T75, T81, T89, T102 |
+| 6 | A retirada é registrada pelo coordenador, com motivo, quem solicitou e data (não futura), e é irreversível. O participante passa a RETIRADO e as visitas futuras AGENDADA viram CANCELADA com o motivo "retirada do estudo". A vaga continua ocupada, ou seja, o limite de vagas conta todos os que foram incluídos (ponto a validar com o PO) | T101, T102 (inclui os bloqueios nos serviços de T75, T81 e T89) e T104 |
+| 10 | Erros seguem o formato único da Sprint 2 (400 validação, 403 perfil sem permissão, 404 inexistente, 409 regra de negócio, sempre com o código da regra). As migrations usam faixas de versão por PBI (V3_19_* a V3_25_*); antes de começar, confirmar que a maior versão da Sprint 2 é menor que V3_19, senão trocar o prefixo V3 pelo número seguinte ao da última migration | T74 e todas as de backend |
+
+### 9.4 Texto original da task no planejamento
+
+> **T102 · Regras da retirada (serviço de domínio).** Primeiro escreva o serviço em uma única transação. Depois valide as pré-condições: participante ativo, estudo não encerrado, motivo obrigatório com ao menos 5 caracteres e data não futura, cada falha com 409 ou 400 e código próprio. Em seguida grave a retirada, mude a participação para RETIRADO e cancele as visitas futuras ainda AGENDADA usando a máquina de estados da T80, com o motivo automático "retirada do estudo", sem tocar nas visitas que já têm desfecho. Em seguida acrescente a verificação de participante retirado (409 com código próprio) nos serviços de agendamento (T75), de desfecho (T81) e de resultados (T89), que foram entregues antes de a coluna de situação existir, com um teste para cada um. Por fim, mantenha a vaga ocupada (regra 6), de modo que a contagem de incluídos do RF11 não diminua, e deixe o registro sem opção de desfazer.
+
+### 9.5 Requisitos da especificação que atravessam esta task
+
+- Entregas: “Tratamento de erros e validações das regras de negócio.”
+- Estratégia de testes (seção 7): “Cobertura mínima de **80% das linhas do código de negócio do backend** (excluindo código gerado e configurações)”, “Testes unitários para todas as regras de negócio relevantes”, “Testes de integração para os principais endpoints” e “Execução automatizada dos testes a cada pull request ou integração à branch principal”. Regra 9.6: “As equipes devem implementar testes automatizados e apresentar evidências de cobertura.”
+- **Definition of Done** da Sprint (texto completo na [seção 11 das convenções](00-convencoes-e-contrato-compartilhado.md#11-definition-of-done-e-requisitos-transversais-da-especificação)): os critérios de aceite estão atendidos e demonstráveis com dados fictícios; o código foi revisado, passou no CI e entrou na `main` por Pull Request; há testes automatizados e, no backend, a cobertura do código de negócio permanece em 80% ou mais; erros e validações são tratados com mensagens claras; Swagger e contrato YAML refletem os endpoints; os dados de demonstração estão no perfil `demo`; documentação e capturas estão no repositório; e RF01 a RF11 continuam funcionando.
+
 
 ---
 Parte do conjunto de documentos de design da Sprint 3: [índice](README.md) · [convenções e contrato](00-convencoes-e-contrato-compartilhado.md).

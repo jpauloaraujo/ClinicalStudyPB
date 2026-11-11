@@ -5,7 +5,7 @@
 > **Depende de:** T76, T82  
 > **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
 
-> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task.
+> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task. A origem dos requisitos (especificação, critério de aceite do PBI, regras de negócio e o texto original da task) está na [seção 9](#9-origem-dos-requisitos-especificação-e-planejamento).
 
 ## 1. Objetivo
 
@@ -63,6 +63,35 @@ Cada requisito tem um identificador (`RQ-T84-NN`) para a revisão do Pull Reques
 
 - Não alterar o estudo da T63 (`...000000000102`) nem os dados do script `R__demo_19`.
 - Não usar datas fixas: o demo precisa continuar válido na data da apresentação.
+
+## 9. Origem dos requisitos (especificação e planejamento)
+
+Esta seção reúne, **sem paráfrase**, o que a especificação do projeto e o planejamento da Sprint 3 exigem para esta task, para que o documento sozinho mostre de onde vem cada requisito da seção 4. Onde o texto original difere das convenções (ajustes 1 a 10, [seção 1](00-convencoes-e-contrato-compartilhado.md#1-ajustes-em-relação-ao-planejamento-e-por-quê)), vale o que está neste documento e nas convenções.
+
+### 9.1 Requisito funcional da especificação
+
+- **RF13** (Módulo D — Acompanhamento; interface Web): “Registrar a realização, ausência ou cancelamento de visitas.”
+
+### 9.2 Critério de aceite do PBI (planejamento)
+
+> O coordenador registra o desfecho de uma visita agendada (realizada, ausente ou cancelada), com os dados exigidos por cada situação; desfechos são finais e não podem ser desfeitos; transições inválidas são recusadas com a regra violada.
+
+### 9.3 Regras de negócio do planejamento que afetam esta task
+
+| # | Regra proposta | Tasks afetadas (no planejamento) |
+|---|---|---|
+| 10 | Erros seguem o formato único da Sprint 2 (400 validação, 403 perfil sem permissão, 404 inexistente, 409 regra de negócio, sempre com o código da regra). As migrations usam faixas de versão por PBI (V3_19_* a V3_25_*); antes de começar, confirmar que a maior versão da Sprint 2 é menor que V3_19, senão trocar o prefixo V3 pelo número seguinte ao da última migration | T74 e todas as de backend |
+
+### 9.4 Texto original da task no planejamento
+
+> **T84 · Dados de demonstração e integração com a agenda.** Primeiro crie o script V3_20_1__demo_visit_outcomes.sql (perfil demo, repetível) com visitas em cada situação para os PBIs 21, 22 e 25 e para o E2E da T99. Depois confira na agenda e no histórico que os desfechos aparecem, e avise I6, dono do próximo PBI, que os dados estão disponíveis. Por fim, registre os defeitos de integração como Bugs ligados à task de origem.
+
+### 9.5 Requisitos da especificação que atravessam esta task
+
+- Regra 9.5 e Entregas: “O sistema deve ter persistência de dados e controle de acesso por perfil.” e “Persistência dos dados, com scripts de criação/migração do banco e dados fictícios para demonstração.”
+- Entregas: arquivos de configuração para instalar, executar e testar “**sem senhas ou credenciais reais**” (os dados de demonstração são fictícios).
+- **Definition of Done** da Sprint (texto completo na [seção 11 das convenções](00-convencoes-e-contrato-compartilhado.md#11-definition-of-done-e-requisitos-transversais-da-especificação)): os critérios de aceite estão atendidos e demonstráveis com dados fictícios; o código foi revisado, passou no CI e entrou na `main` por Pull Request; há testes automatizados e, no backend, a cobertura do código de negócio permanece em 80% ou mais; erros e validações são tratados com mensagens claras; Swagger e contrato YAML refletem os endpoints; os dados de demonstração estão no perfil `demo`; documentação e capturas estão no repositório; e RF01 a RF11 continuam funcionando.
+
 
 ---
 Parte do conjunto de documentos de design da Sprint 3: [índice](README.md) · [convenções e contrato](00-convencoes-e-contrato-compartilhado.md).

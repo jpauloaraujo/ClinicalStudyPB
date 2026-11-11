@@ -5,7 +5,7 @@
 > **Depende de:** T108  
 > **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
 
-> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task.
+> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task. A origem dos requisitos (especificação, critério de aceite do PBI, regras de negócio e o texto original da task) está na [seção 9](#9-origem-dos-requisitos-especificação-e-planejamento).
 
 ## 1. Objetivo
 
@@ -79,6 +79,38 @@ Cada requisito tem um identificador (`RQ-T110-NN`) para a revisão do Pull Reque
 
 - Não revelar se o e-mail existe: manter uma mensagem única para credencial inválida.
 - Não guardar a senha no dispositivo; só o token, no `SecureStore`.
+
+## 9. Origem dos requisitos (especificação e planejamento)
+
+Esta seção reúne, **sem paráfrase**, o que a especificação do projeto e o planejamento da Sprint 3 exigem para esta task, para que o documento sozinho mostre de onde vem cada requisito da seção 4. Onde o texto original difere das convenções (ajustes 1 a 10, [seção 1](00-convencoes-e-contrato-compartilhado.md#1-ajustes-em-relação-ao-planejamento-e-por-quê)), vale o que está neste documento e nas convenções.
+
+### 9.1 Requisito funcional da especificação
+
+- **RF17** (Módulo E — Aplicativo do participante; interface Mobile): “Permitir ao participante consultar os estudos em que está incluído.”
+- **RF02** (Módulo A — Usuários e autenticação; interface Web/Mobile): “Permitir autenticação e encerramento de sessão.”
+- **RF03** (Módulo A — Usuários e autenticação; interface Web/Mobile): “Restringir funcionalidades conforme o perfil do usuário.”
+- Escopo do planejamento para este PBI: “RF17 e RF18 (Módulo E, interface Mobile), mais o login do participante no app (RF02 e RF03 no mobile)”.
+
+### 9.2 Critério de aceite do PBI (planejamento)
+
+> O participante entra no app com a conta vinculada pelo coordenador, vê a lista dos estudos em que está incluído e o detalhe de cada um, e sai do app; outros perfis são recusados com mensagem clara; o participante nunca vê dados de outro; existe pelo menos um fluxo E2E no app. Ao fechar, em 21/11, este PBI deixa na main o esqueleto do app, os endpoints /me e o vínculo da conta que o PBI-25 usa.
+
+### 9.3 Regras de negócio do planejamento que afetam esta task
+
+| # | Regra proposta | Tasks afetadas (no planejamento) |
+|---|---|---|
+| 8 | Apenas o perfil participante entra no app; os demais perfis recebem mensagem de que o acesso é pela web. O login usa o mesmo endpoint e o mesmo token da web | T108, T110 |
+
+### 9.4 Texto original da task no planejamento
+
+> **T110 · Login e logout no app com a API real.** Primeiro revise a tela de login da Sprint 1 com o novo cliente: validação dos campos, mensagens de credencial inválida e de usuário desativado, e botão desabilitado durante o envio. Depois confirme a regra 8: pesquisador, coordenador e administrador recebem a mensagem de que o acesso é pela web, e participante sem participação vinculada entra e vê um aviso de que ainda não está em nenhum estudo. Em seguida teste a sessão restaurada ao reabrir o app e o logout no Perfil. Por fim, rode o fluxo em emulador Android ou em celular físico, além do navegador, pois a Sprint 1 só testou a versão web.
+
+### 9.5 Requisitos da especificação que atravessam esta task
+
+- Estratégia de testes: em componentes mobile, testar o “comportamento das telas mobile: login, listagem de visitas, confirmação”. Regra 9.4: “A interface **mobile** atende ao perfil de participante e executa em dispositivo ou emulador.”
+- Para o mobile “basta uma aplicação executável em emulador ou dispositivo; não é necessário publicar nas lojas”.
+- **Definition of Done** da Sprint (texto completo na [seção 11 das convenções](00-convencoes-e-contrato-compartilhado.md#11-definition-of-done-e-requisitos-transversais-da-especificação)): os critérios de aceite estão atendidos e demonstráveis com dados fictícios; o código foi revisado, passou no CI e entrou na `main` por Pull Request; há testes automatizados e, no backend, a cobertura do código de negócio permanece em 80% ou mais; erros e validações são tratados com mensagens claras; Swagger e contrato YAML refletem os endpoints; os dados de demonstração estão no perfil `demo`; documentação e capturas estão no repositório; e RF01 a RF11 continuam funcionando.
+
 
 ---
 Parte do conjunto de documentos de design da Sprint 3: [índice](README.md) · [convenções e contrato](00-convencoes-e-contrato-compartilhado.md).

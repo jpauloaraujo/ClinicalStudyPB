@@ -247,3 +247,28 @@ Como dois integrantes nunca trabalham ao mesmo tempo, quem entrega a tela deixa 
 ## 10. Ordem de integração
 
 `PBI-19 (I1)` → `PBI-20 (I3)` → `PBI-21 (I6)` → `PBI-22 (I2)` → `PBI-23 (I4)` → `PBI-24 (I7)` → `PBI-25 (I5)`. Cada Pull Request é revisado pelo dono do PBI seguinte (o último, por I1). Um PBI só começa com o anterior 100% na `main`. As passagens de bastão e o que cada uma entrega estão no [índice](README.md).
+
+## 11. Definition of Done e requisitos transversais da especificação
+
+### Definition of Done (texto do planejamento)
+
+> Uma task ou PBI só é concluído quando: os critérios de aceite estão atendidos e a funcionalidade é demonstrável com dados fictícios; o código foi revisado por outro integrante, passou no CI e entrou na branch principal por Pull Request; existem testes automatizados (unitários, de integração ou de componente) que passam e, no backend, a cobertura de linhas do código de negócio permanece em 80% ou mais; erros e validações das regras de negócio são tratados e mostrados com mensagens claras; o Swagger UI e o contrato YAML refletem os endpoints; os dados de demonstração da fatia estão no perfil demo; documentação e capturas de tela relevantes estão no repositório; e os requisitos RF01 a RF11 das Sprints anteriores continuam funcionando. Para o PBI, vale ainda que todas as suas tasks estão com Remaining Work zerado ao fim da janela, porque o PBI seguinte só começa depois disso.
+
+### Requisitos da especificação que atravessam a Sprint 3
+
+Cada documento de task cita, na sua seção 9.5, os que se aplicam a ela. O conjunto completo:
+
+| Tema | Texto da especificação |
+|---|---|
+| API REST e OpenAPI | Regra 9.2 (tecnologia): “O backend deve disponibilizar uma **API HTTP REST** compartilhada pela web e pelo mobile, documentada no padrão **OpenAPI** (Swagger UI pode ser usado para consulta e testes).” |
+| Persistência, migrações e dados fictícios | Regra 9.5 e Entregas: “O sistema deve ter persistência de dados e controle de acesso por perfil.” e “Persistência dos dados, com scripts de criação/migração do banco e dados fictícios para demonstração.” |
+| Erros e validações | Entregas: “Tratamento de erros e validações das regras de negócio.” |
+| Testes e cobertura do backend | Estratégia de testes (seção 7): “Cobertura mínima de **80% das linhas do código de negócio do backend** (excluindo código gerado e configurações)”, “Testes unitários para todas as regras de negócio relevantes”, “Testes de integração para os principais endpoints” e “Execução automatizada dos testes a cada pull request ou integração à branch principal”. Regra 9.6: “As equipes devem implementar testes automatizados e apresentar evidências de cobertura.” |
+| Testes de componentes web e perfis da web | Estratégia de testes: “Testes automatizados de componentes nas interfaces web e mobile.” Em componentes web, testar o “comportamento das telas: validação de formulários, botões, mensagens de erro”. Regra 9.3: “A interface **web** atende aos perfis de pesquisador, coordenador e administrador.” |
+| Testes de componentes mobile e perfil do app | Estratégia de testes: em componentes mobile, testar o “comportamento das telas mobile: login, listagem de visitas, confirmação”. Regra 9.4: “A interface **mobile** atende ao perfil de participante e executa em dispositivo ou emulador.” |
+| Fluxos E2E | Estratégia de testes: “Pelo menos um fluxo E2E automatizado na web e um no mobile.” (exemplo da especificação: “Cadastrar estudo, incluir participante e agendar visita”). |
+| README: funcionalidades com capturas | README principal, seção 3: “**Funcionalidades desenvolvidas** — requisitos por código RF, comportamento e capturas web e mobile, incluindo casos de sucesso e de erro/validação.” |
+| Requisitos anteriores | Entregas: “Os requisitos de releases anteriores devem continuar funcionando.” (RF01 a RF11 continuam funcionando). |
+| Credenciais | Entregas: arquivos de configuração para instalar, executar e testar “**sem senhas ou credenciais reais**” (os dados de demonstração são fictícios). |
+| Processo de desenvolvimento | README de cada release, seção **Processo de desenvolvimento** por sprint: (1) Backlog e tarefas, (2) Organização da equipe, (3) Burndown (“gráfico do Azure DevOps com breve análise planejado × realizado”) e (4) Revisão (“o que foi entregue, impedimentos e ações de melhoria”). Gerenciamento ágil: Azure DevOps. |
+| Mobile | Para o mobile “basta uma aplicação executável em emulador ou dispositivo; não é necessário publicar nas lojas”. |

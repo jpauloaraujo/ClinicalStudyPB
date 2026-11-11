@@ -5,7 +5,7 @@
 > **Depende de:** Nenhuma  
 > **Situação:** 📋 Entrega fora do código (cerimônia e processo), especificada neste documento e ainda obrigatória
 
-> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task.
+> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task. A origem dos requisitos (especificação, critério de aceite do PBI, regras de negócio e o texto original da task) está na [seção 9](#9-origem-dos-requisitos-especificação-e-planejamento).
 
 ## 1. Objetivo
 
@@ -79,6 +79,33 @@ Cada requisito tem um identificador (`RQ-T94-NN`) para a revisão do Pull Reques
 
 - É uma cerimônia: não cria código. O resultado é a ata e o Azure Boards.
 - Se o PO mudar uma regra depois do Planning, a mudança entra na ata e nos documentos de design **no mesmo dia**, antes de o PBI afetado começar.
+
+## 9. Origem dos requisitos (especificação e planejamento)
+
+Esta seção reúne, **sem paráfrase**, o que a especificação do projeto e o planejamento da Sprint 3 exigem para esta task, para que o documento sozinho mostre de onde vem cada requisito da seção 4. Onde o texto original difere das convenções (ajustes 1 a 10, [seção 1](00-convencoes-e-contrato-compartilhado.md#1-ajustes-em-relação-ao-planejamento-e-por-quê)), vale o que está neste documento e nas convenções.
+
+### 9.1 Requisito funcional da especificação
+
+- **RF15** (Módulo D — Acompanhamento; interface Web): “Consultar o histórico de visitas e avaliações de um participante.”
+- Este PBI reúne também o **acompanhamento da Sprint** (Planning, checkpoint e E2E do fluxo completo), por isso fica com I2, que já atua como PO.
+
+### 9.2 Critério de aceite do PBI (planejamento)
+
+> Pesquisador e coordenador abrem a ficha de um participante e veem, em ordem, todas as visitas previstas com situação, datas e resultados, e um resumo com realizadas, ausentes, canceladas e pendentes. Este PBI também reúne o acompanhamento da Sprint (Planning, checkpoint e E2E do fluxo completo), por isso fica com I2, que já atua como PO. O Planning (T94) é uma cerimônia da terça 10/11 e acontece antes da janela do PBI.
+
+### 9.3 Regras de negócio do planejamento que afetam esta task
+
+Nenhuma das dez regras numeradas cita esta task diretamente; valem as regras gerais da Sprint (formato único de erro, Definition of Done).
+
+### 9.4 Texto original da task no planejamento
+
+> **T94 · Planning: validar regras e cadastrar a Sprint 3 no Azure Boards.** Esta task precisa estar pronta no mesmo dia, porque o resto da equipe depende dela para começar. Primeiro leve as dez regras de negócio deste documento para a reunião, anote a resposta de cada uma e corrija o texto das tasks afetadas. Depois cadastre a iteração, os PBIs, as tasks e as dependências como descrito na seção do Azure DevOps, mais abaixo. Em seguida registre a disponibilidade dos sete integrantes em Capacity, cada um na sua janela de dois dias, lembrando que sexta 20/11 é feriado e que as janelas dos PBIs 21, 24 e 25 caem em fim de semana ou feriado, o que precisa ser confirmado com os donos. Por fim, levante o que ficou pendente da Sprint 2 e abra itens de carry-over ligados a quem vai resolver.
+
+### 9.5 Requisitos da especificação que atravessam esta task
+
+- README de cada release, seção **Processo de desenvolvimento** por sprint: (1) Backlog e tarefas, (2) Organização da equipe, (3) Burndown (“gráfico do Azure DevOps com breve análise planejado × realizado”) e (4) Revisão (“o que foi entregue, impedimentos e ações de melhoria”). Gerenciamento ágil: Azure DevOps.
+- **Definition of Done** da Sprint (texto completo na [seção 11 das convenções](00-convencoes-e-contrato-compartilhado.md#11-definition-of-done-e-requisitos-transversais-da-especificação)): os critérios de aceite estão atendidos e demonstráveis com dados fictícios; o código foi revisado, passou no CI e entrou na `main` por Pull Request; há testes automatizados e, no backend, a cobertura do código de negócio permanece em 80% ou mais; erros e validações são tratados com mensagens claras; Swagger e contrato YAML refletem os endpoints; os dados de demonstração estão no perfil `demo`; documentação e capturas estão no repositório; e RF01 a RF11 continuam funcionando.
+
 
 ---
 Parte do conjunto de documentos de design da Sprint 3: [índice](README.md) · [convenções e contrato](00-convencoes-e-contrato-compartilhado.md).

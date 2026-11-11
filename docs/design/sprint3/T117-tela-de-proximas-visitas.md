@@ -5,7 +5,7 @@
 > **Depende de:** T108, T115, T116  
 > **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
 
-> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task.
+> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task. A origem dos requisitos (especificação, critério de aceite do PBI, regras de negócio e o texto original da task) está na [seção 9](#9-origem-dos-requisitos-especificação-e-planejamento).
 
 ## 1. Objetivo
 
@@ -75,6 +75,34 @@ Cada requisito tem um identificador (`RQ-T117-NN`) para a revisão do Pull Reque
 
 - Sem confirmar presença nem solicitar reagendamento (RF19).
 - Sem mocks na entrega: a tela usa a API real da T116 (os mocks são só para teste e desenvolvimento).
+
+## 9. Origem dos requisitos (especificação e planejamento)
+
+Esta seção reúne, **sem paráfrase**, o que a especificação do projeto e o planejamento da Sprint 3 exigem para esta task, para que o documento sozinho mostre de onde vem cada requisito da seção 4. Onde o texto original difere das convenções (ajustes 1 a 10, [seção 1](00-convencoes-e-contrato-compartilhado.md#1-ajustes-em-relação-ao-planejamento-e-por-quê)), vale o que está neste documento e nas convenções.
+
+### 9.1 Requisito funcional da especificação
+
+- **RF18** (Módulo E — Aplicativo do participante; interface Mobile): “Exibir as próximas visitas e seu histórico de comparecimento.”
+
+### 9.2 Critério de aceite do PBI (planejamento)
+
+> O participante logado no app vê a lista das suas próximas visitas agendadas (data, hora, estudo, nome da visita e atividades previstas) e o histórico de visitas realizadas, ausentes e canceladas; nunca vê dados de outro participante; as telas tratam carregamento, erro e lista vazia.
+
+### 9.3 Regras de negócio do planejamento que afetam esta task
+
+| # | Regra proposta | Tasks afetadas (no planejamento) |
+|---|---|---|
+| 9 | No app, "próximas visitas" são as AGENDADA de hoje em diante, da mais próxima para a mais distante; o "histórico de comparecimento" reúne REALIZADA, AUSENTE e CANCELADA, da mais recente para a mais antiga | T116, T117, T118 |
+
+### 9.4 Texto original da task no planejamento
+
+> **T117 · Tela de próximas visitas.** Primeiro crie, sobre o esqueleto da T108 e a API da T116, a lista de cartões na aba Visitas, com data e hora em português (por exemplo, "ter, 24/11 às 09:30"), nome da visita, estudo e atividades previstas. Depois acrescente o detalhe da visita, a rolagem puxando para atualizar e o estado de lista vazia com texto claro. Em seguida formate as datas no fuso do aparelho, a partir da data com fuso que vem da API. Por fim, deixe os alvos de toque e os textos acessíveis, sem depender só de cor.
+
+### 9.5 Requisitos da especificação que atravessam esta task
+
+- Estratégia de testes: em componentes mobile, testar o “comportamento das telas mobile: login, listagem de visitas, confirmação”. Regra 9.4: “A interface **mobile** atende ao perfil de participante e executa em dispositivo ou emulador.”
+- **Definition of Done** da Sprint (texto completo na [seção 11 das convenções](00-convencoes-e-contrato-compartilhado.md#11-definition-of-done-e-requisitos-transversais-da-especificação)): os critérios de aceite estão atendidos e demonstráveis com dados fictícios; o código foi revisado, passou no CI e entrou na `main` por Pull Request; há testes automatizados e, no backend, a cobertura do código de negócio permanece em 80% ou mais; erros e validações são tratados com mensagens claras; Swagger e contrato YAML refletem os endpoints; os dados de demonstração estão no perfil `demo`; documentação e capturas estão no repositório; e RF01 a RF11 continuam funcionando.
+
 
 ---
 Parte do conjunto de documentos de design da Sprint 3: [índice](README.md) · [convenções e contrato](00-convencoes-e-contrato-compartilhado.md).

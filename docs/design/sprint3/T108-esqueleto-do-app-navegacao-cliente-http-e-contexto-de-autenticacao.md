@@ -5,7 +5,7 @@
 > **Depende de:** Sprint 1 (app Expo com login, T12)  
 > **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
 
-> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task.
+> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task. A origem dos requisitos (especificação, critério de aceite do PBI, regras de negócio e o texto original da task) está na [seção 9](#9-origem-dos-requisitos-especificação-e-planejamento).
 
 ## 1. Objetivo
 
@@ -90,6 +90,38 @@ Cada requisito tem um identificador (`RQ-T108-NN`) para a revisão do Pull Reque
 - Não implementar as telas de estudos e de visitas aqui (T112, T117 e T118).
 - Não criar um cliente novo: evoluir o `src/api/cliente.ts` existente.
 - Sem mocks na entrega: o fluxo final roda contra a API real.
+
+## 9. Origem dos requisitos (especificação e planejamento)
+
+Esta seção reúne, **sem paráfrase**, o que a especificação do projeto e o planejamento da Sprint 3 exigem para esta task, para que o documento sozinho mostre de onde vem cada requisito da seção 4. Onde o texto original difere das convenções (ajustes 1 a 10, [seção 1](00-convencoes-e-contrato-compartilhado.md#1-ajustes-em-relação-ao-planejamento-e-por-quê)), vale o que está neste documento e nas convenções.
+
+### 9.1 Requisito funcional da especificação
+
+- **RF17** (Módulo E — Aplicativo do participante; interface Mobile): “Permitir ao participante consultar os estudos em que está incluído.”
+- **RF02** (Módulo A — Usuários e autenticação; interface Web/Mobile): “Permitir autenticação e encerramento de sessão.”
+- **RF03** (Módulo A — Usuários e autenticação; interface Web/Mobile): “Restringir funcionalidades conforme o perfil do usuário.”
+- Escopo do planejamento para este PBI: “RF17 e RF18 (Módulo E, interface Mobile), mais o login do participante no app (RF02 e RF03 no mobile)”.
+
+### 9.2 Critério de aceite do PBI (planejamento)
+
+> O participante entra no app com a conta vinculada pelo coordenador, vê a lista dos estudos em que está incluído e o detalhe de cada um, e sai do app; outros perfis são recusados com mensagem clara; o participante nunca vê dados de outro; existe pelo menos um fluxo E2E no app. Ao fechar, em 21/11, este PBI deixa na main o esqueleto do app, os endpoints /me e o vínculo da conta que o PBI-25 usa.
+
+### 9.3 Regras de negócio do planejamento que afetam esta task
+
+| # | Regra proposta | Tasks afetadas (no planejamento) |
+|---|---|---|
+| 8 | Apenas o perfil participante entra no app; os demais perfis recebem mensagem de que o acesso é pela web. O login usa o mesmo endpoint e o mesmo token da web | T108, T110 |
+
+### 9.4 Texto original da task no planejamento
+
+> **T108 · Esqueleto do app: navegação, cliente HTTP e contexto de autenticação.** O app Expo da Sprint 1 já tem Expo Router, login, sessão no SecureStore e as abas Início, Estudos, Visitas e Perfil; esta task o prepara para receber as telas do PBI-24 e do PBI-25. Primeiro atualize o cliente HTTP para o formato único de erro da Sprint 2 (status, código da regra, mensagem e erros por campo), com tratamento central de 401 que limpa a sessão e volta ao login. Depois gere os tipos TypeScript a partir do YAML da Sprint, como na web, e crie um modo de mocks ativado por variável de ambiente. Em seguida configure Jest e Testing Library no app, com um teste de exemplo rodando no job Mobile do CI. Por fim, documente no README do app como rodar com mocks e com o backend e avise I5, dono do último PBI, que o PBI-25 começa sobre este esqueleto.
+
+### 9.5 Requisitos da especificação que atravessam esta task
+
+- Estratégia de testes: em componentes mobile, testar o “comportamento das telas mobile: login, listagem de visitas, confirmação”. Regra 9.4: “A interface **mobile** atende ao perfil de participante e executa em dispositivo ou emulador.”
+- Para o mobile “basta uma aplicação executável em emulador ou dispositivo; não é necessário publicar nas lojas”.
+- **Definition of Done** da Sprint (texto completo na [seção 11 das convenções](00-convencoes-e-contrato-compartilhado.md#11-definition-of-done-e-requisitos-transversais-da-especificação)): os critérios de aceite estão atendidos e demonstráveis com dados fictícios; o código foi revisado, passou no CI e entrou na `main` por Pull Request; há testes automatizados e, no backend, a cobertura do código de negócio permanece em 80% ou mais; erros e validações são tratados com mensagens claras; Swagger e contrato YAML refletem os endpoints; os dados de demonstração estão no perfil `demo`; documentação e capturas estão no repositório; e RF01 a RF11 continuam funcionando.
+
 
 ---
 Parte do conjunto de documentos de design da Sprint 3: [índice](README.md) · [convenções e contrato](00-convencoes-e-contrato-compartilhado.md).

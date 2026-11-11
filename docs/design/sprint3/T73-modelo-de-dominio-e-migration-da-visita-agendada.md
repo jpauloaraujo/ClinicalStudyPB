@@ -5,7 +5,7 @@
 > **Depende de:** Sprint 2 (tabelas de participação e de visita prevista)  
 > **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
 
-> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task.
+> Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task. A origem dos requisitos (especificação, critério de aceite do PBI, regras de negócio e o texto original da task) está na [seção 9](#9-origem-dos-requisitos-especificação-e-planejamento).
 
 ## 1. Objetivo
 
@@ -87,6 +87,36 @@ Cada requisito tem um identificador (`RQ-T73-NN`) para a revisão do Pull Reques
 - Não criar endpoints, serviço nem DTO aqui (T74 a T76).
 - `TIMESTAMP` sem fuso é proposital: o fuso é aplicado só na resposta da API (ajuste 6).
 - Não colocar coluna de retirada aqui: a situação da participação nasce na T101.
+
+## 9. Origem dos requisitos (especificação e planejamento)
+
+Esta seção reúne, **sem paráfrase**, o que a especificação do projeto e o planejamento da Sprint 3 exigem para esta task, para que o documento sozinho mostre de onde vem cada requisito da seção 4. Onde o texto original difere das convenções (ajustes 1 a 10, [seção 1](00-convencoes-e-contrato-compartilhado.md#1-ajustes-em-relação-ao-planejamento-e-por-quê)), vale o que está neste documento e nas convenções.
+
+### 9.1 Requisito funcional da especificação
+
+- **RF12** (Módulo D — Acompanhamento; interface Web): “Agendar visitas para os participantes incluídos.”
+
+### 9.2 Critério de aceite do PBI (planejamento)
+
+> O coordenador agenda, reagenda e consulta as visitas de um participante ativo, com sugestão de datas a partir da inclusão; datas fora da janela e estudos fora de recrutamento ou execução são recusados com mensagem clara. Ao fechar, em 11/11, este PBI deixa na main a tabela e a agenda da visita agendada que os PBIs 20, 21, 22, 23 e 25 usam.
+
+### 9.3 Regras de negócio do planejamento que afetam esta task
+
+| # | Regra proposta | Tasks afetadas (no planejamento) |
+|---|---|---|
+| 2 | Uma visita agendada por visita prevista e por participante. A data deve ser de hoje em diante e ficar dentro da janela da visita prevista: data de inclusão somada ao dia previsto, mais ou menos os dias de tolerância. Fora da janela, o sistema recusa com 409 e mostra a janela válida | T73, T75, T77 |
+| 10 | Erros seguem o formato único da Sprint 2 (400 validação, 403 perfil sem permissão, 404 inexistente, 409 regra de negócio, sempre com o código da regra). As migrations usam faixas de versão por PBI (V3_19_* a V3_25_*); antes de começar, confirmar que a maior versão da Sprint 2 é menor que V3_19, senão trocar o prefixo V3 pelo número seguinte ao da última migration | T74 e todas as de backend |
+
+### 9.4 Texto original da task no planejamento
+
+> **T73 · Modelo de domínio e migration da visita agendada.** Esta task é a base de cinco PBIs, então deve ser feita primeiro e integrada rápido. Primeiro, defina a entidade ScheduledVisit com id, participação, visita prevista, data e hora agendadas, situação (AGENDADA, REALIZADA, AUSENTE ou CANCELADA), motivo ou observação, usuário e data de criação e de última alteração. Depois escreva a migration V3_19_1__scheduled_visit.sql com as chaves estrangeiras, o UNIQUE de (participação, visita prevista) e o CHECK da situação, e crie a entidade JPA e o repositório. Por fim, suba o backend em banco vazio e em banco populado pela Sprint 2, abra um Pull Request pequeno e avise o grupo quando ele entrar na main, porque T80, T87, T95, T101 e T116 dependem dele.
+
+### 9.5 Requisitos da especificação que atravessam esta task
+
+- Regra 9.5 e Entregas: “O sistema deve ter persistência de dados e controle de acesso por perfil.” e “Persistência dos dados, com scripts de criação/migração do banco e dados fictícios para demonstração.”
+- Estratégia de testes (seção 7): “Cobertura mínima de **80% das linhas do código de negócio do backend** (excluindo código gerado e configurações)”, “Testes unitários para todas as regras de negócio relevantes”, “Testes de integração para os principais endpoints” e “Execução automatizada dos testes a cada pull request ou integração à branch principal”. Regra 9.6: “As equipes devem implementar testes automatizados e apresentar evidências de cobertura.”
+- **Definition of Done** da Sprint (texto completo na [seção 11 das convenções](00-convencoes-e-contrato-compartilhado.md#11-definition-of-done-e-requisitos-transversais-da-especificação)): os critérios de aceite estão atendidos e demonstráveis com dados fictícios; o código foi revisado, passou no CI e entrou na `main` por Pull Request; há testes automatizados e, no backend, a cobertura do código de negócio permanece em 80% ou mais; erros e validações são tratados com mensagens claras; Swagger e contrato YAML refletem os endpoints; os dados de demonstração estão no perfil `demo`; documentação e capturas estão no repositório; e RF01 a RF11 continuam funcionando.
+
 
 ---
 Parte do conjunto de documentos de design da Sprint 3: [índice](README.md) · [convenções e contrato](00-convencoes-e-contrato-compartilhado.md).
