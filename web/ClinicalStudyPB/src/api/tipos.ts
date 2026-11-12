@@ -30,6 +30,16 @@ export type ParticipacaoResponse = Esquemas['ParticipacaoResponse']
 export type VagasResponse = Esquemas['VagasResponse']
 export type HistoricoStatusResponse = Esquemas['HistoricoStatusResponse']
 
+// Agendamento de visitas (Sprint 3, T74)
+export type SituacaoVisita = EsquemasSprint3['SituacaoVisita']
+export type VisitaDoParticipanteResponse = EsquemasSprint3['VisitaDoParticipanteResponse']
+export type VisitaAgendadaRequest = EsquemasSprint3['VisitaAgendadaRequest']
+export type VisitaReagendamentoRequest = EsquemasSprint3['VisitaReagendamentoRequest']
+export type VisitaAgendadaResponse = EsquemasSprint3['VisitaAgendadaResponse']
+export type AgendaItemResponse = EsquemasSprint3['AgendaItemResponse']
+export type PaginaAgenda = EsquemasSprint3['PaginaAgenda']
+export type ParticipanteAgendaResponse = EsquemasSprint3['ParticipanteAgendaResponse']
+
 // Histórico do participante (Sprint 3, T95)
 export type SituacaoNoHistorico = EsquemasSprint3['SituacaoNoHistorico']
 export type HistoricoParticipanteResponse = EsquemasSprint3['HistoricoParticipanteResponse']

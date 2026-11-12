@@ -33,10 +33,11 @@ class DemoDataIntegrationTest {
 
     private static final String ESTUDO_PLANEJAMENTO = "d6300000-0000-4000-8000-000000000101";
     private static final String ESTUDO_RECRUTAMENTO = "d6300000-0000-4000-8000-000000000102";
+    private static final String ESTUDO_ACOMPANHAMENTO = "d6300000-0000-4000-8000-000000001901";
     private static final String CANDIDATO_PRONTO = "d6300000-0000-4000-8000-000000000504";
     private static final String[] TABELAS = {"usuarios", "estudos", "criterios", "visitas_planejadas", "acoes",
             "candidatos", "avaliacoes_elegibilidade", "respostas_avaliacao", "consentimentos", "participacoes",
-            "historico_status_estudo"};
+            "historico_status_estudo", "visitas_agendadas"};
 
     @Test
     @DisplayName("T63: o perfil normal nao executa a carga adicional de demonstracao")
@@ -120,6 +121,85 @@ class DemoDataIntegrationTest {
                 ESTUDO_PLANEJAMENTO)).isEqualTo("Titulo alterado na demonstracao");
         assertThat(jdbc.queryForObject("select contato from candidatos where id = cast(? as uuid)", String.class,
                 CANDIDATO_PRONTO)).isEqualTo("contato ficticio alterado");
+    }
+
+    @Test
+    @DisplayName("T74: o estudo de acompanhamento tem 3 participantes e visitas agendadas em situacoes diferentes, sem mexer no estudo da T63")
+    void demoCarregaEstudoDeAcompanhamento() throws Exception {
+        SingleConnectionDataSource banco = novoBanco();
+        migrarDemo(banco);
+        JdbcTemplate jdbc = new JdbcTemplate(banco);
+
+        assertThat(jdbc.queryForObject("select status from estudos where id = cast(? as uuid)", String.class,
+                ESTUDO_ACOMPANHAMENTO)).isEqualTo("EXECUCAO");
+        assertThat(jdbc.queryForObject("select limite_participantes from estudos where id = cast(? as uuid)",
+                Integer.class, ESTUDO_ACOMPANHAMENTO)).isEqualTo(6);
+        assertThat(jdbc.queryForObject("select count(*) from criterios where estudo_id = cast(? as uuid) and tipo = 'INCLUSAO'",
+                Integer.class, ESTUDO_ACOMPANHAMENTO)).isEqualTo(1);
+        assertThat(jdbc.queryForList("select nome || ':' || dia_previsto || ':' || tolerancia from visitas_planejadas "
+                + "where estudo_id = cast(? as uuid) order by ordem", String.class, ESTUDO_ACOMPANHAMENTO))
+                .containsExactly("Triagem:0:3", "Retorno 30 dias:30:5", "Retorno 60 dias:60:7");
+        assertThat(jdbc.queryForObject("select count(*) from acoes a join visitas_planejadas v on v.id = a.visita_id "
+                + "where v.estudo_id = cast(? as uuid)", Integer.class, ESTUDO_ACOMPANHAMENTO)).isEqualTo(6);
+        assertThat(jdbc.queryForObject("select count(*) from acoes a join visitas_planejadas v on v.id = a.visita_id "
+                + "where v.estudo_id = cast(? as uuid) and a.categoria = 'AVALIACAO_CLINICA'", Integer.class,
+                ESTUDO_ACOMPANHAMENTO)).isEqualTo(3);
+        assertThat(jdbc.queryForList("select estado_novo from historico_status_estudo where estudo_id = cast(? as uuid) "
+                + "order by data_hora", String.class, ESTUDO_ACOMPANHAMENTO)).containsExactly("RECRUTAMENTO", "EXECUCAO");
+
+        // Tres participantes incluidos, cada um com avaliacao aprovada e consentimento, na data de inclusao esperada (D-20, D-3, D-1)
+        assertThat(jdbc.queryForList("select c.codigo || ':' || datediff('DAY', p.data_inclusao, current_date) "
+                + "from participacoes p join candidatos c on c.id = p.candidato_id where p.estudo_id = cast(? as uuid) "
+                + "order by c.codigo", String.class, ESTUDO_ACOMPANHAMENTO))
+                .containsExactly("CAND-001:20", "CAND-002:3", "CAND-003:1");
+        assertThat(jdbc.queryForObject("select count(*) from candidatos c "
+                + "join avaliacoes_elegibilidade a on a.candidato_id = c.id and a.vigente = true and a.resultado = 'APROVADO' "
+                + "join consentimentos co on co.candidato_id = c.id "
+                + "where c.estudo_id = cast(? as uuid) and c.situacao = 'INCLUIDO'", Integer.class, ESTUDO_ACOMPANHAMENTO))
+                .isEqualTo(3);
+
+        // Visitas agendadas: P1 Triagem REALIZADA e Retorno 30 AGENDADA em D+10 09:30; P2 Triagem AGENDADA em D 15:00; P3 nenhuma
+        assertThat(jdbc.queryForList("select c.codigo || ':' || vp.nome || ':' || va.situacao from visitas_agendadas va "
+                + "join participacoes p on p.id = va.participacao_id join candidatos c on c.id = p.candidato_id "
+                + "join visitas_planejadas vp on vp.id = va.visita_planejada_id order by c.codigo, vp.ordem", String.class))
+                .containsExactly("CAND-001:Triagem:REALIZADA", "CAND-001:Retorno 30 dias:AGENDADA", "CAND-002:Triagem:AGENDADA");
+        assertThat(jdbc.queryForObject("select count(*) from visitas_agendadas va join participacoes p on p.id = va.participacao_id "
+                + "join candidatos c on c.id = p.candidato_id where c.codigo = 'CAND-003' and p.estudo_id = cast(? as uuid)",
+                Integer.class, ESTUDO_ACOMPANHAMENTO)).isZero();
+        assertThat(jdbc.queryForObject("select data_hora_realizada is not null from visitas_agendadas "
+                + "where id = cast('d6300000-0000-4000-8000-000000001981' as uuid)", Boolean.class)).isTrue();
+        assertThat(jdbc.queryForObject("select datediff('DAY', current_date, cast(data_hora_agendada as date)) "
+                + "from visitas_agendadas where id = cast('d6300000-0000-4000-8000-000000001982' as uuid)", Integer.class))
+                .isEqualTo(10);
+
+        // O estudo de recrutamento da T63 segue intacto
+        assertThat(jdbc.queryForObject("select status from estudos where id = cast(? as uuid)", String.class,
+                ESTUDO_RECRUTAMENTO)).isEqualTo("RECRUTAMENTO");
+        assertThat(jdbc.queryForObject("select count(*) from participacoes where estudo_id = cast(? as uuid)",
+                Integer.class, ESTUDO_RECRUTAMENTO)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("T74: duas cargas do script de acompanhamento nao duplicam nada nem desfazem alteracoes do usuario")
+    void cargaDoAcompanhamentoEIdempotente() throws Exception {
+        SingleConnectionDataSource banco = novoBanco();
+        migrarDemo(banco);
+        JdbcTemplate jdbc = new JdbcTemplate(banco);
+        Map<String, Integer> antes = contagens(jdbc);
+        jdbc.update("update visitas_agendadas set observacao = 'alterada na demonstracao' "
+                + "where id = cast('d6300000-0000-4000-8000-000000001983' as uuid)");
+
+        try (Connection conexao = banco.getConnection()) {
+            ClassPathResource script = new ClassPathResource("db/demo/R__demo_19_visitas_agendadas.sql");
+            ScriptUtils.executeSqlScript(conexao, script);
+            ScriptUtils.executeSqlScript(conexao, script);
+        }
+
+        assertThat(contagens(jdbc)).isEqualTo(antes);
+        assertThat(antes.get("visitas_agendadas")).isEqualTo(3);
+        assertThat(jdbc.queryForObject("select observacao from visitas_agendadas "
+                + "where id = cast('d6300000-0000-4000-8000-000000001983' as uuid)", String.class))
+                .isEqualTo("alterada na demonstracao");
     }
 
     private static Flyway migrarDemo(SingleConnectionDataSource banco) throws Exception {

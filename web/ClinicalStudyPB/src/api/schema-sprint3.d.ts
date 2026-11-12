@@ -4,6 +4,132 @@
  */
 
 export interface paths {
+    "/api/participacoes/{participacaoId}/visitas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Visitas previstas do participante e seus agendamentos
+         * @description Um item para **cada visita prevista do estudo**, ordenado por `ordem`, com a data sugerida (data de inclusão
+         *     mais o dia previsto), a janela válida (`janelaInicio` a `janelaFim`, a data sugerida mais ou menos a tolerância)
+         *     e o `agendamento` da visita, que é nulo enquanto ela não foi agendada.
+         *
+         *     Perfis: COORDENADOR e PESQUISADOR leem; ADMINISTRADOR e PARTICIPANTE recebem 403.
+         */
+        get: operations["visitasDoParticipante"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/participacoes/{participacaoId}/visitas-agendadas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Agendar uma visita do participante
+         * @description Agenda uma visita prevista para o participante. A `dataHora` é **local, sem fuso** (`2026-11-19T09:30`); na
+         *     resposta ela volta com o deslocamento do fuso do centro (`2026-11-19T09:30:00-03:00`).
+         *
+         *     Regras: o estudo precisa estar em RECRUTAMENTO ou EXECUCAO; a data é de hoje em diante e fica dentro da janela
+         *     da visita prevista (inclusão mais dia previsto, mais ou menos a tolerância); só pode haver uma visita agendada
+         *     por visita prevista e por participante, e uma visita cancelada não é agendada de novo.
+         *
+         *     Códigos 409: ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO, VISITA_JA_AGENDADA, DATA_FORA_DA_JANELA (a mensagem traz
+         *     a janela válida), DATA_NO_PASSADO.
+         *
+         *     Perfis: somente COORDENADOR; os demais recebem 403.
+         */
+        post: operations["agendarVisita"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/visitas-agendadas/{visitaAgendadaId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Reagendar uma visita
+         * @description Troca a data e a hora de uma visita que ainda está AGENDADA. A nova `dataHora` é local, sem fuso, e passa pelas
+         *     mesmas regras de janela e de data do agendamento.
+         *
+         *     Códigos 409: VISITA_NAO_ESTA_AGENDADA (só AGENDADA pode ser reagendada), ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO,
+         *     DATA_FORA_DA_JANELA, DATA_NO_PASSADO.
+         *
+         *     Perfis: somente COORDENADOR; os demais recebem 403.
+         */
+        put: operations["reagendarVisita"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/estudos/{estudoId}/agenda": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Agenda do estudo por período e situação
+         * @description Visitas agendadas de todos os participantes do estudo, paginadas e ordenadas por data e hora. Os filtros
+         *     `de` e `ate` (datas, inclusivas) e `situacao` são opcionais.
+         *
+         *     Perfis: COORDENADOR e PESQUISADOR leem; ADMINISTRADOR e PARTICIPANTE recebem 403.
+         */
+        get: operations["agendaDoEstudo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/estudos/{estudoId}/agenda/participantes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Participantes do estudo com a contagem de visitas agendadas
+         * @description Os participantes do estudo com quantas visitas previstas o estudo tem e quantas já foram agendadas ("2 de 3
+         *     visitas agendadas"). Conta como agendada a visita que tem agendamento em qualquer situação.
+         *
+         *     Perfis: COORDENADOR e PESQUISADOR leem; ADMINISTRADOR e PARTICIPANTE recebem 403.
+         */
+        get: operations["participantesDaAgenda"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/participacoes/{participacaoId}/historico": {
         parameters: {
             query?: never;
@@ -36,6 +162,178 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * @description Situação de uma visita agendada. A visita nasce AGENDADA; REALIZADA, AUSENTE e CANCELADA são finais.
+         * @enum {string}
+         */
+        SituacaoVisita: "AGENDADA" | "REALIZADA" | "AUSENTE" | "CANCELADA";
+        /** @description Uma visita prevista do estudo vista pelo participante, com a janela de datas e o agendamento (nulo se ainda não agendada). */
+        VisitaDoParticipanteResponse: {
+            /** Format: uuid */
+            visitaPlanejadaId: string;
+            /** @example Retorno 30 dias */
+            nome: string;
+            ordem: number;
+            /** @description Dias a partir da inclusão. */
+            diaPrevisto: number;
+            /** @description Dias de tolerância para mais e para menos. */
+            tolerancia: number;
+            /**
+             * Format: date
+             * @description Data sugerida: inclusão mais dia previsto.
+             * @example 2026-11-19
+             */
+            dataSugerida: string;
+            /**
+             * Format: date
+             * @description Primeira data aceita (data sugerida menos a tolerância).
+             * @example 2026-11-14
+             */
+            janelaInicio: string;
+            /**
+             * Format: date
+             * @description Última data aceita (data sugerida mais a tolerância).
+             * @example 2026-11-24
+             */
+            janelaFim: string;
+            /** @description A visita agendada; nulo enquanto a visita prevista não foi agendada. */
+            agendamento?: components["schemas"]["VisitaAgendadaResponse"] | null;
+        };
+        /** @description Pedido de agendamento. */
+        VisitaAgendadaRequest: {
+            /**
+             * Format: uuid
+             * @description Visita prevista do estudo da participação.
+             */
+            visitaPlanejadaId: string;
+            /**
+             * Format: date-time
+             * @description Data e hora **locais, sem fuso** (`yyyy-MM-ddTHH:mm` ou `yyyy-MM-ddTHH:mm:ss`).
+             * @example 2026-11-19T09:30
+             */
+            dataHora: string;
+        };
+        /** @description Pedido de reagendamento. */
+        VisitaReagendamentoRequest: {
+            /**
+             * Format: date-time
+             * @description Nova data e hora **locais, sem fuso**.
+             * @example 2026-11-20T10:00
+             */
+            dataHora: string;
+        };
+        /** @description Visita agendada de um participante. As datas e horas voltam com o deslocamento do fuso do centro. */
+        VisitaAgendadaResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            participacaoId: string;
+            /** Format: uuid */
+            estudoId: string;
+            /** Format: uuid */
+            visitaPlanejadaId: string;
+            /** @example Retorno 30 dias */
+            visitaNome: string;
+            /** @example CAND-001 */
+            participanteCodigo: string;
+            /** @example Pessoa Teta (Ficticia) */
+            participanteNome: string;
+            /**
+             * Format: date-time
+             * @description Data e hora agendadas, com deslocamento.
+             * @example 2026-11-19T09:30:00-03:00
+             */
+            dataHora: string;
+            situacao: components["schemas"]["SituacaoVisita"];
+            /**
+             * Format: date-time
+             * @description Preenchida só nas visitas REALIZADA.
+             */
+            dataHoraRealizada?: string | null;
+            /** @description Motivo do cancelamento. */
+            motivo?: string | null;
+            observacao?: string | null;
+            /**
+             * Format: date
+             * @example 2026-11-14
+             */
+            janelaInicio: string;
+            /**
+             * Format: date
+             * @example 2026-11-24
+             */
+            janelaFim: string;
+            /** @example Coordenador Demo (Ficticio) */
+            criadoPor: string;
+            /**
+             * Format: date-time
+             * @example 2026-11-11T10:00:00-03:00
+             */
+            criadoEm: string;
+            /** @example Coordenador Demo (Ficticio) */
+            alteradoPor: string;
+            /**
+             * Format: date-time
+             * @example 2026-11-11T10:00:00-03:00
+             */
+            alteradoEm: string;
+            /**
+             * Format: int64
+             * @description Versão otimista; aumenta a cada alteração.
+             */
+            versao: number;
+        };
+        /** @description Item da agenda do estudo. */
+        AgendaItemResponse: {
+            /** Format: uuid */
+            visitaAgendadaId: string;
+            /** Format: uuid */
+            participacaoId: string;
+            /** @example CAND-001 */
+            participanteCodigo: string;
+            /** @example Pessoa Teta (Ficticia) */
+            participanteNome: string;
+            /** Format: uuid */
+            visitaPlanejadaId: string;
+            /** @example Retorno 30 dias */
+            visitaNome: string;
+            /**
+             * Format: date-time
+             * @example 2026-11-19T09:30:00-03:00
+             */
+            dataHora: string;
+            situacao: components["schemas"]["SituacaoVisita"];
+        };
+        /** @description Página da agenda do estudo. */
+        PaginaAgenda: {
+            conteudo: components["schemas"]["AgendaItemResponse"][];
+            /** @description Base 0. */
+            pagina: number;
+            tamanho: number;
+            /** Format: int64 */
+            totalElementos: number;
+            totalPaginas: number;
+        };
+        /** @description Participante do estudo com o andamento do agendamento ("X de N visitas agendadas"). */
+        ParticipanteAgendaResponse: {
+            /** Format: uuid */
+            participacaoId: string;
+            /** Format: uuid */
+            candidatoId: string;
+            /** @example CAND-001 */
+            codigo: string;
+            /** @example Pessoa Teta (Ficticia) */
+            nomeFicticio: string;
+            /**
+             * Format: date
+             * @example 2026-10-20
+             */
+            dataInclusao: string;
+            /** @description Visitas previstas do estudo. */
+            visitasPrevistas: number;
+            /** @description Visitas previstas que já têm agendamento, em qualquer situação. */
+            visitasAgendadas: number;
+        };
         /** @description Formato único de erro da API. O status HTTP identifica a classe do erro: 400 validação ou regra de formato, 401 sem token, 403 perfil sem permissão, 404 recurso inexistente, 409 regra de negócio violada (sempre com "codigo"). */
         Erro: {
             /** @description Mensagem em português. Em erro de validação (400) vem no formato "campo: mensagem". */
@@ -147,6 +445,35 @@ export interface components {
         };
     };
     responses: {
+        /** @description Validação falhou (campo obrigatório, formato de data) ou regra de formato. */
+        Erro400: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "erro": "dataHora: A data e a hora são obrigatórias"
+                 *     }
+                 */
+                "application/json": components["schemas"]["Erro"];
+            };
+        };
+        /** @description Regra de negócio violada; "codigo" identifica a regra. */
+        Erro409: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "erro": "A data deve estar entre 2026-11-14 e 2026-11-24 (janela da visita Retorno 30 dias)",
+                 *       "codigo": "DATA_FORA_DA_JANELA"
+                 *     }
+                 */
+                "application/json": components["schemas"]["Erro"];
+            };
+        };
         /** @description Sem token ou token inválido/expirado. */
         Erro401: {
             headers: {
@@ -183,7 +510,7 @@ export interface components {
             content: {
                 /**
                  * @example {
-                 *       "erro": "Participação não encontrada: d6300000-0000-4000-8000-000000001911",
+                 *       "erro": "Participação não encontrada: d6300000-0000-4000-8000-000000001921",
                  *       "codigo": "PARTICIPACAO_NAO_ENCONTRADA"
                  *     }
                  */
@@ -191,13 +518,170 @@ export interface components {
             };
         };
     };
-    parameters: never;
+    parameters: {
+        /** @description UUID da participação (o participante incluído no estudo). */
+        ParticipacaoId: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    visitasDoParticipante: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID da participação (o participante incluído no estudo). */
+                participacaoId: components["parameters"]["ParticipacaoId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Visitas previstas do estudo com o agendamento de cada uma. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VisitaDoParticipanteResponse"][];
+                };
+            };
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+            404: components["responses"]["Erro404"];
+        };
+    };
+    agendarVisita: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID da participação (o participante incluído no estudo). */
+                participacaoId: components["parameters"]["ParticipacaoId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VisitaAgendadaRequest"];
+            };
+        };
+        responses: {
+            /** @description Visita agendada. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VisitaAgendadaResponse"];
+                };
+            };
+            400: components["responses"]["Erro400"];
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+            404: components["responses"]["Erro404"];
+            409: components["responses"]["Erro409"];
+        };
+    };
+    reagendarVisita: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID da visita agendada. */
+                visitaAgendadaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VisitaReagendamentoRequest"];
+            };
+        };
+        responses: {
+            /** @description Visita reagendada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VisitaAgendadaResponse"];
+                };
+            };
+            400: components["responses"]["Erro400"];
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+            404: components["responses"]["Erro404"];
+            409: components["responses"]["Erro409"];
+        };
+    };
+    agendaDoEstudo: {
+        parameters: {
+            query?: {
+                /** @description Data inicial do período, inclusive (`yyyy-MM-dd`). */
+                de?: string;
+                /** @description Data final do período, inclusive (`yyyy-MM-dd`). Não pode ser anterior a `de`. */
+                ate?: string;
+                /** @description Filtra por situação da visita agendada. */
+                situacao?: components["schemas"]["SituacaoVisita"];
+                /** @description Página, base 0. */
+                pagina?: number;
+                /** @description Itens por página (máximo 100). */
+                tamanho?: number;
+            };
+            header?: never;
+            path: {
+                /** @description UUID do estudo. */
+                estudoId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Página da agenda do estudo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginaAgenda"];
+                };
+            };
+            400: components["responses"]["Erro400"];
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+            404: components["responses"]["Erro404"];
+        };
+    };
+    participantesDaAgenda: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID do estudo. */
+                estudoId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Participantes do estudo com o andamento do agendamento. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParticipanteAgendaResponse"][];
+                };
+            };
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+            404: components["responses"]["Erro404"];
+        };
+    };
     historicoDoParticipante: {
         parameters: {
             query?: never;
@@ -219,8 +703,8 @@ export interface operations {
                     /**
                      * @example {
                      *       "participante": {
-                     *         "participacaoId": "d6300000-0000-4000-8000-000000001911",
-                     *         "candidatoId": "d6300000-0000-4000-8000-000000001901",
+                     *         "participacaoId": "d6300000-0000-4000-8000-000000001921",
+                     *         "candidatoId": "d6300000-0000-4000-8000-000000001911",
                      *         "codigo": "CAND-001",
                      *         "nomeFicticio": "Pessoa Teta (Ficticia)",
                      *         "dataInclusao": "2026-10-20"
@@ -236,14 +720,14 @@ export interface operations {
                      *       },
                      *       "visitas": [
                      *         {
-                     *           "visitaPlanejadaId": "d6300000-0000-4000-8000-000000001921",
+                     *           "visitaPlanejadaId": "d6300000-0000-4000-8000-000000001931",
                      *           "nome": "Triagem",
                      *           "ordem": 1,
                      *           "diaPrevisto": 0,
                      *           "tolerancia": 3,
                      *           "dataSugerida": "2026-10-20",
                      *           "situacao": "REALIZADA",
-                     *           "visitaAgendadaId": "d6300000-0000-4000-8000-000000001931",
+                     *           "visitaAgendadaId": "d6300000-0000-4000-8000-000000001981",
                      *           "dataHoraAgendada": "2026-10-20T09:00:00-03:00",
                      *           "dataHoraRealizada": "2026-10-20T09:10:00-03:00",
                      *           "motivo": null,
@@ -259,14 +743,14 @@ export interface operations {
                      *           ]
                      *         },
                      *         {
-                     *           "visitaPlanejadaId": "d6300000-0000-4000-8000-000000001922",
+                     *           "visitaPlanejadaId": "d6300000-0000-4000-8000-000000001932",
                      *           "nome": "Retorno 30 dias",
                      *           "ordem": 2,
                      *           "diaPrevisto": 30,
                      *           "tolerancia": 5,
                      *           "dataSugerida": "2026-11-19",
                      *           "situacao": "AGENDADA",
-                     *           "visitaAgendadaId": "d6300000-0000-4000-8000-000000001932",
+                     *           "visitaAgendadaId": "d6300000-0000-4000-8000-000000001982",
                      *           "dataHoraAgendada": "2026-11-19T09:30:00-03:00",
                      *           "dataHoraRealizada": null,
                      *           "motivo": null,
@@ -274,7 +758,7 @@ export interface operations {
                      *           "resultados": []
                      *         },
                      *         {
-                     *           "visitaPlanejadaId": "d6300000-0000-4000-8000-000000001923",
+                     *           "visitaPlanejadaId": "d6300000-0000-4000-8000-000000001933",
                      *           "nome": "Retorno 60 dias",
                      *           "ordem": 3,
                      *           "diaPrevisto": 60,
