@@ -14,7 +14,7 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:report": "playwright show-report",
-    "api:tipos": "npx --yes openapi-typescript@7.13.0 ../../docs/api/openapi-sprint2.yaml -o src/api/schema.d.ts"
+    "api:tipos": "npx --yes openapi-typescript@7.13.0 ../../docs/api/openapi-sprint2.yaml -o src/api/schema.d.ts && npx --yes openapi-typescript@7.13.0 ../../docs/api/openapi-sprint3.yaml -o src/api/schema-sprint3.d.ts"
   },
   "dependencies": {
     "axios": "^1.20.0",

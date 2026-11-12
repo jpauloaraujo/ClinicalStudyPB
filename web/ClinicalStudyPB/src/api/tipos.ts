@@ -1,8 +1,11 @@
 import type { components } from './schema'
+import type { components as componentsSprint3 } from './schema-sprint3'
 
 // Nomes curtos para os tipos gerados do contrato (docs/api/openapi-sprint2.yaml).
 // Nada aqui é escrito à mão: ao mudar o contrato, rode `npm run api:tipos`.
 type Esquemas = components['schemas']
+// Sprint 3 (docs/api/openapi-sprint3.yaml)
+type EsquemasSprint3 = componentsSprint3['schemas']
 
 export type TipoCriterio = Esquemas['TipoCriterio']
 export type CategoriaAcao = Esquemas['CategoriaAcao']
@@ -26,6 +29,14 @@ export type ConsentimentoResponse = Esquemas['ConsentimentoResponse']
 export type ParticipacaoResponse = Esquemas['ParticipacaoResponse']
 export type VagasResponse = Esquemas['VagasResponse']
 export type HistoricoStatusResponse = Esquemas['HistoricoStatusResponse']
+
+// Histórico do participante (Sprint 3, T95)
+export type SituacaoNoHistorico = EsquemasSprint3['SituacaoNoHistorico']
+export type HistoricoParticipanteResponse = EsquemasSprint3['HistoricoParticipanteResponse']
+export type ParticipanteDoHistorico = EsquemasSprint3['ParticipanteDoHistorico']
+export type ResumoDoHistorico = EsquemasSprint3['ResumoDoHistorico']
+export type VisitaDoHistorico = EsquemasSprint3['VisitaDoHistorico']
+export type ResultadoDoHistorico = EsquemasSprint3['ResultadoDoHistorico']
 
 export const categoriasAcao: CategoriaAcao[] = [
   'AVALIACAO_CLINICA',

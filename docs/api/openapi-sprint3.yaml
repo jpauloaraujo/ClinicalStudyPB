@@ -1,0 +1,358 @@
+# Contrato OpenAPI da Sprint 3 (RF12 a RF18). Mantido pela equipe: edite-o diretamente quando houver divergência
+# com o código, no mesmo Pull Request. Este arquivo cresce a cada PBI; a T74 acrescenta o agendamento, a T88 os
+# resultados, e assim por diante. Aqui já estão as definições da T95 (histórico do participante).
+openapi: 3.0.3
+info:
+  title: ClinicalStudyPB — contrato da Sprint 3 (RF12 a RF18)
+  version: 1.0.0
+  description: |-
+    Contrato dos endpoints de acompanhamento da Sprint 3, escrito para web, mobile e backend andarem em paralelo
+    (os tipos TypeScript são gerados deste arquivo com `npm run api:tipos`).
+
+    **Datas e horas:** a API **devolve** `OffsetDateTime` ISO 8601 com o fuso do centro (`app.fuso-horario`, padrão
+    `America/Fortaleza`, ex.: `2026-11-19T09:30:00-03:00`) e **recebe** data e hora locais sem fuso. Datas puras
+    são `yyyy-MM-dd`.
+
+    **Erros:** formato único `{"erro", "codigo?"}` (ver o schema `Erro`): 400 validação, 401 sem token, 403 perfil
+    sem permissão, 404 recurso inexistente, 409 regra de negócio violada, sempre com `codigo`.
+
+    **Teste de contrato:** `ContratoOpenApiSprint3Test` confere que o YAML e os DTOs do backend têm os mesmos campos.
+servers:
+- url: http://localhost:8081
+  description: Backend local
+security:
+- bearerAuth: []
+tags:
+- name: Histórico do participante
+paths:
+  /api/participacoes/{participacaoId}/historico:
+    get:
+      tags:
+      - Histórico do participante
+      summary: Histórico de um participante
+      operationId: historicoDoParticipante
+      description: |-
+        Somente leitura. Devolve os dados do participante, o resumo por situação e **uma linha para cada visita
+        prevista do estudo**, ordenadas por `ordem` e dia previsto, inclusive as ainda não agendadas
+        (`situacao = NAO_AGENDADA`, com os campos do agendamento nulos). Cada visita traz a situação, as datas e a
+        lista de resultados das atividades.
+
+        `pendentes = agendadas + naoAgendadas`: visitas previstas sem agendamento mais as ainda agendadas, sem desfecho.
+        O desenho do histórico de um participante retirado (situação e dados da retirada) entra com a retirada de participante.
+
+        Perfis: PESQUISADOR e COORDENADOR leem; ADMINISTRADOR e PARTICIPANTE recebem 403.
+      parameters:
+      - name: participacaoId
+        in: path
+        required: true
+        description: UUID da participação (o participante incluído no estudo).
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Histórico completo do participante.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoricoParticipanteResponse'
+              example:
+                participante:
+                  participacaoId: d6300000-0000-4000-8000-000000001911
+                  candidatoId: d6300000-0000-4000-8000-000000001901
+                  codigo: CAND-001
+                  nomeFicticio: Pessoa Teta (Ficticia)
+                  dataInclusao: '2026-10-20'
+                resumo:
+                  previstas: 3
+                  realizadas: 1
+                  ausentes: 0
+                  canceladas: 0
+                  agendadas: 1
+                  naoAgendadas: 1
+                  pendentes: 2
+                visitas:
+                - visitaPlanejadaId: d6300000-0000-4000-8000-000000001921
+                  nome: Triagem
+                  ordem: 1
+                  diaPrevisto: 0
+                  tolerancia: 3
+                  dataSugerida: '2026-10-20'
+                  situacao: REALIZADA
+                  visitaAgendadaId: d6300000-0000-4000-8000-000000001931
+                  dataHoraAgendada: '2026-10-20T09:00:00-03:00'
+                  dataHoraRealizada: '2026-10-20T09:10:00-03:00'
+                  motivo: null
+                  observacao: null
+                  resultados:
+                  - acaoId: d6300000-0000-4000-8000-000000001941
+                    nome: Aferir pressão arterial
+                    valor: 120/80
+                    unidade: mmHg
+                    observacao: null
+                - visitaPlanejadaId: d6300000-0000-4000-8000-000000001922
+                  nome: Retorno 30 dias
+                  ordem: 2
+                  diaPrevisto: 30
+                  tolerancia: 5
+                  dataSugerida: '2026-11-19'
+                  situacao: AGENDADA
+                  visitaAgendadaId: d6300000-0000-4000-8000-000000001932
+                  dataHoraAgendada: '2026-11-19T09:30:00-03:00'
+                  dataHoraRealizada: null
+                  motivo: null
+                  observacao: null
+                  resultados: []
+                - visitaPlanejadaId: d6300000-0000-4000-8000-000000001923
+                  nome: Retorno 60 dias
+                  ordem: 3
+                  diaPrevisto: 60
+                  tolerancia: 7
+                  dataSugerida: '2026-12-19'
+                  situacao: NAO_AGENDADA
+                  visitaAgendadaId: null
+                  dataHoraAgendada: null
+                  dataHoraRealizada: null
+                  motivo: null
+                  observacao: null
+                  resultados: []
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Erro401:
+      description: Sem token ou token inválido/expirado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+          example:
+            erro: Não autenticado
+    Erro403:
+      description: O perfil do usuário não tem permissão.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+          example:
+            erro: Acesso negado para o seu perfil
+    Erro404:
+      description: Recurso inexistente.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+          example:
+            erro: 'Participação não encontrada: d6300000-0000-4000-8000-000000001911'
+            codigo: PARTICIPACAO_NAO_ENCONTRADA
+  schemas:
+    Erro:
+      type: object
+      description: 'Formato único de erro da API. O status HTTP identifica a classe do erro: 400 validação ou regra
+        de formato, 401 sem token, 403 perfil sem permissão, 404 recurso inexistente, 409 regra de negócio violada
+        (sempre com "codigo").'
+      properties:
+        erro:
+          type: string
+          description: 'Mensagem em português. Em erro de validação (400) vem no formato "campo: mensagem".'
+        codigo:
+          type: string
+          description: Código estável da regra de negócio violada.
+        status:
+          type: integer
+          description: Status HTTP repetido no corpo.
+        codigoRegra:
+          type: string
+          description: Mesmo valor de `codigo` (nome do formato novo).
+        mensagem:
+          type: string
+          description: Mesmo texto de `erro` (nome do formato novo).
+        errosCampo:
+          type: array
+          description: Lista de erros por campo; preenchida na validação (400) e vazia nos demais erros.
+          items:
+            type: object
+            properties:
+              campo:
+                type: string
+              erro:
+                type: string
+      required:
+      - erro
+    SituacaoNoHistorico:
+      type: string
+      enum:
+      - NAO_AGENDADA
+      - AGENDADA
+      - REALIZADA
+      - AUSENTE
+      - CANCELADA
+      description: 'Situação de uma visita prevista no histórico: o vocabulário da visita agendada mais NAO_AGENDADA,
+        para a visita prevista que ainda não tem agendamento. REALIZADA, AUSENTE e CANCELADA são finais.'
+    HistoricoParticipanteResponse:
+      type: object
+      description: Histórico de um participante (somente leitura).
+      properties:
+        participante:
+          $ref: '#/components/schemas/ParticipanteDoHistorico'
+        resumo:
+          $ref: '#/components/schemas/ResumoDoHistorico'
+        visitas:
+          type: array
+          description: Uma linha para cada visita prevista do estudo, ordenadas por `ordem` e dia previsto, inclusive as ainda não agendadas.
+          items:
+            $ref: '#/components/schemas/VisitaDoHistorico'
+      required:
+      - participante
+      - resumo
+      - visitas
+    ParticipanteDoHistorico:
+      type: object
+      description: Participante a que o histórico se refere.
+      properties:
+        participacaoId:
+          type: string
+          format: uuid
+        candidatoId:
+          type: string
+          format: uuid
+        codigo:
+          type: string
+          example: CAND-001
+        nomeFicticio:
+          type: string
+          example: Pessoa Teta (Ficticia)
+        dataInclusao:
+          type: string
+          format: date
+          description: Dia 0 do cronograma do participante.
+          example: '2026-10-20'
+      required:
+      - participacaoId
+      - candidatoId
+      - codigo
+      - nomeFicticio
+      - dataInclusao
+    ResumoDoHistorico:
+      type: object
+      description: Contagem de visitas por situação. `pendentes = agendadas + naoAgendadas`.
+      properties:
+        previstas:
+          type: integer
+          description: Total de visitas previstas do estudo.
+        realizadas:
+          type: integer
+        ausentes:
+          type: integer
+        canceladas:
+          type: integer
+        agendadas:
+          type: integer
+          description: Visitas agendadas que ainda não tiveram desfecho.
+        naoAgendadas:
+          type: integer
+          description: Visitas previstas sem agendamento.
+        pendentes:
+          type: integer
+          description: Visitas sem desfecho, agendadas mais não agendadas.
+      required:
+      - previstas
+      - realizadas
+      - ausentes
+      - canceladas
+      - agendadas
+      - naoAgendadas
+      - pendentes
+    VisitaDoHistorico:
+      type: object
+      description: Uma visita prevista do estudo e o que aconteceu com ela para este participante. Sem agendamento, `situacao` é NAO_AGENDADA e os campos do agendamento vêm nulos.
+      properties:
+        visitaPlanejadaId:
+          type: string
+          format: uuid
+        nome:
+          type: string
+          example: Triagem
+        ordem:
+          type: integer
+        diaPrevisto:
+          type: integer
+          description: Dias a partir da inclusão.
+        tolerancia:
+          type: integer
+          description: Dias de tolerância para mais e para menos.
+        dataSugerida:
+          type: string
+          format: date
+          description: 'Data prevista: inclusão mais dia previsto.'
+          example: '2026-10-20'
+        situacao:
+          $ref: '#/components/schemas/SituacaoNoHistorico'
+        visitaAgendadaId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Nulo quando a visita não foi agendada.
+        dataHoraAgendada:
+          type: string
+          format: date-time
+          nullable: true
+        dataHoraRealizada:
+          type: string
+          format: date-time
+          nullable: true
+          description: Preenchida só nas visitas REALIZADA.
+        motivo:
+          type: string
+          nullable: true
+          description: Motivo do cancelamento.
+        observacao:
+          type: string
+          nullable: true
+        resultados:
+          type: array
+          description: Resultado de cada atividade da visita; vazio se não houver.
+          items:
+            $ref: '#/components/schemas/ResultadoDoHistorico'
+      required:
+      - visitaPlanejadaId
+      - nome
+      - ordem
+      - diaPrevisto
+      - tolerancia
+      - dataSugerida
+      - situacao
+      - resultados
+    ResultadoDoHistorico:
+      type: object
+      description: Resultado fictício registrado para uma atividade da visita.
+      properties:
+        acaoId:
+          type: string
+          format: uuid
+        nome:
+          type: string
+          example: Aferir pressão arterial
+        valor:
+          type: string
+          example: 120/80
+        unidade:
+          type: string
+          nullable: true
+          example: mmHg
+        observacao:
+          type: string
+          nullable: true
+      required:
+      - acaoId
+      - nome
+      - valor
