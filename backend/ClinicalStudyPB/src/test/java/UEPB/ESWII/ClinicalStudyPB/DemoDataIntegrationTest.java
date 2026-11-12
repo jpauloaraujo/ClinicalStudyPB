@@ -145,7 +145,7 @@ class DemoDataIntegrationTest {
                 + "where v.estudo_id = cast(? as uuid) and a.categoria = 'AVALIACAO_CLINICA'", Integer.class,
                 ESTUDO_ACOMPANHAMENTO)).isEqualTo(3);
         assertThat(jdbc.queryForList("select estado_novo from historico_status_estudo where estudo_id = cast(? as uuid) "
-                + "order by data_hora", String.class, ESTUDO_ACOMPANHAMENTO)).containsExactly("RECRUTAMENTO", "EXECUCAO");
+                + "order by data_hora", String.class, ESTUDO_ACOMPANHAMENTO)).containsExactly("EXECUCAO");
 
         // Tres participantes incluidos, cada um com avaliacao aprovada e consentimento, na data de inclusao esperada (D-20, D-3, D-1)
         assertThat(jdbc.queryForList("select c.codigo || ':' || datediff('DAY', p.data_inclusao, current_date) "

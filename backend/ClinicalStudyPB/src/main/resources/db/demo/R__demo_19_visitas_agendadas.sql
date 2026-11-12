@@ -24,18 +24,14 @@ SELECT CAST('d6300000-0000-4000-8000-000000001902' AS UUID), CAST('d6300000-0000
 WHERE EXISTS (SELECT 1 FROM estudos e WHERE e.id = CAST('d6300000-0000-4000-8000-000000001901' AS UUID))
   AND NOT EXISTS (SELECT 1 FROM criterios c WHERE c.id = CAST('d6300000-0000-4000-8000-000000001902' AS UUID));
 
--- O estudo percorreu os estados do protocolo: planejamento, recrutamento e execucao
+-- O estudo ja esta em EXECUCAO: uma linha no historico de estados registra a entrada nessa fase
 INSERT INTO historico_status_estudo (id, estudo_id, estado_anterior, estado_novo, usuario_id, data_hora)
-SELECT CAST(v.id AS UUID), CAST('d6300000-0000-4000-8000-000000001901' AS UUID), v.anterior, v.novo, u.id,
-       CASE WHEN v.dias_atras = 40 THEN CAST(CURRENT_DATE AS TIMESTAMP) - INTERVAL '40' DAY + INTERVAL '9' HOUR
-            ELSE CAST(CURRENT_DATE AS TIMESTAMP) - INTERVAL '30' DAY + INTERVAL '9' HOUR END
-FROM (VALUES
-    ('d6300000-0000-4000-8000-000000001903', 'PLANEJAMENTO', 'RECRUTAMENTO', 40),
-    ('d6300000-0000-4000-8000-000000001904', 'RECRUTAMENTO', 'EXECUCAO', 30)
-) AS v(id, anterior, novo, dias_atras)
-JOIN usuarios u ON u.email = 'demo.pesquisador@clinicalstudy.test'
-WHERE EXISTS (SELECT 1 FROM estudos e WHERE e.id = CAST('d6300000-0000-4000-8000-000000001901' AS UUID))
-  AND NOT EXISTS (SELECT 1 FROM historico_status_estudo h WHERE h.id = CAST(v.id AS UUID));
+SELECT CAST('d6300000-0000-4000-8000-000000001903' AS UUID), CAST('d6300000-0000-4000-8000-000000001901' AS UUID),
+       'RECRUTAMENTO', 'EXECUCAO', u.id, CAST(CURRENT_DATE AS TIMESTAMP) - INTERVAL '30' DAY + INTERVAL '9' HOUR
+FROM usuarios u
+WHERE u.email = 'demo.pesquisador@clinicalstudy.test'
+  AND EXISTS (SELECT 1 FROM estudos e WHERE e.id = CAST('d6300000-0000-4000-8000-000000001901' AS UUID))
+  AND NOT EXISTS (SELECT 1 FROM historico_status_estudo h WHERE h.id = CAST('d6300000-0000-4000-8000-000000001903' AS UUID));
 
 INSERT INTO visitas_planejadas (id, estudo_id, nome, dia_previsto, tolerancia, ordem)
 SELECT CAST(v.id AS UUID), CAST('d6300000-0000-4000-8000-000000001901' AS UUID), v.nome, v.dia, v.tolerancia, v.ordem

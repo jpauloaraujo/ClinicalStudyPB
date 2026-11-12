@@ -59,6 +59,8 @@ paths:
           $ref: '#/components/responses/Erro403'
         '404':
           $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
   /api/participacoes/{participacaoId}/visitas-agendadas:
     post:
       tags:
@@ -218,6 +220,8 @@ paths:
           $ref: '#/components/responses/Erro403'
         '404':
           $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
   /api/estudos/{estudoId}/agenda/participantes:
     get:
       tags:
@@ -252,6 +256,8 @@ paths:
           $ref: '#/components/responses/Erro403'
         '404':
           $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
   /api/participacoes/{participacaoId}/historico:
     get:
       tags:
@@ -349,6 +355,8 @@ paths:
           $ref: '#/components/responses/Erro403'
         '404':
           $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
 components:
   securitySchemes:
     bearerAuth:

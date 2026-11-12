@@ -145,7 +145,7 @@ class ContratoOpenApiSprint3Test {
 
     @SuppressWarnings("unchecked")
     @Test
-    @DisplayName("T74: toda operação declara 401, 403 e 404; as de escrita declaram também 400 e 409")
+    @DisplayName("T74: toda operação declara 401, 403, 404 e 409; as de escrita declaram também 400")
     void operacoesDeclaramAsRespostasDeErro() throws Exception {
         Map<String, Map<String, Object>> caminhos = (Map<String, Map<String, Object>>) documento().get("paths");
         caminhos.forEach((caminho, metodos) -> metodos.forEach((metodo, definicao) -> {
@@ -154,9 +154,9 @@ class ContratoOpenApiSprint3Test {
             }
             Set<String> respostas = ((Map<Object, Object>) ((Map<String, Object>) definicao).get("responses"))
                     .keySet().stream().map(Object::toString).collect(java.util.stream.Collectors.toSet());
-            assertThat(respostas).as(metodo + " " + caminho).contains("401", "403", "404");
+            assertThat(respostas).as(metodo + " " + caminho).contains("401", "403", "404", "409");
             if (!metodo.equals("get")) {
-                assertThat(respostas).as(metodo + " " + caminho).contains("400", "409");
+                assertThat(respostas).as(metodo + " " + caminho).contains("400");
             }
         }));
     }
