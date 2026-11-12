@@ -33,7 +33,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class ScheduledVisit {
+public class VisitaAgendada {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
