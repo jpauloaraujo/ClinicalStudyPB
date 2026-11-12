@@ -1,11 +1,12 @@
 package UEPB.ESWII.ClinicalStudyPB.domain.model;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoVisitaAgendada;
+import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoVisita;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -20,10 +21,18 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Version;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Visita real de um participante: instância de uma {@link VisitaPlanejada}. Só guarda dados; a conta da janela de
+ * datas fica em {@link VisitaPlanejada} e as regras de agendamento e de desfecho ficam em serviço.
+ *
+ * <p>{@code versao} é o controle de versão otimista: dois desfechos simultâneos para a mesma visita não podem
+ * dar certo ao mesmo tempo.</p>
+ */
 @Entity
 @Table(
         name = "visitas_agendadas",
@@ -54,31 +63,59 @@ public class VisitaAgendada {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private SituacaoVisitaAgendada situacao;
+    private SituacaoVisita situacao = SituacaoVisita.AGENDADA;
 
-    @Column(name = "motivo_observacao", length = 500)
-    private String motivoObservacao;
+    /** Quando a visita aconteceu de fato; obrigatória na situação REALIZADA. */
+    @Column(name = "data_hora_realizada")
+    private LocalDateTime dataHoraRealizada;
+
+    /** Obrigatório na situação CANCELADA. */
+    @Column(length = 500)
+    private String motivo;
+
+    @Column(length = 500)
+    private String observacao;
+
+    @Version
+    @Column(nullable = false)
+    private Long versao;
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "usuario_id", nullable = false)
-    private Usuario usuario;
+    @JoinColumn(name = "criado_por_id", nullable = false, updatable = false)
+    private Usuario criadoPor;
 
-    @Column(name = "data_criacao", nullable = false, updatable = false)
-    private LocalDateTime dataCriacao;
+    @Column(name = "criado_em", nullable = false, updatable = false)
+    private LocalDateTime criadoEm;
 
-    @Column(name = "data_ultima_alteracao", nullable = false)
-    private LocalDateTime dataUltimaAlteracao;
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "alterado_por_id", nullable = false)
+    private Usuario alteradoPor;
+
+    @Column(name = "alterado_em", nullable = false)
+    private LocalDateTime alteradoEm;
+
+    public boolean estaAgendada() {
+        return situacao == SituacaoVisita.AGENDADA;
+    }
+
+    public LocalDate dataAgendada() {
+        return dataHoraAgendada.toLocalDate();
+    }
 
     @PrePersist
     private void registrarCriacao() {
         LocalDateTime agora = LocalDateTime.now();
-        dataCriacao = agora;
-        dataUltimaAlteracao = agora;
+        criadoEm = agora;
+        alteradoEm = agora;
+        if (alteradoPor == null) {
+            alteradoPor = criadoPor;
+        }
     }
 
     @PreUpdate
     private void registrarAlteracao() {
-        dataUltimaAlteracao = LocalDateTime.now();
+        alteradoEm = LocalDateTime.now();
     }
 }
