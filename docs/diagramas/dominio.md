@@ -1,6 +1,6 @@
-# Modelo de domínio das Sprints 2 e 3 (T36 e T73)
+# Modelo de domínio das Sprints 2 e 3 (T36, T73 e T87)
 
-> Diagrama de classes, matriz de estados, pré-condições e regras de negócio do recrutamento (RF05 a RF11), **como estão implementados** no backend. É o produto da T36 e a base do diagrama atualizado da T69. Código em `backend/ClinicalStudyPB/src/main/java/UEPB/ESWII/ClinicalStudyPB/domain`; migrations `V4` e `V5`. A **seção 5** acrescenta a **visita agendada** da Sprint 3 (T73, migration `V6_19_1`): é o diagrama de projeto dessa task, a ser mantido conforme o código for implementado.
+> Diagrama de classes, matriz de estados, pré-condições e regras de negócio do recrutamento (RF05 a RF11), **como estão implementados** no backend. É o produto da T36 e a base do diagrama atualizado da T69. Código em `backend/ClinicalStudyPB/src/main/java/UEPB/ESWII/ClinicalStudyPB/domain`; migrations `V4` e `V5`. A **seção 5** acrescenta a **visita agendada** da Sprint 3 (T73, migration `V6_19_1`): é o diagrama de projeto dessa task, a ser mantido conforme o código for implementado. A **seção 6** acrescenta o **resultado das avaliações** (T87, migration `V6_21_1`).
 
 ## 1. Diagrama de classes
 
@@ -110,6 +110,14 @@ classDiagram
         AUSENTE
         CANCELADA
     }
+    class ResultadoAtividade {
+        UUID id
+        String valor
+        String unidade
+        String observacao
+        LocalDateTime registradoEm
+        LocalDateTime alteradoEm
+    }
 
     Criterio <|-- CriterioInclusao
     Criterio <|-- CriterioExclusao
@@ -134,6 +142,9 @@ classDiagram
     VisitaPlanejada "1" -- "0..*" VisitaAgendada : é instanciada em
     VisitaAgendada --> SituacaoVisita
     Usuario "1" <-- "0..*" VisitaAgendada : criado e alterado por
+    VisitaAgendada "1" *-- "0..*" ResultadoAtividade : resultados
+    Acao "1" <-- "0..*" ResultadoAtividade : atividade avaliada
+    Usuario "1" <-- "0..*" ResultadoAtividade : registrado e alterado por
 ```
 
 Regras de domínio puras, sem banco nem Spring: `domain/regra/RegraElegibilidade` (elegibilidade) e `domain/regra/MaquinaEstadosEstudo` (estados do estudo).
@@ -152,6 +163,7 @@ Regras de domínio puras, sem banco nem Spring: `domain/regra/RegraElegibilidade
 | Participation | `Participacao` | `participacoes` | candidato (único), estudo, data de inclusão, quem incluiu |
 | study_status_history | `HistoricoStatusEstudo` | `historico_status_estudo` | estudo, estado anterior, novo estado, usuário, data e hora |
 | ScheduledVisit (Sprint 3, T73) | `VisitaAgendada` | `visitas_agendadas` | participação, visita prevista, data e hora agendadas, situação, data e hora reais, motivo, observação, versão, quem criou e alterou e quando |
+| EvaluationResult (Sprint 3, T87) | `ResultadoAtividade` | `resultados_atividade` | visita agendada, atividade, valor (texto curto), unidade, observação, quem registrou e alterou e quando |
 
 Diferenças dos nomes do planejamento: as tabelas seguem o português já usado na Sprint 1 (`usuarios`, `estudos`). Os critérios ficam em uma tabela só (herança de tabela única), e a `ordem` do critério do planejamento não foi criada (os critérios saem ordenados por título).
 
@@ -387,3 +399,76 @@ Exemplo, com o participante P1 do estudo de demonstração (incluído há 20 dia
 | Fim da janela | prevista + 5 dias | D + 15 |
 
 Qualquer data de D + 5 a D + 15 é aceita; D + 4 e D + 16 recebem `409 DATA_FORA_DA_JANELA`.
+
+## 6. Resultados das avaliações (Sprint 3 · T87)
+
+O **resultado** (`ResultadoAtividade`) guarda o valor **fictício** de uma atividade (`Acao`) de uma visita agendada (`VisitaAgendada`): por exemplo, "120/80 mmHg" para "Aferir pressão arterial". Há **um resultado por atividade e por visita agendada**; editar troca o valor e atualiza quem alterou e quando, sem criar outra linha. Os resultados são fictícios (LGPD): nenhum dado real de pessoa é armazenado.
+
+### 6.1 Classes e relacionamentos
+
+```mermaid
+classDiagram
+    direction LR
+    class VisitaAgendada {
+        UUID id
+        SituacaoVisita situacao
+    }
+    class Acao {
+        UUID id
+        String nome
+        CategoriaAcao categoria
+    }
+    class ResultadoAtividade {
+        UUID id
+        String valor
+        String unidade
+        String observacao
+        LocalDateTime registradoEm
+        LocalDateTime alteradoEm
+    }
+    class Usuario {
+        UUID id
+        PerfilUsuario perfil
+    }
+
+    VisitaAgendada "1" *-- "0..*" ResultadoAtividade : visitaAgendada
+    Acao "1" <-- "0..*" ResultadoAtividade : acao
+    ResultadoAtividade "0..*" --> "1" Usuario : registradoPor
+    ResultadoAtividade "0..*" --> "1" Usuario : alteradoPor
+```
+
+Regras de leitura:
+
+- A entidade só guarda dados. A regra 4 (resultado só para visita `REALIZADA` e só para atividade `AVALIACAO_CLINICA` da visita prevista, estudo não encerrado, valor não vazio) é do `ResultadoAtividadeService` (T89).
+- `valor` é texto curto livre (até 200 caracteres); não há tipos numéricos nem faixas de referência. `unidade` (até 30) e `observacao` (até 500) são opcionais.
+- `registradoPor` e `registradoEm` não mudam depois do primeiro registro; `alteradoPor` e `alteradoEm` acompanham a última edição.
+
+### 6.2 Tabela `resultados_atividade` (migration `V6_21_1__create_evaluation_results.sql`)
+
+```mermaid
+erDiagram
+    VISITAS_AGENDADAS ||--o{ RESULTADOS_ATIVIDADE : "tem"
+    ACOES ||--o{ RESULTADOS_ATIVIDADE : "e avaliada em"
+    USUARIOS ||--o{ RESULTADOS_ATIVIDADE : "registrado e alterado por"
+
+    RESULTADOS_ATIVIDADE {
+        uuid id PK
+        uuid visita_agendada_id FK "UK com acao_id"
+        uuid acao_id FK "UK com visita_agendada_id"
+        varchar valor "NOT NULL, 200"
+        varchar unidade "opcional, 30"
+        varchar observacao "opcional, 500"
+        uuid registrado_por_id FK "usuarios"
+        timestamp registrado_em "NOT NULL"
+        uuid alterado_por_id FK "usuarios"
+        timestamp alterado_em "NOT NULL"
+    }
+```
+
+| Constraint ou índice | O que garante |
+|---|---|
+| `pk_resultados_atividade` | Chave primária (`id`) |
+| `uk_resultados_atividade_visita_acao` | Um resultado por atividade e por visita agendada (regra 4) |
+| `idx_resultados_atividade_visita_agendada` | Consulta dos resultados de uma visita (tela da T91 e histórico da T96) |
+| Chaves estrangeiras | Para `visitas_agendadas`, `acoes` e, duas vezes, `usuarios`; todas `ON DELETE RESTRICT`, nenhuma cascata |
+
