@@ -110,8 +110,7 @@ class FlywayMigrationIntegrationTest {
         var ids = CenarioVisitaAgendada.criar(jdbc);
         CenarioVisitaAgendada.inserirVisitaAgendada(jdbc, ids, ids.visita(), "AGENDADA", null, null);
 
-        assertThatThrownBy(() -> CenarioVisitaAgendada.inserirVisitaAgendada(jdbc, ids, ids.visita(), "AGENDADA", null, null))
-                .isInstanceOf(DataIntegrityViolationException.class);
+        recusadoPeloBanco(() -> CenarioVisitaAgendada.inserirVisitaAgendada(jdbc, ids, ids.visita(), "AGENDADA", null, null));
     }
 
     @Test
@@ -119,8 +118,7 @@ class FlywayMigrationIntegrationTest {
     void checkRecusaSituacaoInvalida() {
         var ids = CenarioVisitaAgendada.criar(jdbc);
 
-        assertThatThrownBy(() -> CenarioVisitaAgendada.inserirVisitaAgendada(jdbc, ids, ids.visita(), "EM_ANDAMENTO", null, null))
-                .isInstanceOf(DataIntegrityViolationException.class);
+        recusadoPeloBanco(() -> CenarioVisitaAgendada.inserirVisitaAgendada(jdbc, ids, ids.visita(), "EM_ANDAMENTO", null, null));
     }
 
     @Test
@@ -128,10 +126,8 @@ class FlywayMigrationIntegrationTest {
     void checkExigeCamposPorSituacao() {
         var ids = CenarioVisitaAgendada.criar(jdbc);
 
-        assertThatThrownBy(() -> CenarioVisitaAgendada.inserirVisitaAgendada(jdbc, ids, ids.visita(), "REALIZADA", null, null))
-                .isInstanceOf(DataIntegrityViolationException.class);
-        assertThatThrownBy(() -> CenarioVisitaAgendada.inserirVisitaAgendada(jdbc, ids, ids.outraVisita(), "CANCELADA", null, null))
-                .isInstanceOf(DataIntegrityViolationException.class);
+        recusadoPeloBanco(() -> CenarioVisitaAgendada.inserirVisitaAgendada(jdbc, ids, ids.visita(), "REALIZADA", null, null));
+        recusadoPeloBanco(() -> CenarioVisitaAgendada.inserirVisitaAgendada(jdbc, ids, ids.outraVisita(), "CANCELADA", null, null));
 
         CenarioVisitaAgendada.inserirVisitaAgendada(jdbc, ids, ids.visita(), "REALIZADA", LocalDateTime.now(), null);
         CenarioVisitaAgendada.inserirVisitaAgendada(jdbc, ids, ids.outraVisita(), "CANCELADA", null, "Participante viajou");
@@ -143,7 +139,86 @@ class FlywayMigrationIntegrationTest {
         var ids = CenarioVisitaAgendada.criar(jdbc);
         CenarioVisitaAgendada.inserirVisitaAgendada(jdbc, ids, ids.visita(), "AGENDADA", null, null);
 
-        assertThatThrownBy(() -> jdbc.update("DELETE FROM participacoes WHERE id = CAST(? AS UUID)",
-                ids.participacao().toString())).isInstanceOf(DataIntegrityViolationException.class);
+        recusadoPeloBanco(() -> jdbc.update("DELETE FROM participacoes WHERE id = CAST(? AS UUID)",
+                ids.participacao().toString()));
+    }
+
+    @Test
+    @DisplayName("T87 - A tabela resultados_atividade existe e aceita um resultado de uma atividade da visita")
+    void deveCriarTabelaDeResultadosAtividade() {
+        var ids = CenarioVisitaAgendada.criar(jdbc);
+        UUID visitaAgendada = CenarioVisitaAgendada.inserirVisitaAgendada(jdbc, ids, ids.visita(), "REALIZADA",
+                LocalDateTime.now(), null);
+        UUID acao = CenarioVisitaAgendada.inserirAcao(jdbc, ids.visita(), "Aferir pressão arterial", "AVALIACAO_CLINICA");
+
+        inserirResultado(visitaAgendada, acao, ids.usuario());
+
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM resultados_atividade WHERE visita_agendada_id = CAST(? AS UUID)",
+                Integer.class, visitaAgendada.toString())).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("T87 - O UNIQUE recusa o segundo resultado da mesma atividade na mesma visita agendada")
+    void uniqueRecusaSegundoResultadoDaMesmaAtividade() {
+        var ids = CenarioVisitaAgendada.criar(jdbc);
+        UUID visitaAgendada = CenarioVisitaAgendada.inserirVisitaAgendada(jdbc, ids, ids.visita(), "REALIZADA",
+                LocalDateTime.now(), null);
+        UUID acao = CenarioVisitaAgendada.inserirAcao(jdbc, ids.visita(), "Aferir pressão arterial", "AVALIACAO_CLINICA");
+        UUID outraAcao = CenarioVisitaAgendada.inserirAcao(jdbc, ids.visita(), "Escala de dor", "AVALIACAO_CLINICA");
+        inserirResultado(visitaAgendada, acao, ids.usuario());
+
+        recusadoPeloBanco(() -> inserirResultado(visitaAgendada, acao, ids.usuario()));
+        inserirResultado(visitaAgendada, outraAcao, ids.usuario());
+    }
+
+    @Test
+    @DisplayName("T87 - As chaves estrangeiras recusam visita agendada, atividade e usuário inexistentes")
+    void fksRecusamReferenciasInexistentes() {
+        var ids = CenarioVisitaAgendada.criar(jdbc);
+        UUID visitaAgendada = CenarioVisitaAgendada.inserirVisitaAgendada(jdbc, ids, ids.visita(), "REALIZADA",
+                LocalDateTime.now(), null);
+        UUID acao = CenarioVisitaAgendada.inserirAcao(jdbc, ids.visita(), "Aferir pressão arterial", "AVALIACAO_CLINICA");
+
+        recusadoPeloBanco(() -> inserirResultado(UUID.randomUUID(), acao, ids.usuario()));
+        recusadoPeloBanco(() -> inserirResultado(visitaAgendada, UUID.randomUUID(), ids.usuario()));
+        recusadoPeloBanco(() -> inserirResultado(visitaAgendada, acao, UUID.randomUUID()));
+    }
+
+    @Test
+    @DisplayName("T87 - Não há cascata: apagar a visita agendada ou a atividade com resultado é recusado")
+    void apagarVisitaOuAtividadeComResultadoERecusado() {
+        var ids = CenarioVisitaAgendada.criar(jdbc);
+        UUID visitaAgendada = CenarioVisitaAgendada.inserirVisitaAgendada(jdbc, ids, ids.visita(), "REALIZADA",
+                LocalDateTime.now(), null);
+        UUID acao = CenarioVisitaAgendada.inserirAcao(jdbc, ids.visita(), "Aferir pressão arterial", "AVALIACAO_CLINICA");
+        inserirResultado(visitaAgendada, acao, ids.usuario());
+
+        recusadoPeloBanco(() -> jdbc.update("DELETE FROM visitas_agendadas WHERE id = CAST(? AS UUID)",
+                visitaAgendada.toString()));
+        recusadoPeloBanco(() -> jdbc.update("DELETE FROM acoes WHERE id = CAST(? AS UUID)",
+                acao.toString()));
+    }
+
+    /**
+     * Confere que o banco recusa o comando com {@link DataIntegrityViolationException}, dentro de um savepoint: no
+     * PostgreSQL um erro aborta a transação inteira do teste, e o savepoint deixa os comandos seguintes rodarem.
+     */
+    private void recusadoPeloBanco(Runnable comando) {
+        jdbc.execute("SAVEPOINT recusa_esperada");
+        try {
+            assertThatThrownBy(comando::run).isInstanceOf(DataIntegrityViolationException.class);
+        } finally {
+            jdbc.execute("ROLLBACK TO SAVEPOINT recusa_esperada");
+        }
+    }
+
+    private void inserirResultado(UUID visitaAgendada, UUID acao, UUID usuario) {
+        java.sql.Timestamp agora = java.sql.Timestamp.valueOf(LocalDateTime.now());
+        jdbc.update("INSERT INTO resultados_atividade (id, visita_agendada_id, acao_id, valor, unidade, observacao, "
+                + "registrado_por_id, registrado_em, alterado_por_id, alterado_em) "
+                + "VALUES (CAST(? AS UUID), CAST(? AS UUID), CAST(? AS UUID), '120/80', 'mmHg', NULL, "
+                + "CAST(? AS UUID), ?, CAST(? AS UUID), ?)",
+                UUID.randomUUID().toString(), visitaAgendada.toString(), acao.toString(),
+                usuario.toString(), agora, usuario.toString(), agora);
     }
 }
