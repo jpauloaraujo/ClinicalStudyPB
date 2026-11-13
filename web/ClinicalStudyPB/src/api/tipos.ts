@@ -1,8 +1,11 @@
 import type { components } from './schema'
+import type { components as componentsSprint3 } from './schema-sprint3'
 
 // Nomes curtos para os tipos gerados do contrato (docs/api/openapi-sprint2.yaml).
 // Nada aqui é escrito à mão: ao mudar o contrato, rode `npm run api:tipos`.
 type Esquemas = components['schemas']
+// Sprint 3 (docs/api/openapi-sprint3.yaml)
+type EsquemasSprint3 = componentsSprint3['schemas']
 
 export type TipoCriterio = Esquemas['TipoCriterio']
 export type CategoriaAcao = Esquemas['CategoriaAcao']
@@ -26,6 +29,24 @@ export type ConsentimentoResponse = Esquemas['ConsentimentoResponse']
 export type ParticipacaoResponse = Esquemas['ParticipacaoResponse']
 export type VagasResponse = Esquemas['VagasResponse']
 export type HistoricoStatusResponse = Esquemas['HistoricoStatusResponse']
+
+// Agendamento de visitas (Sprint 3, T74)
+export type SituacaoVisita = EsquemasSprint3['SituacaoVisita']
+export type VisitaDoParticipanteResponse = EsquemasSprint3['VisitaDoParticipanteResponse']
+export type VisitaAgendadaRequest = EsquemasSprint3['VisitaAgendadaRequest']
+export type VisitaReagendamentoRequest = EsquemasSprint3['VisitaReagendamentoRequest']
+export type VisitaAgendadaResponse = EsquemasSprint3['VisitaAgendadaResponse']
+export type AgendaItemResponse = EsquemasSprint3['AgendaItemResponse']
+export type PaginaAgenda = EsquemasSprint3['PaginaAgenda']
+export type ParticipanteAgendaResponse = EsquemasSprint3['ParticipanteAgendaResponse']
+
+// Histórico do participante (Sprint 3, T95)
+export type SituacaoNoHistorico = EsquemasSprint3['SituacaoNoHistorico']
+export type HistoricoParticipanteResponse = EsquemasSprint3['HistoricoParticipanteResponse']
+export type ParticipanteDoHistorico = EsquemasSprint3['ParticipanteDoHistorico']
+export type ResumoDoHistorico = EsquemasSprint3['ResumoDoHistorico']
+export type VisitaDoHistorico = EsquemasSprint3['VisitaDoHistorico']
+export type ResultadoDoHistorico = EsquemasSprint3['ResultadoDoHistorico']
 
 export const categoriasAcao: CategoriaAcao[] = [
   'AVALIACAO_CLINICA',
