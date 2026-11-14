@@ -77,7 +77,7 @@ class AgendamentoVisitaServiceTest {
         participacao.getEstudo().setStatus(StatusEstudo.PLANEJAMENTO);
 
         esperaConflito("PARTICIPANTE_RETIRADO",
-                () -> service.agendarVisita(participacao, visita, HOJE.minusDays(1), usuario));
+                () -> service.agendarVisita(participacao, visita, HOJE.minusDays(1).atStartOfDay(), usuario));
     }
 
     @Test
@@ -86,7 +86,7 @@ class AgendamentoVisitaServiceTest {
         participacao.getEstudo().setStatus(StatusEstudo.ENCERRADO);
 
         esperaConflito("ESTUDO_INVALIDO",
-                () -> service.agendarVisita(participacao, visita, HOJE, usuario));
+                () -> service.agendarVisita(participacao, visita, HOJE.atStartOfDay(), usuario));
     }
 
     @Test
@@ -94,7 +94,7 @@ class AgendamentoVisitaServiceTest {
     void aceitaEstudoEmExecucao() {
         participacao.getEstudo().setStatus(StatusEstudo.EXECUCAO);
 
-        assertThat(service.agendarVisita(participacao, visita, HOJE, usuario).estaAgendada()).isTrue();
+        assertThat(service.agendarVisita(participacao, visita, HOJE.atStartOfDay(), usuario).estaAgendada()).isTrue();
     }
 
     @Test
@@ -103,26 +103,30 @@ class AgendamentoVisitaServiceTest {
         visita.setEstudo(estudo(StatusEstudo.RECRUTAMENTO));
 
         esperaConflito("VISITA_INCOMPATIVEL",
-                () -> service.agendarVisita(participacao, visita, HOJE, usuario));
+                () -> service.agendarVisita(participacao, visita, HOJE.atStartOfDay(), usuario));
     }
 
     @Test
     @DisplayName("Rejeita datas passadas antes de verificar a janela")
     void validaDataPassadaAntesDaJanela() {
         esperaConflito("DATA_PASSADA",
-                () -> service.agendarVisita(participacao, visita, HOJE.minusDays(1), usuario));
+                () -> service.agendarVisita(participacao, visita, HOJE.minusDays(1).atStartOfDay(), usuario));
     }
 
     @Test
     @DisplayName("A janela inclui seus limites e rejeita datas fora dela")
     void validaLimitesInclusivosDaJanela() {
-        assertThat(service.agendarVisita(participacao, visita, HOJE.minusDays(2), usuario).dataAgendada())
-                .isEqualTo(HOJE.minusDays(2));
-        assertThat(service.agendarVisita(participacao, visita, HOJE.plusDays(2), usuario).dataAgendada())
-                .isEqualTo(HOJE.plusDays(2));
+        participacao.setDataInclusao(HOJE.minusDays(25));
+        assertThat(service.agendarVisita(participacao, visita, HOJE.plusDays(3).atStartOfDay(), usuario).dataAgendada())
+                .isEqualTo(HOJE.plusDays(3));
+        assertThat(service.agendarVisita(participacao, visita, HOJE.plusDays(7).atStartOfDay(), usuario).dataAgendada())
+                  .isEqualTo(HOJE.plusDays(7));
 
-        esperaConflito("FORA_DA_JANELA",
-                () -> service.agendarVisita(participacao, visita, HOJE.plusDays(3), usuario));
+        esperaConflito("DATA_FORA_DA_JANELA",
+                () -> service.agendarVisita(participacao, visita, HOJE.plusDays(2).atStartOfDay(), usuario));
+
+        esperaConflito("DATA_FORA_DA_JANELA",
+                () -> service.agendarVisita(participacao, visita, HOJE.plusDays(8).atStartOfDay(), usuario));
     }
 
     @Test
@@ -132,13 +136,13 @@ class AgendamentoVisitaServiceTest {
                 participacao.getId(), visita.getId())).thenReturn(true);
 
         esperaConflito("AGENDAMENTO_DUPLICADO",
-                () -> service.agendarVisita(participacao, visita, HOJE, usuario));
+                () -> service.agendarVisita(participacao, visita, HOJE.atStartOfDay(), usuario));
     }
 
     @Test
     @DisplayName("Registra agendamento, autor e instantes de criação e alteração")
     void registraAgendamentoEAuditoria() {
-        VisitaAgendada salva = service.agendarVisita(participacao, visita, HOJE, usuario);
+        VisitaAgendada salva = service.agendarVisita(participacao, visita, HOJE.atStartOfDay(), usuario);
 
         assertThat(salva.getSituacao()).isEqualTo(SituacaoVisita.AGENDADA);
         assertThat(salva.getDataHoraAgendada()).isEqualTo(HOJE.atStartOfDay());
@@ -153,16 +157,16 @@ class AgendamentoVisitaServiceTest {
     void reagendaVisitaAgendadaNaMesmaJanela() {
         VisitaAgendada agendada = visitaAgendada(SituacaoVisita.AGENDADA);
 
-        VisitaAgendada salva = service.reagendarVisita(agendada, HOJE.plusDays(1), usuario);
+        VisitaAgendada salva = service.reagendarVisita(agendada, HOJE.plusDays(1).atStartOfDay(), usuario);
 
         assertThat(salva.getDataHoraAgendada()).isEqualTo(HOJE.plusDays(1).atStartOfDay());
         assertThat(salva.getAlteradoPor()).isSameAs(usuario);
         assertThat(salva.getAlteradoEm()).isEqualTo(AGORA);
 
-        esperaConflito("FORA_DA_JANELA",
-                () -> service.reagendarVisita(agendada, HOJE.plusDays(3), usuario));
+        esperaConflito("DATA_FORA_DA_JANELA",
+                () -> service.reagendarVisita(agendada, HOJE.plusDays(3).atStartOfDay(), usuario));
         esperaConflito("REAGENDAMENTO_INVALIDO",
-                () -> service.reagendarVisita(visitaAgendada(SituacaoVisita.REALIZADA), HOJE, usuario));
+                () -> service.reagendarVisita(visitaAgendada(SituacaoVisita.REALIZADA), HOJE.atStartOfDay(), usuario));
     }
 
     @Test

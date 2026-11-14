@@ -19,14 +19,15 @@ public class AgendamentoVisitaService {
 
     private final VisitaAgendadaRepository visitaRepository;
     private final Clock clock;
-
+    private static final java.time.format.DateTimeFormatter FORMATADOR_DATA = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    
     public AgendamentoVisitaService(VisitaAgendadaRepository visitaRepository, Clock clock) {
         this.visitaRepository = Objects.requireNonNull(visitaRepository);
         this.clock = Objects.requireNonNull(clock);
     }
 
     public VisitaAgendada agendarVisita(Participacao participacao, VisitaPlanejada visitaPlanejada,
-            LocalDate dataAgendada, Usuario usuario) {
+            LocalDateTime dataAgendada, Usuario usuario) {
         validarRegrasDeAgendamento(participacao, visitaPlanejada, dataAgendada);
 
         if (visitaRepository.existsByParticipacaoIdAndVisitaPlanejadaId(
@@ -39,7 +40,7 @@ public class AgendamentoVisitaService {
         VisitaAgendada visita = new VisitaAgendada();
         visita.setParticipacao(participacao);
         visita.setVisitaPlanejada(visitaPlanejada);
-        visita.setDataHoraAgendada(dataAgendada.atStartOfDay());
+        visita.setDataHoraAgendada(dataAgendada);
         visita.setSituacao(SituacaoVisita.AGENDADA);
         visita.setCriadoPor(usuario);
         visita.setCriadoEm(agora);
@@ -48,7 +49,7 @@ public class AgendamentoVisitaService {
         return visitaRepository.save(visita);
     }
 
-    public VisitaAgendada reagendarVisita(VisitaAgendada visitaAgendada, LocalDate novaData, Usuario usuario) {
+    public VisitaAgendada reagendarVisita(VisitaAgendada visitaAgendada, LocalDateTime novaData, Usuario usuario) {
         if (!visitaAgendada.estaAgendada()) {
             throw conflito("REAGENDAMENTO_INVALIDO",
                     "Apenas visitas com situação AGENDADA podem ser reagendadas.");
@@ -57,7 +58,7 @@ public class AgendamentoVisitaService {
         validarRegrasDeAgendamento(visitaAgendada.getParticipacao(),
                 visitaAgendada.getVisitaPlanejada(), novaData);
 
-        visitaAgendada.setDataHoraAgendada(novaData.atStartOfDay());
+        visitaAgendada.setDataHoraAgendada(novaData);
         visitaAgendada.setAlteradoPor(usuario);
         visitaAgendada.setAlteradoEm(LocalDateTime.now(clock));
         return visitaRepository.save(visitaAgendada);
@@ -73,7 +74,7 @@ public class AgendamentoVisitaService {
     }
 
     private void validarRegrasDeAgendamento(Participacao participacao, VisitaPlanejada visitaPlanejada,
-            LocalDate dataDesejada) {
+            LocalDateTime dataDesejada) {
         Candidato candidato = participacao.getCandidato();
         if (candidato == null || !candidato.estaIncluido()) {
             throw conflito("PARTICIPANTE_RETIRADO", "O participante não está ativo no estudo.");
@@ -91,15 +92,17 @@ public class AgendamentoVisitaService {
         }
 
         LocalDate hoje = LocalDate.now(clock);
-        if (dataDesejada.isBefore(hoje)) {
+        if (dataDesejada.toLocalDate().isBefore(hoje)) {
             throw conflito("DATA_PASSADA", "A data agendada não pode estar no passado.");
         }
 
-        JanelaDeAgendamento janela = calcularJanelaSugerida(participacao, visitaPlanejada);
-        if (dataDesejada.isBefore(janela.dataInicio()) || dataDesejada.isAfter(janela.dataFim())) {
-            throw conflito("FORA_DA_JANELA",
-                    String.format("A data %s está fora da janela permitida (%s a %s).",
-                            dataDesejada, janela.dataInicio(), janela.dataFim()));
+        JanelaDeAgendamento janela = JanelaDeAgendamento.de(visitaPlanejada, participacao.getDataInclusao());
+
+        if (!janela.contem(dataDesejada.toLocalDate())) {
+            String inicioFormatado = janela.dataInicio().format(FORMATADOR_DATA);
+            String fimFormatado = janela.dataFim().format(FORMATADOR_DATA);
+            throw conflito("DATA_FORA_DA_JANELA", 
+                String.format("Data fora da janela de %s a %s", inicioFormatado, fimFormatado));
         }
     }
 
