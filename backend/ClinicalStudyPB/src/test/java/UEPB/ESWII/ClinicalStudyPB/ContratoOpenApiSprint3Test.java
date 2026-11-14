@@ -35,7 +35,8 @@ import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoVisita;
 /**
  * Contrato da Sprint 3 ({@code docs/api/openapi-sprint3.yaml}). Cada PBI acrescenta suas operações ao YAML e
  * atualiza a contagem esperada. Além de conferir os caminhos, confere que os schemas do histórico (T95) têm
- * exatamente os mesmos campos dos DTOs do backend, para o contrato e o código não divergirem.
+ * exatamente os mesmos campos dos DTOs do backend, para o contrato e o código não divergirem, e que os schemas dos
+ * resultados (T88) declaram os limites e os campos anuláveis que a tela e o serviço (T89) usam.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -44,8 +45,16 @@ class ContratoOpenApiSprint3Test {
     private static final Path CONTRATO = Path.of("..", "..", "docs", "api", "openapi-sprint3.yaml");
     private static final Set<String> METODOS = Set.of("get", "post", "put", "delete", "patch");
 
-    /** Quantas operações o YAML tem agora: 5 do agendamento (T74) e 1 do histórico (T95). Cada PBI só atualiza este número. */
-    private static final int OPERACOES_ESPERADAS = 6;
+    /**
+     * Quantas operações o YAML tem agora: 5 do agendamento (T74), 1 do histórico (T95) e 2 dos resultados (T88).
+     * Cada PBI só atualiza este número.
+     */
+    private static final int OPERACOES_ESPERADAS = 8;
+
+    /** Operações dos resultados das avaliações (T88), implementadas na T90. */
+    private static final Set<String> OPERACOES_RESULTADOS = Set.of(
+            "GET /api/visitas-agendadas/{visitaAgendadaId}/resultados",
+            "PUT /api/visitas-agendadas/{visitaAgendadaId}/resultados/{acaoId}");
 
     // Caminhos da Sprint 3 (nenhum colide com o regex do ContratoOpenApiTest da Sprint 2)
     private static final Pattern SPRINT3 = Pattern.compile(
@@ -88,9 +97,9 @@ class ContratoOpenApiSprint3Test {
     }
 
     @Test
-    @DisplayName("O contrato da Sprint 3 tem as operações previstas até aqui (agendamento da T74 e histórico da T95)")
+    @DisplayName("O contrato da Sprint 3 tem as operações previstas até aqui (agendamento da T74, histórico da T95 e resultados da T88)")
     void contratoTemAsOperacoesEsperadas() throws Exception {
-        assertThat(operacoesDoContrato()).hasSize(OPERACOES_ESPERADAS).contains(
+        assertThat(operacoesDoContrato()).hasSize(OPERACOES_ESPERADAS).containsAll(OPERACOES_RESULTADOS).contains(
                 "GET /api/participacoes/{participacaoId}/visitas",
                 "POST /api/participacoes/{participacaoId}/visitas-agendadas",
                 "PUT /api/visitas-agendadas/{visitaAgendadaId}",
@@ -105,9 +114,20 @@ class ContratoOpenApiSprint3Test {
     void contratoNaoPrometeEndpointInexistente() throws Exception {
         Set<String> faltandoNaApi = new TreeSet<>(operacoesDoContrato());
         faltandoNaApi.removeIf(operacao -> operacao.endsWith("/historico"));
+        faltandoNaApi.removeAll(OPERACOES_RESULTADOS);
         faltandoNaApi.removeAll(operacoesDaApi());
 
         assertThat(faltandoNaApi).as("operações do contrato que a API não tem").isEmpty();
+    }
+
+    @Test
+    @Disabled("T90: ligar quando os endpoints dos resultados existirem no backend")
+    @DisplayName("Os endpoints dos resultados do contrato existem na API publicada")
+    void resultadosDoContratoExistemNaApi() throws Exception {
+        Set<String> faltandoNaApi = new TreeSet<>(OPERACOES_RESULTADOS);
+        faltandoNaApi.removeAll(operacoesDaApi());
+
+        assertThat(faltandoNaApi).as("operações dos resultados que a API não tem").isEmpty();
     }
 
     @Test
@@ -211,5 +231,49 @@ class ContratoOpenApiSprint3Test {
         List<String> valores = (List<String>) schema("SituacaoNoHistorico").get("enum");
 
         assertThat(valores).containsExactly(Arrays.stream(SituacaoNoHistorico.values()).map(Enum::name).toArray(String[]::new));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    @DisplayName("T88: o contrato declara os schemas dos resultados, com bloqueio e resultado anuláveis")
+    void contratoDeclaraOsSchemasDosResultados() throws Exception {
+        Map<String, Object> resultados = (Map<String, Object>) schema("ResultadosDaVisitaResponse").get("properties");
+        Map<String, Object> atividade = (Map<String, Object>) schema("AtividadeComResultado").get("properties");
+
+        assertThat(resultados.keySet()).containsExactlyInAnyOrder("visitaAgendadaId", "situacaoVisita", "bloqueio",
+                "total", "registrados", "pendentes", "atividades");
+        assertThat(((Map<String, Object>) resultados.get("bloqueio")).get("nullable")).isEqualTo(true);
+        assertThat(((Map<String, Object>) atividade.get("resultado")).get("nullable")).isEqualTo(true);
+        assertThat((List<String>) schema("BloqueioResultados").get("enum"))
+                .containsExactly("VISITA_NAO_REALIZADA", "ESTUDO_ENCERRADO", "PARTICIPANTE_RETIRADO");
+        assertThat(((Map<String, Object>) schema("ResultadoAtividadeResponse").get("properties")).keySet())
+                .containsExactlyInAnyOrder("acaoId", "valor", "unidade", "observacao", "registradoPor",
+                        "registradoEm", "alteradoPor", "alteradoEm");
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    @DisplayName("T88: o ResultadoRequest tem os mesmos limites da tabela resultados_atividade (T87)")
+    void resultadoRequestTemOsLimitesDaTabela() throws Exception {
+        Map<String, Object> request = schema("ResultadoRequest");
+        Map<String, Map<String, Object>> campos = (Map<String, Map<String, Object>>) request.get("properties");
+
+        assertThat((List<String>) request.get("required")).containsExactly("valor");
+        assertThat(campos.get("valor")).containsEntry("minLength", 1).containsEntry("maxLength", 200);
+        assertThat(campos.get("unidade")).containsEntry("maxLength", 30);
+        assertThat(campos.get("observacao")).containsEntry("maxLength", 500);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    @DisplayName("T88: o registro do resultado responde 201 no primeiro registro e 200 na edição")
+    void registroDoResultadoDeclara201E200() throws Exception {
+        Map<String, Map<String, Object>> caminhos = (Map<String, Map<String, Object>>) documento().get("paths");
+        Map<String, Object> put = (Map<String, Object>) caminhos
+                .get("/api/visitas-agendadas/{visitaAgendadaId}/resultados/{acaoId}").get("put");
+        Set<String> respostas = ((Map<Object, Object>) put.get("responses")).keySet().stream()
+                .map(Object::toString).collect(java.util.stream.Collectors.toSet());
+
+        assertThat(respostas).contains("200", "201");
     }
 }
