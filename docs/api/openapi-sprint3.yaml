@@ -438,11 +438,11 @@ paths:
 
         Regras, na ordem em que são verificadas (depois do 403 do perfil):
         1. a visita agendada existe e a atividade existe (404);
-        2. o estudo não está encerrado (409 `ESTUDO_ENCERRADO`);
-        3. o participante não foi retirado (409 `PARTICIPANTE_RETIRADO`, a partir da retirada, T102);
-        4. a visita está REALIZADA (409 `VISITA_NAO_REALIZADA`);
-        5. a atividade é da visita prevista desta visita agendada (409 `ATIVIDADE_NAO_PERTENCE_A_VISITA`) e da
-           categoria `AVALIACAO_CLINICA` (409 `ATIVIDADE_FORA_DA_CATEGORIA_AVALIACAO`);
+        2. a visita está REALIZADA (409 `VISITA_NAO_REALIZADA`);
+        3. a atividade é da visita prevista desta visita agendada (409 `ATIVIDADE_NAO_PERTENCE_A_VISITA`);
+        4. a atividade é da categoria `AVALIACAO_CLINICA` (409 `ATIVIDADE_FORA_DA_CATEGORIA_AVALIACAO`);
+        5. o estudo não está encerrado (409 `ESTUDO_ENCERRADO`) e, a partir da retirada (T102), o participante não foi
+           retirado (409 `PARTICIPANTE_RETIRADO`);
         6. o valor não está em branco (400 `VALOR_OBRIGATORIO`) e os tamanhos são respeitados (400 `VALIDACAO_CAMPOS`).
 
         Perfis: somente PESQUISADOR. O COORDENADOR **nunca** escreve resultados (recebe 403), assim como ADMINISTRADOR e
@@ -1110,7 +1110,7 @@ components:
       description: 'Motivo pelo qual a visita não aceita registro nem edição de resultados; a tela mostra os resultados
         somente leitura. VISITA_NAO_REALIZADA: a visita não está REALIZADA. ESTUDO_ENCERRADO: o estudo foi encerrado.
         PARTICIPANTE_RETIRADO: o participante foi retirado (a partir da T102). Quando há mais de um motivo, vale o
-        primeiro na ordem das verificações do registro: ESTUDO_ENCERRADO, PARTICIPANTE_RETIRADO, VISITA_NAO_REALIZADA.'
+        primeiro nesta ordem: VISITA_NAO_REALIZADA, ESTUDO_ENCERRADO, PARTICIPANTE_RETIRADO.'
     ResultadosDaVisitaResponse:
       type: object
       description: Atividades de avaliação clínica de uma visita agendada, com o resultado fictício de cada uma (nulo se pendente).
