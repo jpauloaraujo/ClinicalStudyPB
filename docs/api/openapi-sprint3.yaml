@@ -1,7 +1,7 @@
 # Contrato OpenAPI da Sprint 3 (RF12 a RF18). Mantido pela equipe: edite-o diretamente quando houver divergência
 # com o código, no mesmo Pull Request. Este arquivo cresce a cada PBI e cada PBI acrescenta só os seus caminhos, para
-# evitar conflito de merge: a T74 trouxe o agendamento (PBI-19), a T95 o histórico do participante; o desfecho, os
-# resultados, a retirada e o app entram nos PBIs seguintes.
+# evitar conflito de merge: a T74 trouxe o agendamento (PBI-19), a T95 o histórico do participante e a T88 os
+# resultados das avaliações (PBI-21); o desfecho, a retirada e o app entram nos PBIs seguintes.
 openapi: 3.0.3
 info:
   title: ClinicalStudyPB — contrato da Sprint 3 (RF12 a RF18)
@@ -17,7 +17,8 @@ info:
     **Erros:** formato único `{"erro", "codigo?"}` (ver o schema `Erro`): 400 validação, 401 sem token, 403 perfil
     sem permissão, 404 recurso inexistente, 409 regra de negócio violada, sempre com `codigo`.
 
-    **Perfis:** a escrita do agendamento é só do COORDENADOR; a leitura (visitas, agenda e histórico) é de COORDENADOR e PESQUISADOR.
+    **Perfis:** a escrita do agendamento é só do COORDENADOR e a dos resultados das avaliações é só do PESQUISADOR; a
+    leitura (visitas, agenda, resultados e histórico) é de COORDENADOR e PESQUISADOR.
 
     **Teste de contrato:** `ContratoOpenApiSprint3Test` confere que o YAML e os DTOs do backend têm os mesmos campos.
 servers:
@@ -29,6 +30,7 @@ tags:
 - name: Agendamento
 - name: Agenda
 - name: Histórico do participante
+- name: Resultados das avaliações
 paths:
   /api/participacoes/{participacaoId}/visitas:
     get:
@@ -357,6 +359,216 @@ paths:
           $ref: '#/components/responses/Erro404'
         '409':
           $ref: '#/components/responses/Erro409'
+  /api/visitas-agendadas/{visitaAgendadaId}/resultados:
+    get:
+      tags:
+      - Resultados das avaliações
+      summary: Resultados das avaliações de uma visita
+      operationId: resultadosDaVisita
+      description: |-
+        Lista **cada atividade da categoria `AVALIACAO_CLINICA`** da visita prevista desta visita agendada, ordenada
+        pelo nome, com o resultado registrado ou `resultado: null` (pendente), e as contagens `total`, `registrados` e
+        `pendentes` (`pendentes = total - registrados`). Atividades de outras categorias não aparecem. **Os resultados
+        são fictícios**: o sistema não armazena dados reais de pessoas.
+
+        Responde 200 em qualquer situação da visita. Quando a visita **não aceita** registro nem edição de resultados,
+        o campo `bloqueio` diz por quê, e a tela mostra os resultados **somente leitura**:
+        - `VISITA_NAO_REALIZADA`: a visita está AGENDADA, AUSENTE ou CANCELADA (resultado só existe para REALIZADA);
+        - `ESTUDO_ENCERRADO`: o estudo foi encerrado;
+        - `PARTICIPANTE_RETIRADO`: o participante foi retirado do estudo (a partir da retirada, T102).
+
+        `bloqueio` é a decisão **do servidor pelo estado**; o perfil é decidido **pela tela**: o COORDENADOR vê os
+        resultados sempre somente leitura, mesmo com `bloqueio: null`.
+
+        Perfis: PESQUISADOR e COORDENADOR leem; ADMINISTRADOR e PARTICIPANTE recebem 403.
+      parameters:
+      - $ref: '#/components/parameters/VisitaAgendadaId'
+      responses:
+        '200':
+          description: Atividades de avaliação da visita, com o resultado de cada uma ou nulo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultadosDaVisitaResponse'
+              example:
+                visitaAgendadaId: d6300000-0000-4000-8000-000000001981
+                situacaoVisita: REALIZADA
+                bloqueio: null
+                total: 1
+                registrados: 1
+                pendentes: 0
+                atividades:
+                - acaoId: d6300000-0000-4000-8000-000000001941
+                  nome: Aferir pressão arterial
+                  descricao: Medida simulada
+                  resultado:
+                    valor: 120/80
+                    unidade: mmHg
+                    observacao: null
+                    registradoPor: Pesquisador Demo (Ficticio)
+                    registradoEm: '2026-10-25T11:00:00-03:00'
+                    alteradoPor: Pesquisador Demo (Ficticio)
+                    alteradoEm: '2026-10-25T11:00:00-03:00'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          description: Visita agendada inexistente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+              example:
+                erro: 'Visita agendada não encontrada: d6300000-0000-4000-8000-000000009999'
+                codigo: RECURSO_NAO_ENCONTRADO
+        '409':
+          $ref: '#/components/responses/Erro409'
+  /api/visitas-agendadas/{visitaAgendadaId}/resultados/{acaoId}:
+    put:
+      tags:
+      - Resultados das avaliações
+      summary: Registrar ou editar o resultado de uma atividade
+      operationId: registrarResultado
+      description: |-
+        Registra o resultado **fictício** de uma atividade de avaliação ou, se ela já tiver resultado, o edita (há um
+        resultado por atividade e por visita agendada). Responde **201** no primeiro registro e **200** na edição,
+        sempre com o resultado salvo. Quem registrou e quando não mudam na edição; quem alterou e quando passam a ser
+        os da última edição.
+
+        Regras, na ordem em que são verificadas (depois do 403 do perfil):
+        1. a visita agendada existe e a atividade existe (404);
+        2. o estudo não está encerrado (409 `ESTUDO_ENCERRADO`);
+        3. o participante não foi retirado (409 `PARTICIPANTE_RETIRADO`, a partir da retirada, T102);
+        4. a visita está REALIZADA (409 `VISITA_NAO_REALIZADA`);
+        5. a atividade é da visita prevista desta visita agendada (409 `ATIVIDADE_NAO_PERTENCE_A_VISITA`) e da
+           categoria `AVALIACAO_CLINICA` (409 `ATIVIDADE_FORA_DA_CATEGORIA_AVALIACAO`);
+        6. o valor não está em branco (400 `VALOR_OBRIGATORIO`) e os tamanhos são respeitados (400 `VALIDACAO_CAMPOS`).
+
+        Perfis: somente PESQUISADOR. O COORDENADOR **nunca** escreve resultados (recebe 403), assim como ADMINISTRADOR e
+        PARTICIPANTE.
+      parameters:
+      - $ref: '#/components/parameters/VisitaAgendadaId'
+      - name: acaoId
+        in: path
+        required: true
+        description: UUID da atividade (ação) da visita prevista.
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResultadoRequest'
+            example:
+              valor: 120/80
+              unidade: mmHg
+              observacao: Sentado, após 5 minutos
+      responses:
+        '200':
+          description: Resultado editado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultadoAtividadeResponse'
+              example:
+                acaoId: d6300000-0000-4000-8000-000000001941
+                valor: 130/85
+                unidade: mmHg
+                observacao: Repetida após 10 minutos
+                registradoPor: Pesquisador Demo (Ficticio)
+                registradoEm: '2026-10-25T11:00:00-03:00'
+                alteradoPor: Pesquisador Demo (Ficticio)
+                alteradoEm: '2026-11-14T10:20:00-03:00'
+        '201':
+          description: Resultado registrado pela primeira vez.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultadoAtividadeResponse'
+              example:
+                acaoId: d6300000-0000-4000-8000-000000001941
+                valor: 120/80
+                unidade: mmHg
+                observacao: Sentado, após 5 minutos
+                registradoPor: Pesquisador Demo (Ficticio)
+                registradoEm: '2026-11-14T10:00:00-03:00'
+                alteradoPor: Pesquisador Demo (Ficticio)
+                alteradoEm: '2026-11-14T10:00:00-03:00'
+        '400':
+          description: 'Dado inválido: corpo ausente ou malformado (`CORPO_INVALIDO`), valor em branco
+            (`VALOR_OBRIGATORIO`) ou tamanho acima do limite (`VALIDACAO_CAMPOS`, com `errosCampo`).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+              examples:
+                valorObrigatorio:
+                  summary: Valor em branco
+                  value:
+                    erro: O valor do resultado é obrigatório
+                    codigo: VALOR_OBRIGATORIO
+                validacaoCampos:
+                  summary: Unidade acima de 30 caracteres
+                  value:
+                    erro: 'unidade: A unidade deve ter no máximo 30 caracteres'
+                    codigo: VALIDACAO_CAMPOS
+                    errosCampo:
+                    - campo: unidade
+                      erro: A unidade deve ter no máximo 30 caracteres
+                corpoInvalido:
+                  summary: Corpo ausente ou JSON malformado
+                  value:
+                    erro: Corpo da requisição inválido ou malformado
+                    codigo: CORPO_INVALIDO
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          description: Visita agendada ou atividade inexistente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+              example:
+                erro: 'Atividade não encontrada: d6300000-0000-4000-8000-000000009999'
+                codigo: RECURSO_NAO_ENCONTRADO
+        '409':
+          description: 'Regra de negócio violada: `VISITA_NAO_REALIZADA`, `ATIVIDADE_FORA_DA_CATEGORIA_AVALIACAO`,
+            `ATIVIDADE_NAO_PERTENCE_A_VISITA`, `ESTUDO_ENCERRADO` e, a partir da retirada (T102), `PARTICIPANTE_RETIRADO`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+              examples:
+                visitaNaoRealizada:
+                  summary: Visita ainda agendada, ausente ou cancelada
+                  value:
+                    erro: Resultados só podem ser registrados em visita realizada
+                    codigo: VISITA_NAO_REALIZADA
+                foraDaCategoria:
+                  summary: Atividade que não é de avaliação clínica
+                  value:
+                    erro: Só atividades da categoria avaliação clínica recebem resultado
+                    codigo: ATIVIDADE_FORA_DA_CATEGORIA_AVALIACAO
+                naoPertence:
+                  summary: Atividade de outra visita prevista
+                  value:
+                    erro: A atividade não pertence à visita prevista desta visita agendada
+                    codigo: ATIVIDADE_NAO_PERTENCE_A_VISITA
+                estudoEncerrado:
+                  summary: Estudo encerrado
+                  value:
+                    erro: O estudo está encerrado e não aceita novos resultados
+                    codigo: ESTUDO_ENCERRADO
+                participanteRetirado:
+                  summary: Participante retirado (a partir da T102)
+                  value:
+                    erro: O participante foi retirado do estudo
+                    codigo: PARTICIPANTE_RETIRADO
 components:
   securitySchemes:
     bearerAuth:
@@ -369,6 +581,14 @@ components:
       in: path
       required: true
       description: UUID da participação (o participante incluído no estudo).
+      schema:
+        type: string
+        format: uuid
+    VisitaAgendadaId:
+      name: visitaAgendadaId
+      in: path
+      required: true
+      description: UUID da visita agendada.
       schema:
         type: string
         format: uuid
@@ -880,4 +1100,139 @@ components:
       required:
       - acaoId
       - nome
+      - valor
+    BloqueioResultados:
+      type: string
+      enum:
+      - VISITA_NAO_REALIZADA
+      - ESTUDO_ENCERRADO
+      - PARTICIPANTE_RETIRADO
+      description: 'Motivo pelo qual a visita não aceita registro nem edição de resultados; a tela mostra os resultados
+        somente leitura. VISITA_NAO_REALIZADA: a visita não está REALIZADA. ESTUDO_ENCERRADO: o estudo foi encerrado.
+        PARTICIPANTE_RETIRADO: o participante foi retirado (a partir da T102). Quando há mais de um motivo, vale o
+        primeiro na ordem das verificações do registro: ESTUDO_ENCERRADO, PARTICIPANTE_RETIRADO, VISITA_NAO_REALIZADA.'
+    ResultadosDaVisitaResponse:
+      type: object
+      description: Atividades de avaliação clínica de uma visita agendada, com o resultado fictício de cada uma (nulo se pendente).
+      properties:
+        visitaAgendadaId:
+          type: string
+          format: uuid
+        situacaoVisita:
+          $ref: '#/components/schemas/SituacaoVisita'
+        bloqueio:
+          allOf:
+          - $ref: '#/components/schemas/BloqueioResultados'
+          nullable: true
+          description: Nulo quando a visita aceita registro e edição; senão, o motivo do modo somente leitura.
+        total:
+          type: integer
+          minimum: 0
+          description: Quantidade de atividades AVALIACAO_CLINICA da visita prevista.
+          example: 1
+        registrados:
+          type: integer
+          minimum: 0
+          description: Quantas dessas atividades já têm resultado.
+          example: 1
+        pendentes:
+          type: integer
+          minimum: 0
+          description: total - registrados.
+          example: 0
+        atividades:
+          type: array
+          items:
+            $ref: '#/components/schemas/AtividadeComResultado'
+      required:
+      - visitaAgendadaId
+      - situacaoVisita
+      - bloqueio
+      - total
+      - registrados
+      - pendentes
+      - atividades
+    AtividadeComResultado:
+      type: object
+      description: Uma atividade de avaliação clínica da visita prevista e o seu resultado (nulo = pendente).
+      properties:
+        acaoId:
+          type: string
+          format: uuid
+        nome:
+          type: string
+          example: Aferir pressão arterial
+        descricao:
+          type: string
+          nullable: true
+          example: Medida simulada
+        resultado:
+          allOf:
+          - $ref: '#/components/schemas/ResultadoAtividadeResponse'
+          nullable: true
+          description: Nulo enquanto o resultado estiver pendente.
+      required:
+      - acaoId
+      - nome
+      - resultado
+    ResultadoAtividadeResponse:
+      type: object
+      description: Resultado fictício de uma atividade, com quem registrou e quem alterou por último (nome do usuário).
+      properties:
+        acaoId:
+          type: string
+          format: uuid
+        valor:
+          type: string
+          example: 120/80
+        unidade:
+          type: string
+          nullable: true
+          example: mmHg
+        observacao:
+          type: string
+          nullable: true
+          example: Sentado, após 5 minutos
+        registradoPor:
+          type: string
+          example: Pesquisador Demo (Ficticio)
+        registradoEm:
+          type: string
+          format: date-time
+          example: '2026-11-14T10:00:00-03:00'
+        alteradoPor:
+          type: string
+          example: Pesquisador Demo (Ficticio)
+        alteradoEm:
+          type: string
+          format: date-time
+          example: '2026-11-14T10:00:00-03:00'
+      required:
+      - acaoId
+      - valor
+      - registradoPor
+      - registradoEm
+      - alteradoPor
+      - alteradoEm
+    ResultadoRequest:
+      type: object
+      description: Resultado fictício de uma atividade de avaliação. O valor é texto curto livre (sem faixa de referência).
+      properties:
+        valor:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Obrigatório; não pode ser só espaços (VALOR_OBRIGATORIO).
+          example: 120/80
+        unidade:
+          type: string
+          nullable: true
+          maxLength: 30
+          example: mmHg
+        observacao:
+          type: string
+          nullable: true
+          maxLength: 500
+          example: Sentado, após 5 minutos
+      required:
       - valor
