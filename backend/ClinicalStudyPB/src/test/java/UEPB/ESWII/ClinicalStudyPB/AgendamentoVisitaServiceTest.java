@@ -35,8 +35,8 @@ import UEPB.ESWII.ClinicalStudyPB.service.ConflitoRegraException;
 
 class AgendamentoVisitaServiceTest {
 
-    private static final LocalDate HOJE = LocalDate.of(2026, 11, 12);
-    private static final LocalDateTime AGORA = LocalDateTime.of(2026, 11, 12, 12, 0);
+    private static final LocalDate HOJE = LocalDate.now();
+    private static final LocalDateTime AGORA = LocalDateTime.now();
 
     private VisitaAgendadaRepository repository;
     private AgendamentoVisitaService service;
