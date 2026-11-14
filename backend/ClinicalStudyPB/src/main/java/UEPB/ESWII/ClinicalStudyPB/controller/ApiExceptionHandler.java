@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import UEPB.ESWII.ClinicalStudyPB.service.ConflitoRegraException;
+import UEPB.ESWII.ClinicalStudyPB.service.ValidacaoRegraException;
 import UEPB.ESWII.ClinicalStudyPB.service.RecursoNaoEncontradoException;
 import UEPB.ESWII.ClinicalStudyPB.service.RegraNegocioException;
 
@@ -38,6 +39,12 @@ public class ApiExceptionHandler {
     @ExceptionHandler(RegraNegocioException.class)
     public ResponseEntity<Map<String, Object>> tratarRegraNegocio(RegraNegocioException ex) {
         return resposta(HttpStatus.BAD_REQUEST, "DADOS_INVALIDOS", ex.getMessage(), List.of());
+    }
+
+    // Dado inválido por uma regra com código próprio (ex.: VALOR_OBRIGATORIO): 400 com esse código
+    @ExceptionHandler(ValidacaoRegraException.class)
+    public ResponseEntity<Map<String, Object>> tratarValidacaoRegra(ValidacaoRegraException ex) {
+        return resposta(HttpStatus.BAD_REQUEST, ex.getCodigo(), ex.getMessage(), List.of());
     }
 
     // Regra de recrutamento violada: 409 com um código estável para a tela explicar o motivo

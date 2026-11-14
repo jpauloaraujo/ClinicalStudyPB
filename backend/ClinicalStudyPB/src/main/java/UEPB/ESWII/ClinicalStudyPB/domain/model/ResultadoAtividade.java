@@ -14,7 +14,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
@@ -29,7 +28,8 @@ import lombok.Setter;
  *
  * <p>Há um resultado por atividade e por visita agendada ({@code uk_resultados_atividade_visita_acao}). A entidade
  * só guarda dados: as regras de quem pode registrar e quando (visita {@code REALIZADA}, categoria
- * {@code AVALIACAO_CLINICA}, estudo não encerrado) ficam no serviço de resultados (T89).</p>
+ * {@code AVALIACAO_CLINICA}, estudo não encerrado) ficam no serviço de resultados (T89), que também preenche quem
+ * alterou e quando a cada edição, pelo {@code Clock} da aplicação.</p>
  */
 @Entity
 @Table(
@@ -82,18 +82,17 @@ public class ResultadoAtividade {
     @Column(name = "alterado_em", nullable = false)
     private LocalDateTime alteradoEm;
 
+    /** Preenche a auditoria de criação que o serviço não informou (o serviço usa o {@code Clock} da aplicação). */
     @PrePersist
     private void registrarCriacao() {
-        LocalDateTime agora = LocalDateTime.now();
-        registradoEm = agora;
-        alteradoEm = agora;
+        if (registradoEm == null) {
+            registradoEm = LocalDateTime.now();
+        }
+        if (alteradoEm == null) {
+            alteradoEm = registradoEm;
+        }
         if (alteradoPor == null) {
             alteradoPor = registradoPor;
         }
-    }
-
-    @PreUpdate
-    private void registrarAlteracao() {
-        alteradoEm = LocalDateTime.now();
     }
 }
