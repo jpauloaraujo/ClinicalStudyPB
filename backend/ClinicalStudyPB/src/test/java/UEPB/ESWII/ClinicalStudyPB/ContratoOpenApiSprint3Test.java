@@ -63,7 +63,6 @@ class ContratoOpenApiSprint3Test {
     @Autowired
     private MockMvc mockMvc;
 
-    @SuppressWarnings("unchecked")
     private static Map<String, Object> documento() throws IOException {
         return new Yaml().load(Files.readString(CONTRATO));
     }

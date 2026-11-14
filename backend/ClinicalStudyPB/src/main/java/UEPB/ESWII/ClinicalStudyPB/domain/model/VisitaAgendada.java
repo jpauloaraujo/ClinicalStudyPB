@@ -18,9 +18,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -34,11 +32,7 @@ import lombok.Setter;
  * dar certo ao mesmo tempo.</p>
  */
 @Entity
-@Table(
-        name = "visitas_agendadas",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_visitas_agendadas_participacao_visita",
-                columnNames = {"participacao_id", "visita_planejada_id"}))
+@Table(name = "visitas_agendadas")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -65,11 +59,9 @@ public class VisitaAgendada {
     @Column(nullable = false, length = 20)
     private SituacaoVisita situacao = SituacaoVisita.AGENDADA;
 
-    /** Quando a visita aconteceu de fato; obrigatória na situação REALIZADA. */
     @Column(name = "data_hora_realizada")
     private LocalDateTime dataHoraRealizada;
 
-    /** Obrigatório na situação CANCELADA. */
     @Column(length = 500)
     private String motivo;
 
@@ -82,10 +74,10 @@ public class VisitaAgendada {
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "criado_por_id", nullable = false, updatable = false)
+    @JoinColumn(name = "criado_por_id", nullable = false)
     private Usuario criadoPor;
 
-    @Column(name = "criado_em", nullable = false, updatable = false)
+    @Column(name = "criado_em", nullable = false)
     private LocalDateTime criadoEm;
 
     @JsonIgnore
@@ -96,26 +88,25 @@ public class VisitaAgendada {
     @Column(name = "alterado_em", nullable = false)
     private LocalDateTime alteradoEm;
 
+    @PrePersist
+    private void preencherAuditoriaInicial() {
+        LocalDateTime agora = LocalDateTime.now();
+        if (criadoEm == null) {
+            criadoEm = agora;
+        }
+        if (alteradoEm == null) {
+            alteradoEm = agora;
+        }
+        if (alteradoPor == null) {
+            alteradoPor = criadoPor;
+        }
+    }
+
     public boolean estaAgendada() {
         return situacao == SituacaoVisita.AGENDADA;
     }
 
     public LocalDate dataAgendada() {
         return dataHoraAgendada.toLocalDate();
-    }
-
-    @PrePersist
-    private void registrarCriacao() {
-        LocalDateTime agora = LocalDateTime.now();
-        criadoEm = agora;
-        alteradoEm = agora;
-        if (alteradoPor == null) {
-            alteradoPor = criadoPor;
-        }
-    }
-
-    @PreUpdate
-    private void registrarAlteracao() {
-        alteradoEm = LocalDateTime.now();
     }
 }

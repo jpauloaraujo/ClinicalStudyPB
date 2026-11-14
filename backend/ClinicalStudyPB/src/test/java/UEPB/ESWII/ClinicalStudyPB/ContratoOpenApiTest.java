@@ -53,6 +53,7 @@ class ContratoOpenApiTest {
         return operacoes;
     }
 
+    @SuppressWarnings("deprecation")
     private Set<String> operacoesDaApi() throws Exception {
         String json = mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
