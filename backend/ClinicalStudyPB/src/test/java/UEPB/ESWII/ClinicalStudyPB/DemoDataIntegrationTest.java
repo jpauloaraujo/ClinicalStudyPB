@@ -37,7 +37,7 @@ class DemoDataIntegrationTest {
     private static final String CANDIDATO_PRONTO = "d6300000-0000-4000-8000-000000000504";
     private static final String[] TABELAS = {"usuarios", "estudos", "criterios", "visitas_planejadas", "acoes",
             "candidatos", "avaliacoes_elegibilidade", "respostas_avaliacao", "consentimentos", "participacoes",
-            "historico_status_estudo", "visitas_agendadas"};
+            "historico_status_estudo", "visitas_agendadas", "resultados_atividade"};
 
     @Test
     @DisplayName("T63: o perfil normal nao executa a carga adicional de demonstracao")
@@ -200,6 +200,60 @@ class DemoDataIntegrationTest {
         assertThat(jdbc.queryForObject("select observacao from visitas_agendadas "
                 + "where id = cast('d6300000-0000-4000-8000-000000001983' as uuid)", String.class))
                 .isEqualTo("alterada na demonstracao");
+    }
+
+    @Test
+    @DisplayName("T90: o demo traz o resultado da pressao arterial na Triagem realizada do P1, pelo pesquisador demo, e deixa as demais avaliacoes pendentes")
+    void demoCarregaResultadosDasAvaliacoes() throws Exception {
+        SingleConnectionDataSource banco = novoBanco();
+        migrarDemo(banco);
+        JdbcTemplate jdbc = new JdbcTemplate(banco);
+
+        // P4 (CAND-004) e a Triagem dele entram pelo script do PBI-20; ate la, so o resultado do P1 existe.
+        boolean temP4 = jdbc.queryForObject("select count(*) from candidatos where codigo = 'CAND-004' "
+                + "and estudo_id = cast(? as uuid)", Integer.class, ESTUDO_ACOMPANHAMENTO) > 0;
+        List<String> esperados = new ArrayList<>(List.of("CAND-001:Triagem:Aferir pressão arterial:120/80:mmHg"));
+        if (temP4) {
+            esperados.add("CAND-004:Triagem:Aferir pressão arterial:130/85:mmHg");
+        }
+        assertThat(jdbc.queryForList("select c.codigo || ':' || vp.nome || ':' || a.nome || ':' || r.valor || ':' || r.unidade "
+                + "from resultados_atividade r join visitas_agendadas va on va.id = r.visita_agendada_id "
+                + "join participacoes p on p.id = va.participacao_id join candidatos c on c.id = p.candidato_id "
+                + "join visitas_planejadas vp on vp.id = va.visita_planejada_id join acoes a on a.id = r.acao_id "
+                + "order by c.codigo", String.class)).containsExactlyElementsOf(esperados);
+
+        // Resultado so em visita REALIZADA, so em AVALIACAO_CLINICA, registrado pelo pesquisador demo 1 hora depois da visita
+        assertThat(jdbc.queryForObject("select count(*) from resultados_atividade r "
+                + "join visitas_agendadas va on va.id = r.visita_agendada_id join acoes a on a.id = r.acao_id "
+                + "where va.situacao <> 'REALIZADA' or a.categoria <> 'AVALIACAO_CLINICA'", Integer.class)).isZero();
+        assertThat(jdbc.queryForList("select u.email from resultados_atividade r "
+                + "join usuarios u on u.id = r.registrado_por_id and u.id = r.alterado_por_id", String.class))
+                .containsOnly("demo.pesquisador@clinicalstudy.test");
+        assertThat(jdbc.queryForObject("select datediff('MINUTE', va.data_hora_realizada, r.registrado_em) "
+                + "from resultados_atividade r join visitas_agendadas va on va.id = r.visita_agendada_id "
+                + "where r.id = cast('d6300000-0000-4000-8000-000000002101' as uuid)", Integer.class)).isEqualTo(60);
+    }
+
+    @Test
+    @DisplayName("T90: duas cargas do script de resultados nao duplicam nada nem desfazem a edicao do usuario")
+    void cargaDosResultadosEIdempotente() throws Exception {
+        SingleConnectionDataSource banco = novoBanco();
+        migrarDemo(banco);
+        JdbcTemplate jdbc = new JdbcTemplate(banco);
+        Map<String, Integer> antes = contagens(jdbc);
+        jdbc.update("update resultados_atividade set valor = '118/76' "
+                + "where id = cast('d6300000-0000-4000-8000-000000002101' as uuid)");
+
+        try (Connection conexao = banco.getConnection()) {
+            ClassPathResource script = new ClassPathResource("db/demo/R__demo_21_resultados.sql");
+            ScriptUtils.executeSqlScript(conexao, script);
+            ScriptUtils.executeSqlScript(conexao, script);
+        }
+
+        assertThat(contagens(jdbc)).isEqualTo(antes);
+        assertThat(antes.get("resultados_atividade")).isPositive();
+        assertThat(jdbc.queryForObject("select valor from resultados_atividade "
+                + "where id = cast('d6300000-0000-4000-8000-000000002101' as uuid)", String.class)).isEqualTo("118/76");
     }
 
     private static Flyway migrarDemo(SingleConnectionDataSource banco) throws Exception {
