@@ -65,7 +65,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Consultar uma visita agendada
+         * @description Devolve a visita agendada completa: situação, datas, dados do desfecho (data e hora reais, motivo e
+         *     observação, quando houver), a janela de datas da visita prevista, quem criou e quem alterou por último, e a
+         *     `versao`. É a consulta da tela da visita.
+         *
+         *     Perfis: COORDENADOR e PESQUISADOR leem; ADMINISTRADOR e PARTICIPANTE recebem 403.
+         */
+        get: operations["buscarVisitaAgendada"];
         /**
          * Reagendar uma visita
          * @description Troca a data e a hora de uma visita que ainda está AGENDADA. A nova `dataHora` é local, sem fuso, e passa pelas
@@ -78,6 +86,50 @@ export interface paths {
          */
         put: operations["reagendarVisita"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/visitas-agendadas/{visitaAgendadaId}/desfecho": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registrar o desfecho de uma visita agendada
+         * @description Registra, em um **único endpoint**, o desfecho de uma visita que ainda está AGENDADA: `REALIZADA`, `AUSENTE`
+         *     ou `CANCELADA`. Os três estados são **finais**: depois do desfecho a visita não volta a AGENDADA, não é
+         *     reagendada e não recebe outro desfecho. O recurso já existe, então a resposta é **200** com a visita atualizada.
+         *
+         *     Dados de cada tipo:
+         *     - `REALIZADA`: `dataHoraRealizada` (local, sem fuso; omitida assume o instante atual) **não pode ser futura**;
+         *       `observacao` é opcional.
+         *     - `AUSENTE`: `observacao` é opcional; não guarda data real.
+         *     - `CANCELADA`: `motivo` é **obrigatório**, com 5 a 500 caracteres depois do `trim`; `observacao` é opcional.
+         *
+         *     Campos que não pertencem ao tipo escolhido são ignorados, sem erro. `motivo` e `observacao` têm no máximo
+         *     500 caracteres.
+         *
+         *     Regras: o estudo precisa estar em RECRUTAMENTO ou EXECUCAO; `REALIZADA` e `AUSENTE` só valem quando o **dia**
+         *     agendado não é futuro (o dia de hoje é permitido), enquanto `CANCELADA` vale a qualquer momento antes do
+         *     desfecho. A ordem das verificações é: visita existe (404), estudo, transição, dados, data agendada.
+         *
+         *     Códigos 400: VALIDACAO_CAMPOS (tipo ausente), CORPO_INVALIDO (JSON ou tipo inexistente), DATA_REALIZACAO_FUTURA,
+         *     MOTIVO_OBRIGATORIO.
+         *
+         *     Códigos 409: TRANSICAO_VISITA_INVALIDA (a visita já tem desfecho), ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO,
+         *     VISITA_AINDA_NAO_OCORREU, VISITA_ALTERADA_CONCORRENTEMENTE (duas requisições simultâneas: uma vence e a
+         *     outra recebe este erro; recarregue a visita).
+         *
+         *     Perfis: somente COORDENADOR; PESQUISADOR, PARTICIPANTE e ADMINISTRADOR recebem 403.
+         */
+        post: operations["registrarDesfechoVisita"];
         delete?: never;
         options?: never;
         head?: never;
@@ -236,6 +288,31 @@ export interface components {
          * @enum {string}
          */
         SituacaoVisita: "AGENDADA" | "REALIZADA" | "AUSENTE" | "CANCELADA";
+        /**
+         * @description Desfecho que o coordenador registra para uma visita agendada. Cada tipo leva a uma situação final de mesmo nome.
+         * @enum {string}
+         */
+        TipoDesfecho: "REALIZADA" | "AUSENTE" | "CANCELADA";
+        /** @description Desfecho de uma visita agendada. Os campos que não pertencem ao `tipo` escolhido são ignorados. */
+        DesfechoRequest: {
+            tipo: components["schemas"]["TipoDesfecho"];
+            /**
+             * Format: date-time
+             * @description Só para `REALIZADA`. Data e hora reais **locais, sem fuso**; não pode ser futura; omitida assume o instante atual.
+             * @example 2026-11-19T09:40
+             */
+            dataHoraRealizada?: string | null;
+            /**
+             * @description Só para `CANCELADA`, onde é **obrigatório**, com 5 ou mais caracteres depois do `trim`.
+             * @example Participante em viagem
+             */
+            motivo?: string | null;
+            /**
+             * @description Opcional nos três tipos.
+             * @example Participante chegou no horário
+             */
+            observacao?: string | null;
+        };
         /** @description Uma visita prevista do estudo vista pelo participante, com a janela de datas e o agendamento (nulo se ainda não agendada). */
         VisitaDoParticipanteResponse: {
             /** Format: uuid */
@@ -735,6 +812,33 @@ export interface operations {
             409: components["responses"]["Erro409"];
         };
     };
+    buscarVisitaAgendada: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID da visita agendada. */
+                visitaAgendadaId: components["parameters"]["VisitaAgendadaId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A visita agendada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VisitaAgendadaResponse"];
+                };
+            };
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+            404: components["responses"]["Erro404"];
+            409: components["responses"]["Erro409"];
+        };
+    };
     reagendarVisita: {
         parameters: {
             query?: never;
@@ -765,6 +869,60 @@ export interface operations {
             403: components["responses"]["Erro403"];
             404: components["responses"]["Erro404"];
             409: components["responses"]["Erro409"];
+        };
+    };
+    registrarDesfechoVisita: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID da visita agendada. */
+                visitaAgendadaId: components["parameters"]["VisitaAgendadaId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DesfechoRequest"];
+            };
+        };
+        responses: {
+            /** @description Desfecho registrado; devolve a visita atualizada (situação final, autor e data da alteração, versão). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VisitaAgendadaResponse"];
+                };
+            };
+            /**
+             * @description Dado inválido. `VALIDACAO_CAMPOS` (tipo ausente ou texto acima de 500 caracteres), `CORPO_INVALIDO` (JSON
+             *     malformado ou tipo inexistente), `DATA_REALIZACAO_FUTURA` e `MOTIVO_OBRIGATORIO`.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Erro"];
+                };
+            };
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+            404: components["responses"]["Erro404"];
+            /**
+             * @description Regra de negócio violada: `TRANSICAO_VISITA_INVALIDA`, `ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO`,
+             *     `VISITA_AINDA_NAO_OCORREU` ou `VISITA_ALTERADA_CONCORRENTEMENTE`.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Erro"];
+                };
+            };
         };
     };
     agendaDoEstudo: {

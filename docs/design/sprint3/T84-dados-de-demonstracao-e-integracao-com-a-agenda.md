@@ -3,7 +3,7 @@
 > **Sprint 3** · PBI-20 · RF13 Realização, ausência e cancelamento de visitas  
 > **Responsável:** I3 · **Estimativa:** 2h · **Prazo:** Sex 13/11  
 > **Depende de:** T76, T82  
-> **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
+> **Situação:** 🟡 Script `R__demo_20_desfechos.sql` e `DemoDataIntegrationTest` prontos (validados em H2 e PostgreSQL 16). Faltam RQ-T84-07 a 10 (conferência na agenda e aviso ao I6), que dependem da T76/T77
 
 > Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task. A origem dos requisitos (especificação, critério de aceite do PBI, regras de negócio e o texto original da task) está na [seção 9](#9-origem-dos-requisitos-especificação-e-planejamento).
 

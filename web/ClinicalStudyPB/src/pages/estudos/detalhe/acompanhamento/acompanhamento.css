@@ -1,0 +1,79 @@
+/* Selo de situação da visita (T83): sempre com texto, a cor só reforça (acessibilidade). */
+.selo {
+  display: inline-block;
+  padding: 2px var(--espaco-2);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.selo--agendada {
+  border-color: var(--cor-primaria);
+  background: var(--cor-primaria-fundo);
+  color: var(--cor-primaria-escura);
+}
+
+.selo--realizada {
+  border-color: var(--cor-sucesso);
+  background: var(--cor-sucesso-fundo);
+  color: var(--cor-sucesso);
+}
+
+.selo--ausente {
+  border-color: #b54708;
+  background: #fffaeb;
+  color: #93370d;
+}
+
+.selo--cancelada {
+  border-color: var(--cor-perigo);
+  background: var(--cor-perigo-fundo);
+  color: var(--cor-perigo);
+}
+
+.selo--nao_agendada {
+  border-color: #98a2b3;
+  background: #f2f4f7;
+  color: #475467;
+}
+
+/* Diálogo de desfecho (T83) */
+.dialogo--desfecho {
+  display: grid;
+  gap: var(--espaco-4);
+  max-width: 34rem;
+  width: 100%;
+}
+
+.desfecho__opcoes {
+  display: grid;
+  gap: var(--espaco-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.desfecho__opcoes legend {
+  margin-bottom: var(--espaco-2);
+  font-weight: 600;
+}
+
+.desfecho__opcao {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-2);
+}
+
+.desfecho__contador {
+  justify-self: end;
+  color: var(--cor-texto-suave);
+  font-size: 0.8125rem;
+}
+
+.desfecho__aviso {
+  margin: 0;
+  color: var(--cor-texto-suave);
+  font-size: 0.875rem;
+}

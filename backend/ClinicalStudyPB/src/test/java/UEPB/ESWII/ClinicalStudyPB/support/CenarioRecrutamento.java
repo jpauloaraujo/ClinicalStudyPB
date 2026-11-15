@@ -115,4 +115,10 @@ public final class CenarioRecrutamento {
     public static ResultActions consentir(MockMvc mvc, String tokenCoordenador, String candidatoId) throws Exception {
         return enviar(mvc, "POST", "/api/candidatos/" + candidatoId + "/consentimento", tokenCoordenador, "{}");
     }
+
+    /** Registra o desfecho de uma visita agendada (T81/T82): {@code POST /api/visitas-agendadas/{id}/desfecho}. */
+    public static ResultActions registrarDesfecho(MockMvc mvc, String token, String visitaAgendadaId, String corpo)
+            throws Exception {
+        return enviar(mvc, "POST", "/api/visitas-agendadas/" + visitaAgendadaId + "/desfecho", token, corpo);
+    }
 }
