@@ -11,6 +11,8 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.ResultadoAtividadeResponse;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.ResultadosDaVisitaResponse;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.BloqueioResultados;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.CategoriaAcao;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoVisita;
@@ -162,6 +164,28 @@ public class ResultadoAtividadeService {
         resultado.setAlteradoPor(usuario);
         resultado.setAlteradoEm(agora);
         return new ResultadoRegistrado(resultados.save(resultado), criado);
+    }
+
+    /** Resposta da API para o registro: o resultado salvo e se ele foi criado agora (201) ou editado (200). */
+    public record RespostaDoRegistro(ResultadoAtividadeResponse resultado, boolean criado) {
+    }
+
+    /**
+     * {@link #consultar(UUID)} já convertido para a resposta da API (T90). A conversão fica dentro da transação
+     * porque lê relações LAZY (nomes de quem registrou e alterou) e o projeto usa {@code open-in-view=false}.
+     */
+    @Transactional(readOnly = true)
+    public ResultadosDaVisitaResponse consultarResposta(UUID visitaAgendadaId) {
+        return ResultadosDaVisitaResponse.de(consultar(visitaAgendadaId), clock.getZone());
+    }
+
+    /** {@link #registrar} já convertido para a resposta da API (T90), dentro da mesma transação. */
+    @Transactional
+    public RespostaDoRegistro registrarResposta(UUID visitaAgendadaId, UUID acaoId, ComandoResultado comando,
+            UUID usuarioId) {
+        ResultadoRegistrado registrado = registrar(visitaAgendadaId, acaoId, comando, usuarioId);
+        return new RespostaDoRegistro(ResultadoAtividadeResponse.de(registrado.resultado(), clock.getZone()),
+                registrado.criado());
     }
 
     /**
