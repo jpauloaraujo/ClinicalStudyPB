@@ -35,8 +35,10 @@ import UEPB.ESWII.ClinicalStudyPB.service.ConflitoRegraException;
 
 class AgendamentoVisitaServiceTest {
 
-    private static final LocalDate HOJE = LocalDate.now();
-    private static final LocalDateTime AGORA = LocalDateTime.now();
+    /** Relógio fixo entregue ao serviço: "hoje" e "agora" do teste saem dele, nunca do relógio real. */
+    private static final Clock RELOGIO = Clock.fixed(Instant.parse("2026-11-12T12:00:00Z"), ZoneOffset.UTC);
+    private static final LocalDate HOJE = LocalDate.now(RELOGIO);
+    private static final LocalDateTime AGORA = LocalDateTime.now(RELOGIO);
 
     private VisitaAgendadaRepository repository;
     private AgendamentoVisitaService service;
@@ -48,8 +50,7 @@ class AgendamentoVisitaServiceTest {
     void preparar() {
         repository = mock(VisitaAgendadaRepository.class);
         when(repository.save(any(VisitaAgendada.class))).thenAnswer(invocacao -> invocacao.getArgument(0));
-        service = new AgendamentoVisitaService(repository,
-                Clock.fixed(Instant.parse("2026-11-12T12:00:00Z"), ZoneOffset.UTC));
+        service = new AgendamentoVisitaService(repository, RELOGIO);
 
         Estudo estudo = estudo(StatusEstudo.RECRUTAMENTO);
         Candidato candidato = new Candidato();
