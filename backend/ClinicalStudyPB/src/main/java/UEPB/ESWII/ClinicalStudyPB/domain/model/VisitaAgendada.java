@@ -18,7 +18,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import lombok.Getter;
@@ -120,8 +119,4 @@ public class VisitaAgendada {
         return dataHoraAgendada.toLocalDate();
     }
 
-    @PreUpdate
-    private void atualizarAuditoria() {
-        this.alteradoEm = LocalDateTime.now();
-    }
 }

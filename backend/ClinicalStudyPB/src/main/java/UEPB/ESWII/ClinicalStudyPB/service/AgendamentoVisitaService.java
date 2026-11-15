@@ -5,6 +5,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoVisita;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.StatusEstudo;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Candidato;
@@ -15,12 +18,14 @@ import UEPB.ESWII.ClinicalStudyPB.domain.model.VisitaPlanejada;
 import UEPB.ESWII.ClinicalStudyPB.domain.regra.JanelaDeAgendamento;
 import UEPB.ESWII.ClinicalStudyPB.repository.VisitaAgendadaRepository;
 
+@Service
 public class AgendamentoVisitaService {
 
     private final VisitaAgendadaRepository visitaRepository;
     private final Clock clock;
-    private static final java.time.format.DateTimeFormatter FORMATADOR_DATA = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    
+    private static final java.time.format.DateTimeFormatter FORMATADOR_DATA =
+            java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
     public AgendamentoVisitaService(VisitaAgendadaRepository visitaRepository, Clock clock) {
         this.visitaRepository = Objects.requireNonNull(visitaRepository);
         this.clock = Objects.requireNonNull(clock);
@@ -32,7 +37,7 @@ public class AgendamentoVisitaService {
 
         if (visitaRepository.existsByParticipacaoIdAndVisitaPlanejadaId(
                 participacao.getId(), visitaPlanejada.getId())) {
-            throw conflito("AGENDAMENTO_DUPLICADO",
+            throw conflito("VISITA_JA_AGENDADA",
                     "Já existe um agendamento para esta visita prevista.");
         }
 
@@ -46,12 +51,17 @@ public class AgendamentoVisitaService {
         visita.setCriadoEm(agora);
         visita.setAlteradoPor(usuario);
         visita.setAlteradoEm(agora);
-        return visitaRepository.save(visita);
+        try {
+            return visitaRepository.saveAndFlush(visita);
+        } catch (DataIntegrityViolationException ex) {
+            throw conflito("VISITA_JA_AGENDADA", "Já existe um agendamento para esta visita prevista.");
+        }
     }
 
     public VisitaAgendada reagendarVisita(VisitaAgendada visitaAgendada, LocalDateTime novaData, Usuario usuario) {
+        validarEstadoDoEstudo(visitaAgendada.getParticipacao());
         if (!visitaAgendada.estaAgendada()) {
-            throw conflito("REAGENDAMENTO_INVALIDO",
+            throw conflito("VISITA_NAO_ESTA_AGENDADA",
                     "Apenas visitas com situação AGENDADA podem ser reagendadas.");
         }
 
@@ -75,25 +85,22 @@ public class AgendamentoVisitaService {
 
     private void validarRegrasDeAgendamento(Participacao participacao, VisitaPlanejada visitaPlanejada,
             LocalDateTime dataDesejada) {
+        validarEstadoDoEstudo(participacao);
+
         Candidato candidato = participacao.getCandidato();
         if (candidato == null || !candidato.estaIncluido()) {
             throw conflito("PARTICIPANTE_RETIRADO", "O participante não está ativo no estudo.");
         }
 
-        StatusEstudo status = participacao.getEstudo().getStatus();
-        if (status != StatusEstudo.RECRUTAMENTO && status != StatusEstudo.EXECUCAO) {
-            throw conflito("ESTUDO_INVALIDO", "O estudo não está em recrutamento ou execução.");
-        }
-
         if (visitaPlanejada.getEstudo().getId() == null
                 || !visitaPlanejada.getEstudo().getId().equals(participacao.getEstudo().getId())) {
-            throw conflito("VISITA_INCOMPATIVEL",
-                    "A visita prevista não pertence ao estudo do participante.");
+            throw new RecursoNaoEncontradoException(
+                    "Visita prevista não encontrada para a participação: " + visitaPlanejada.getId());
         }
 
         LocalDate hoje = LocalDate.now(clock);
         if (dataDesejada.toLocalDate().isBefore(hoje)) {
-            throw conflito("DATA_PASSADA", "A data agendada não pode estar no passado.");
+            throw new ValidacaoRegraException("DATA_NO_PASSADO", "A data agendada não pode estar no passado.");
         }
 
         JanelaDeAgendamento janela = JanelaDeAgendamento.de(visitaPlanejada, participacao.getDataInclusao());
@@ -101,8 +108,16 @@ public class AgendamentoVisitaService {
         if (!janela.contem(dataDesejada.toLocalDate())) {
             String inicioFormatado = janela.dataInicio().format(FORMATADOR_DATA);
             String fimFormatado = janela.dataFim().format(FORMATADOR_DATA);
-            throw conflito("DATA_FORA_DA_JANELA", 
-                String.format("Data fora da janela de %s a %s", inicioFormatado, fimFormatado));
+            throw conflito("DATA_FORA_DA_JANELA",
+                    String.format("Data fora da janela de %s a %s", inicioFormatado, fimFormatado));
+        }
+    }
+
+    void validarEstadoDoEstudo(Participacao participacao) {
+        StatusEstudo status = participacao.getEstudo().getStatus();
+        if (status != StatusEstudo.RECRUTAMENTO && status != StatusEstudo.EXECUCAO) {
+            throw conflito("ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO",
+                    "O estudo não está em recrutamento ou execução.");
         }
     }
 

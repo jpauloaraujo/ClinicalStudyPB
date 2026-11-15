@@ -14,7 +14,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -29,10 +28,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.AtividadeComResultadoResponse;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.AgendaItemResponse;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.ParticipanteAgendaResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.HistoricoParticipanteResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.ResultadoAtividadeResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.ResultadoRequest;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.ResultadosDaVisitaResponse;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.VisitaAgendadaRequest;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.VisitaAgendadaResponse;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.VisitaDoParticipanteResponse;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.VisitaReagendamentoRequest;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoNoHistorico;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoVisita;
 
@@ -112,7 +117,6 @@ class ContratoOpenApiSprint3Test {
     }
 
     @Test
-    @Disabled("T76: ligar quando os endpoints do agendamento existirem no backend")
     @DisplayName("Todo endpoint do agendamento do contrato existe na API publicada")
     void contratoNaoPrometeEndpointInexistente() throws Exception {
         Set<String> faltandoNaApi = new TreeSet<>(operacoesDoContrato());
@@ -204,6 +208,45 @@ class ContratoOpenApiSprint3Test {
         List<String> valores = (List<String>) schema("SituacaoVisita").get("enum");
 
         assertThat(valores).containsExactly(Arrays.stream(SituacaoVisita.values()).map(Enum::name).toArray(String[]::new));
+    }
+
+    @ParameterizedTest(name = "T76: o schema {0} tem os mesmos campos do DTO")
+    @ValueSource(strings = {"VisitaDoParticipanteResponse", "VisitaAgendadaRequest", "VisitaReagendamentoRequest",
+            "VisitaAgendadaResponse", "AgendaItemResponse", "ParticipanteAgendaResponse"})
+    void schemaDoAgendamentoTemOsCamposDoDto(String nome) throws Exception {
+        Class<?> dto = switch (nome) {
+            case "VisitaDoParticipanteResponse" -> VisitaDoParticipanteResponse.class;
+            case "VisitaAgendadaRequest" -> VisitaAgendadaRequest.class;
+            case "VisitaReagendamentoRequest" -> VisitaReagendamentoRequest.class;
+            case "VisitaAgendadaResponse" -> VisitaAgendadaResponse.class;
+            case "AgendaItemResponse" -> AgendaItemResponse.class;
+            default -> ParticipanteAgendaResponse.class;
+        };
+        Set<String> camposDoDto = new TreeSet<>();
+        Arrays.stream(dto.getRecordComponents()).forEach(c -> camposDoDto.add(c.getName()));
+        Map<String, Object> schema = schema(nome);
+        Set<String> camposDoContrato = new TreeSet<>(((Map<String, Object>) schema.get("properties")).keySet());
+
+        assertThat(camposDoContrato).as("campos do schema " + nome).isEqualTo(camposDoDto);
+    }
+
+    @Test
+    @DisplayName("T76: o Swagger documenta as operações e parâmetros do contrato de agenda")
+    void swaggerDocumentaPaginacaoFiltrosETags() throws Exception {
+        String json = mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode caminhos = new ObjectMapper().readTree(json).get("paths");
+        JsonNode agenda = caminhos.get("/api/estudos/{estudoId}/agenda").get("get");
+        Set<String> parametros = new TreeSet<>();
+        agenda.get("parameters").forEach(parametro -> parametros.add(parametro.get("name").asText()));
+        Set<String> respostas = new TreeSet<>();
+        agenda.get("responses").fieldNames().forEachRemaining(respostas::add);
+
+        assertThat(agenda.get("tags").get(0).asText()).isEqualTo("Agenda");
+        assertThat(parametros).contains("de", "ate", "situacao", "pagina", "tamanho");
+        assertThat(respostas).contains("200", "400", "401", "403", "404", "409");
+        assertThat(caminhos.get("/api/participacoes/{participacaoId}/visitas-agendadas")
+                .get("post").get("tags").get(0).asText()).isEqualTo("Agendamento");
     }
 
     @SuppressWarnings("unchecked")
