@@ -5,6 +5,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import UEPB.ESWII.ClinicalStudyPB.domain.model.VisitaAgendada;
 
@@ -17,4 +19,8 @@ public interface VisitaAgendadaRepository extends JpaRepository<VisitaAgendada, 
     List<VisitaAgendada> findByParticipacaoIdOrderByVisitaPlanejadaOrdemAsc(UUID participacaoId);
 
     long countByParticipacaoId(UUID participacaoId);
+
+    /** Agendamentos da participação com a visita prevista, numa consulta só (histórico do participante, T96). */
+    @Query("select va from VisitaAgendada va join fetch va.visitaPlanejada where va.participacao.id = :participacaoId")
+    List<VisitaAgendada> listarComVisitaPlanejada(@Param("participacaoId") UUID participacaoId);
 }

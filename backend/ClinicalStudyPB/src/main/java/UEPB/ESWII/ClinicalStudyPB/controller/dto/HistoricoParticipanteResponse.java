@@ -20,7 +20,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public record HistoricoParticipanteResponse(
         ParticipanteDoHistorico participante,
         ResumoDoHistorico resumo,
-        @Schema(description = "Uma linha para cada visita prevista do estudo, ordenadas por ordem e dia previsto, "
+        @Schema(description = "Uma linha para cada visita prevista do estudo, ordenadas pelo dia previsto (e, no empate, por ordem), "
                 + "inclusive as ainda não agendadas") List<VisitaDoHistorico> visitas) {
 
     @Schema(description = "Participante a que o histórico se refere")

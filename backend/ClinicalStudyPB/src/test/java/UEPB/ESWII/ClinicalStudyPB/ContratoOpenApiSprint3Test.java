@@ -130,7 +130,6 @@ class ContratoOpenApiSprint3Test {
     }
 
     @Test
-    @Disabled("T96: ligar quando o endpoint do histórico existir no backend")
     @DisplayName("O endpoint do histórico do contrato existe na API publicada")
     void historicoDoContratoExisteNaApi() throws Exception {
         Set<String> historico = new TreeSet<>(operacoesDoContrato());

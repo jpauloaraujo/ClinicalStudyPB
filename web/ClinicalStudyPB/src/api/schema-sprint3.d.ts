@@ -140,7 +140,7 @@ export interface paths {
         /**
          * Histórico de um participante
          * @description Somente leitura. Devolve os dados do participante, o resumo por situação e **uma linha para cada visita
-         *     prevista do estudo**, ordenadas por `ordem` e dia previsto, inclusive as ainda não agendadas
+         *     prevista do estudo**, ordenadas pelo dia previsto (e, no empate, por `ordem`), inclusive as ainda não agendadas
          *     (`situacao = NAO_AGENDADA`, com os campos do agendamento nulos). Cada visita traz a situação, as datas e a
          *     lista de resultados das atividades.
          *
@@ -430,7 +430,7 @@ export interface components {
         HistoricoParticipanteResponse: {
             participante: components["schemas"]["ParticipanteDoHistorico"];
             resumo: components["schemas"]["ResumoDoHistorico"];
-            /** @description Uma linha para cada visita prevista do estudo, ordenadas por `ordem` e dia previsto, inclusive as ainda não agendadas. */
+            /** @description Uma linha para cada visita prevista do estudo, ordenadas pelo dia previsto (e, no empate, por `ordem`), inclusive as ainda não agendadas. */
             visitas: components["schemas"]["VisitaDoHistorico"][];
         };
         /** @description Participante a que o histórico se refere. */

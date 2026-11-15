@@ -268,7 +268,7 @@ paths:
       operationId: historicoDoParticipante
       description: |-
         Somente leitura. Devolve os dados do participante, o resumo por situação e **uma linha para cada visita
-        prevista do estudo**, ordenadas por `ordem` e dia previsto, inclusive as ainda não agendadas
+        prevista do estudo**, ordenadas pelo dia previsto (e, no empate, por `ordem`), inclusive as ainda não agendadas
         (`situacao = NAO_AGENDADA`, com os campos do agendamento nulos). Cada visita traz a situação, as datas e a
         lista de resultados das atividades.
 
@@ -953,7 +953,7 @@ components:
           $ref: '#/components/schemas/ResumoDoHistorico'
         visitas:
           type: array
-          description: Uma linha para cada visita prevista do estudo, ordenadas por `ordem` e dia previsto, inclusive as ainda não agendadas.
+          description: Uma linha para cada visita prevista do estudo, ordenadas pelo dia previsto (e, no empate, por `ordem`), inclusive as ainda não agendadas.
           items:
             $ref: '#/components/schemas/VisitaDoHistorico'
       required:
