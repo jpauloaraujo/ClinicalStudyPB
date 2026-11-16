@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test'
 
-export type AbaDoEstudo = 'Resumo' | 'Critérios' | 'Visitas' | 'Candidatos' | 'Participantes'
+export type AbaDoEstudo = 'Resumo' | 'Critérios' | 'Visitas' | 'Candidatos' | 'Participantes' | 'Agenda'
 export type EstadoDoEstudo = 'Planejamento' | 'Recrutamento' | 'Execução' | 'Encerrado'
 
 // Página de detalhe do estudo (/estudos/:id): cabeçalho, abas e o indicador de estado com o botão de avançar (RF07)

@@ -18,9 +18,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -34,11 +32,9 @@ import lombok.Setter;
  * dar certo ao mesmo tempo.</p>
  */
 @Entity
-@Table(
-        name = "visitas_agendadas",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_visitas_agendadas_participacao_visita",
-                columnNames = {"participacao_id", "visita_planejada_id"}))
+@Table(name = "visitas_agendadas", uniqueConstraints = {
+    @jakarta.persistence.UniqueConstraint(columnNames = {"participacao_id", "visita_planejada_id"})
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -65,11 +61,16 @@ public class VisitaAgendada {
     @Column(nullable = false, length = 20)
     private SituacaoVisita situacao = SituacaoVisita.AGENDADA;
 
-    /** Quando a visita aconteceu de fato; obrigatória na situação REALIZADA. */
+    /**
+     * Guarda a data e hora reais quando a visita tem desfecho REALIZADA.
+     * Não pode receber datas futuras.
+     */
     @Column(name = "data_hora_realizada")
     private LocalDateTime dataHoraRealizada;
 
-    /** Obrigatório na situação CANCELADA. */
+    /**
+     * Exigido (mínimo 5 caracteres) quando a visita é CANCELADA.
+     */
     @Column(length = 500)
     private String motivo;
 
@@ -96,6 +97,20 @@ public class VisitaAgendada {
     @Column(name = "alterado_em", nullable = false)
     private LocalDateTime alteradoEm;
 
+    @PrePersist
+    private void preencherAuditoriaInicial() {
+        LocalDateTime agora = LocalDateTime.now();
+        if (criadoEm == null) {
+            criadoEm = agora;
+        }
+        if (alteradoEm == null) {
+            alteradoEm = agora;
+        }
+        if (alteradoPor == null) {
+            alteradoPor = criadoPor;
+        }
+    }
+
     public boolean estaAgendada() {
         return situacao == SituacaoVisita.AGENDADA;
     }
@@ -104,18 +119,4 @@ public class VisitaAgendada {
         return dataHoraAgendada.toLocalDate();
     }
 
-    @PrePersist
-    private void registrarCriacao() {
-        LocalDateTime agora = LocalDateTime.now();
-        criadoEm = agora;
-        alteradoEm = agora;
-        if (alteradoPor == null) {
-            alteradoPor = criadoPor;
-        }
-    }
-
-    @PreUpdate
-    private void registrarAlteracao() {
-        alteradoEm = LocalDateTime.now();
-    }
 }
