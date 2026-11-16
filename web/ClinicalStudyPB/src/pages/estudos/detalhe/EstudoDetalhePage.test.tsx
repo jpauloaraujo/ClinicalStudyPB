@@ -91,18 +91,18 @@ describe('EstudoDetalhePage', () => {
     expect(router.state.location.pathname).toBe('/estudos')
   })
 
-  it('mostra ao pesquisador as abas Resumo, Critérios e Visitas', async () => {
+  it('mostra ao pesquisador as abas Resumo, Critérios, Visitas, Participantes e Agenda (as duas últimas em leitura)', async () => {
     renderizar('PESQUISADOR', `/estudos/${estudo.id}`)
     await screen.findByRole('heading', { level: 1, name: estudo.titulo })
 
-    expect(rotulosDasAbas()).toEqual(['Resumo', 'Critérios', 'Visitas'])
+    expect(rotulosDasAbas()).toEqual(['Resumo', 'Critérios', 'Visitas', 'Participantes', 'Agenda'])
   })
 
-  it('mostra ao coordenador as abas Resumo, Candidatos e Participantes', async () => {
+  it('mostra ao coordenador as abas Resumo, Candidatos, Participantes e Agenda', async () => {
     renderizar('COORDENADOR', `/estudos/${estudo.id}`)
     await screen.findByRole('heading', { level: 1, name: estudo.titulo })
 
-    expect(rotulosDasAbas()).toEqual(['Resumo', 'Candidatos', 'Participantes'])
+    expect(rotulosDasAbas()).toEqual(['Resumo', 'Candidatos', 'Participantes', 'Agenda'])
     expect(screen.queryByRole('link', { name: 'Editar dados' })).not.toBeInTheDocument()
   })
 

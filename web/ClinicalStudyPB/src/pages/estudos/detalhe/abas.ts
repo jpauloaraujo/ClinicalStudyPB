@@ -14,7 +14,9 @@ export const abasEstudo: AbaEstudo[] = [
   { caminho: 'criterios', rotulo: 'Critérios', perfis: ['PESQUISADOR'] },
   { caminho: 'visitas', rotulo: 'Visitas', perfis: ['PESQUISADOR'] },
   { caminho: 'candidatos', rotulo: 'Candidatos', perfis: ['COORDENADOR'] },
-  { caminho: 'participantes', rotulo: 'Participantes', perfis: ['COORDENADOR'] },
+  // RF11 e RF12: o pesquisador também consulta participantes e agenda (somente leitura; só o coordenador escreve)
+  { caminho: 'participantes', rotulo: 'Participantes', perfis: ['PESQUISADOR', 'COORDENADOR'] },
+  { caminho: 'agenda', rotulo: 'Agenda', perfis: ['PESQUISADOR', 'COORDENADOR'] },
 ]
 
 export function abasDoPerfil(perfil: PerfilUsuario): AbaEstudo[] {
