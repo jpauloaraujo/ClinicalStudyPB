@@ -4,13 +4,29 @@
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /src
 
+# O Maven Central pode recusar os downloads dos runners do CI com 429 (Too Many Requests), que é um limite temporário
+# do serviço e não um erro do projeto. Por isso cada passo que baixa dependências tenta até 5 vezes, esperando mais
+# a cada falha (20 s, 40 s, 60 s e 80 s), e só então falha de verdade.
+
 # Dependências primeiro: a camada fica em cache enquanto o pom.xml não mudar
 COPY pom.xml .
-RUN mvn -B -q dependency:go-offline
+RUN for tentativa in 1 2 3 4 5; do \
+        mvn -B -q dependency:go-offline && exit 0; \
+        echo "Maven falhou na tentativa $tentativa de 5 (limite do Maven Central?); aguardando para tentar de novo"; \
+        [ "$tentativa" -lt 5 ] && sleep $((tentativa * 20)); \
+    done; \
+    exit 1
 
 COPY src ./src
-RUN mvn -B -q -DskipTests package \
-    && find target -maxdepth 1 -name '*.jar' ! -name '*.original' -exec cp {} /app.jar \;
+RUN for tentativa in 1 2 3 4 5; do \
+        if mvn -B -q -DskipTests package; then \
+            find target -maxdepth 1 -name '*.jar' ! -name '*.original' -exec cp {} /app.jar \; ; \
+            exit 0; \
+        fi; \
+        echo "Maven falhou na tentativa $tentativa de 5 (limite do Maven Central?); aguardando para tentar de novo"; \
+        [ "$tentativa" -lt 5 ] && sleep $((tentativa * 20)); \
+    done; \
+    exit 1
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
