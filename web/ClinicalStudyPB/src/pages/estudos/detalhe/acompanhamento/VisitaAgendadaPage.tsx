@@ -8,7 +8,8 @@ import { formatarDataHora, formatarJanela } from '../../../../utils/datas'
 import { useEstudoDetalhe } from '../contexto'
 import { AcoesDaVisita } from './AcoesDaVisita'
 import { abasVisitaDoPerfil } from './abasVisita'
-import { rotulosSituacaoVisita } from './rotulosVisita'
+import { DesfechoRegistrado } from './DesfechoRegistrado'
+import { SeloSituacaoVisita } from './SeloSituacaoVisita'
 import '../recrutamento.css'
 import './acompanhamento.css'
 
@@ -17,7 +18,15 @@ type DadosDaVisita = { previsao: VisitaDoParticipanteResponse; visita: VisitaAge
 // Conteúdo de cada aba da tela da visita. Para acrescentar uma aba (T91, `avaliacoes`): declare-a em abasVisita.ts e
 // trate o novo caminho aqui, sem mexer no restante da tela.
 function ConteudoDaAba({ caminho, dados }: { caminho: string; dados: DadosDaVisita }) {
-  if (caminho === 'dados') return <DadosDaVisitaAgendada dados={dados} />
+  if (caminho === 'dados') {
+    return (
+      <>
+        <DadosDaVisitaAgendada dados={dados} />
+        {/* RF13 (T83): o que foi registrado, somente leitura; some enquanto a visita está AGENDADA */}
+        <DesfechoRegistrado visita={dados.visita} />
+      </>
+    )
+  }
   return null
 }
 
@@ -44,31 +53,13 @@ function DadosDaVisitaAgendada({ dados: { previsao, visita } }: { dados: DadosDa
         <div>
           <dt>Situação</dt>
           <dd>
-            <span className="etiqueta">{rotulosSituacaoVisita[visita.situacao]}</span>
+            <SeloSituacaoVisita situacao={visita.situacao} />
           </dd>
         </div>
         <div>
           <dt>Janela válida</dt>
           <dd>{formatarJanela(visita.janelaInicio, visita.janelaFim)}</dd>
         </div>
-        {visita.dataHoraRealizada && (
-          <div>
-            <dt>Realizada em</dt>
-            <dd>{formatarDataHora(visita.dataHoraRealizada)}</dd>
-          </div>
-        )}
-        {visita.motivo && (
-          <div>
-            <dt>Motivo</dt>
-            <dd>{visita.motivo}</dd>
-          </div>
-        )}
-        {visita.observacao && (
-          <div>
-            <dt>Observação</dt>
-            <dd>{visita.observacao}</dd>
-          </div>
-        )}
         <div>
           <dt>Criada por</dt>
           <dd>
@@ -144,6 +135,7 @@ export function VisitaAgendadaPage() {
                 situacao: visita.situacao,
                 dataHora: visita.dataHora,
                 visitaNome: visita.visitaNome,
+                participanteNome: visita.participanteNome,
                 janelaInicio: visita.janelaInicio,
                 janelaFim: visita.janelaFim,
               }}

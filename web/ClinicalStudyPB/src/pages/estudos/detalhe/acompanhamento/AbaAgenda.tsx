@@ -7,7 +7,9 @@ import { useCarregamento } from '../../../../hooks/useCarregamento'
 import { formatarDataHora } from '../../../../utils/datas'
 import { useEstudoDetalhe } from '../contexto'
 import { AcoesDaVisita } from './AcoesDaVisita'
-import { rotulosSituacaoVisita, situacoesVisita } from './rotulosVisita'
+import { SeloSituacaoVisita } from './SeloSituacaoVisita'
+import { rotulosSituacaoVisita } from './situacaoVisita'
+import { situacoesVisita } from './rotulosVisita'
 import '../recrutamento.css'
 import './acompanhamento.css'
 
@@ -148,7 +150,7 @@ export function AbaAgenda() {
                       </td>
                       <td>{item.visitaNome}</td>
                       <td>
-                        <span className="etiqueta">{rotulosSituacaoVisita[item.situacao]}</span>
+                        <SeloSituacaoVisita situacao={item.situacao} />
                       </td>
                       <td className="tabela__acoes">
                         <Link
@@ -165,6 +167,7 @@ export function AbaAgenda() {
                             situacao: item.situacao,
                             dataHora: item.dataHora,
                             visitaNome: item.visitaNome,
+                            participanteNome: item.participanteNome,
                           }}
                           aoAlterar={recarregar}
                         />

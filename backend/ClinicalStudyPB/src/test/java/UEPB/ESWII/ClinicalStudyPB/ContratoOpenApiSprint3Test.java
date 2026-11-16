@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.AtividadeComResultadoResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.AgendaItemResponse;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.DesfechoRequest;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.ParticipanteAgendaResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.HistoricoParticipanteResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.ResultadoAtividadeResponse;
@@ -40,6 +41,7 @@ import UEPB.ESWII.ClinicalStudyPB.controller.dto.VisitaDoParticipanteResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.VisitaReagendamentoRequest;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoNoHistorico;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoVisita;
+import UEPB.ESWII.ClinicalStudyPB.domain.enums.TipoDesfecho;
 
 /**
  * Contrato da Sprint 3 ({@code docs/api/openapi-sprint3.yaml}). Cada PBI acrescenta suas operações ao YAML e
@@ -55,10 +57,15 @@ class ContratoOpenApiSprint3Test {
     private static final Set<String> METODOS = Set.of("get", "post", "put", "delete", "patch");
 
     /**
-     * Quantas operações o YAML tem agora: 5 do agendamento (T74), 1 do histórico (T95) e 2 dos resultados (T88).
-     * Cada PBI só atualiza este número.
+     * Quantas operações o YAML tem agora: 5 do agendamento (T74), 1 do histórico (T95), 2 dos resultados (T88) e 2
+     * do desfecho (T80 e T82: o POST do desfecho e o GET da visita). Cada PBI só atualiza este número.
      */
-    private static final int OPERACOES_ESPERADAS = 8;
+    private static final int OPERACOES_ESPERADAS = 10;
+
+    /** Operações do desfecho da visita (T80 e T82), implementadas na T82. */
+    private static final Set<String> OPERACOES_DESFECHO = Set.of(
+            "POST /api/visitas-agendadas/{visitaAgendadaId}/desfecho",
+            "GET /api/visitas-agendadas/{visitaAgendadaId}");
 
     /** Operações dos resultados das avaliações (T88), implementadas na T90 ({@code ResultadoAtividadeController}). */
     private static final Set<String> OPERACOES_RESULTADOS = Set.of(
@@ -105,9 +112,10 @@ class ContratoOpenApiSprint3Test {
     }
 
     @Test
-    @DisplayName("O contrato da Sprint 3 tem as operações previstas até aqui (agendamento da T74, histórico da T95 e resultados da T88)")
+    @DisplayName("O contrato da Sprint 3 tem as operações previstas até aqui (agendamento da T74, histórico da T95, resultados da T88 e desfecho da T80/T82)")
     void contratoTemAsOperacoesEsperadas() throws Exception {
-        assertThat(operacoesDoContrato()).hasSize(OPERACOES_ESPERADAS).containsAll(OPERACOES_RESULTADOS).contains(
+        assertThat(operacoesDoContrato()).hasSize(OPERACOES_ESPERADAS).containsAll(OPERACOES_RESULTADOS)
+                .containsAll(OPERACOES_DESFECHO).contains(
                 "GET /api/participacoes/{participacaoId}/visitas",
                 "POST /api/participacoes/{participacaoId}/visitas-agendadas",
                 "PUT /api/visitas-agendadas/{visitaAgendadaId}",
@@ -122,6 +130,7 @@ class ContratoOpenApiSprint3Test {
         Set<String> faltandoNaApi = new TreeSet<>(operacoesDoContrato());
         faltandoNaApi.removeIf(operacao -> operacao.endsWith("/historico"));
         faltandoNaApi.removeAll(OPERACOES_RESULTADOS);
+        faltandoNaApi.removeAll(OPERACOES_DESFECHO);
         faltandoNaApi.removeAll(operacoesDaApi());
 
         assertThat(faltandoNaApi).as("operações do contrato que a API não tem").isEmpty();
@@ -247,6 +256,58 @@ class ContratoOpenApiSprint3Test {
         assertThat(respostas).contains("200", "400", "401", "403", "404", "409");
         assertThat(caminhos.get("/api/participacoes/{participacaoId}/visitas-agendadas")
                 .get("post").get("tags").get(0).asText()).isEqualTo("Agendamento");
+    }
+
+    @Test
+    @DisplayName("T82: o desfecho e a consulta da visita do contrato existem na API publicada")
+    void desfechoEConsultaDoContratoExistemNaApi() throws Exception {
+        Set<String> faltandoNaApi = new TreeSet<>(OPERACOES_DESFECHO);
+        faltandoNaApi.removeAll(operacoesDaApi());
+
+        assertThat(faltandoNaApi).as("operações do desfecho que a API não tem").isEmpty();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    @DisplayName("T80: o enum TipoDesfecho do contrato tem os mesmos valores do enum do backend")
+    void tipoDesfechoDoContratoIgualAoDoBackend() throws Exception {
+        List<String> valores = (List<String>) schema("TipoDesfecho").get("enum");
+
+        assertThat(valores).containsExactly(Arrays.stream(TipoDesfecho.values()).map(Enum::name).toArray(String[]::new));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    @DisplayName("T80: DesfechoRequest exige só o tipo, limita texto a 500 caracteres e traz um exemplo por tipo")
+    void desfechoRequestDoContrato() throws Exception {
+        Map<String, Object> request = schema("DesfechoRequest");
+        Map<String, Map<String, Object>> propriedades = (Map<String, Map<String, Object>>) request.get("properties");
+
+        assertThat(propriedades.keySet()).containsExactlyInAnyOrder("tipo", "dataHoraRealizada", "motivo", "observacao");
+        assertThat((List<String>) request.get("required")).containsExactly("tipo");
+        assertThat(propriedades.get("motivo").get("maxLength")).isEqualTo(500);
+        assertThat(propriedades.get("observacao").get("maxLength")).isEqualTo(500);
+
+        Map<String, Map<String, Object>> caminhos = (Map<String, Map<String, Object>>) documento().get("paths");
+        Map<String, Object> post = (Map<String, Object>) caminhos
+                .get("/api/visitas-agendadas/{visitaAgendadaId}/desfecho").get("post");
+        Map<String, Object> exemplos = (Map<String, Object>) ((Map<String, Object>) ((Map<String, Object>)
+                ((Map<String, Object>) post.get("requestBody")).get("content")).get("application/json")).get("examples");
+        assertThat(exemplos.keySet()).containsExactlyInAnyOrder("realizada", "ausente", "cancelada");
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    @DisplayName("T82: DesfechoRequest tem os mesmos campos do DTO, e os campos obrigatórios do contrato existem")
+    void desfechoRequestTemOsCamposDoDto() throws Exception {
+        Set<String> camposDoDto = new TreeSet<>();
+        Arrays.stream(DesfechoRequest.class.getRecordComponents()).forEach(c -> camposDoDto.add(c.getName()));
+
+        Map<String, Object> schema = schema("DesfechoRequest");
+        Set<String> camposDoContrato = new TreeSet<>(((Map<String, Object>) schema.get("properties")).keySet());
+
+        assertThat(camposDoContrato).as("campos do schema DesfechoRequest").isEqualTo(camposDoDto);
+        assertThat(camposDoContrato).containsAll((List<String>) schema.get("required"));
     }
 
     @SuppressWarnings("unchecked")

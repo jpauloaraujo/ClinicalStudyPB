@@ -4,8 +4,10 @@ import type { SituacaoVisita } from '../../../../api/tipos'
 import { useUsuarioLogado } from '../../../../contexts/sessao'
 import { dataHoraParaData, dataHoraParaHora } from '../../../../utils/datas'
 import { useEstudoDetalhe } from '../contexto'
+import { BotaoRegistrarDesfecho } from './BotaoRegistrarDesfecho'
 import { FormularioDataHora } from './FormularioDataHora'
 import { interpretarErroDeAgendamento } from './mensagensAcompanhamento'
+import { rotulosSituacaoVisita } from './situacaoVisita'
 import { EXPLICACAO_ESTUDO_FORA_DE_ESTADO, estudoPermiteAgendar, podeReagendar } from './rotulosVisita'
 import './acompanhamento.css'
 
@@ -19,7 +21,8 @@ import './acompanhamento.css'
  *  - `aoAlterar`: chamado depois de uma ação concluída, para a tela recarregar os dados.
  *
  * Cada botão decide sozinho se aparece, por perfil (useUsuarioLogado) e por situação da visita. Agora há
- * **Reagendar**. A T83 acrescenta **Registrar desfecho** aqui dentro, sem mudar quem usa este componente.
+ * **Reagendar** (T77) e **Registrar desfecho** (T83, componente BotaoRegistrarDesfecho, que decide sozinho quando
+ * aparece). Quem usa este componente não muda para ganhar uma ação nova.
  */
 export type VisitaDasAcoes = {
   visitaAgendadaId: string
@@ -27,7 +30,8 @@ export type VisitaDasAcoes = {
   situacao: SituacaoVisita
   // Data e hora atuais do agendamento (ISO com fuso, como a API devolve)
   dataHora: string
-  // Nome da visita, usado só nos rótulos acessíveis dos botões
+  // Nomes usados nos rótulos dos botões e no diálogo do desfecho
+  participanteNome: string
   visitaNome: string
   janelaInicio?: string
   janelaFim?: string
@@ -46,6 +50,8 @@ export function AcoesDaVisita({ visita, aoAlterar }: AcoesDaVisitaProps) {
   const [enviando, setEnviando] = useState(false)
   const [erroGeral, setErroGeral] = useState<string | null>(null)
   const [erroData, setErroData] = useState<string | null>(null)
+  // Confirmação do desfecho: fica aqui porque o botão desmonta quando a visita deixa de estar agendada
+  const [confirmacaoDesfecho, setConfirmacaoDesfecho] = useState<string | null>(null)
 
   const janela =
     visita.janelaInicio && visita.janelaFim ? { inicio: visita.janelaInicio, fim: visita.janelaFim } : undefined
@@ -76,7 +82,13 @@ export function AcoesDaVisita({ visita, aoAlterar }: AcoesDaVisitaProps) {
   }
 
   // Sem nenhuma ação para este perfil e situação: não desenha nada (o pesquisador e as visitas com desfecho)
-  if (!mostrarReagendar) return null
+  if (!mostrarReagendar) {
+    return confirmacaoDesfecho ? (
+      <p className="alerta alerta--ok" role="status">
+        {confirmacaoDesfecho}
+      </p>
+    ) : null
+  }
 
   return (
     <div className="acoes-visita">
@@ -96,6 +108,22 @@ export function AcoesDaVisita({ visita, aoAlterar }: AcoesDaVisitaProps) {
           {EXPLICACAO_ESTUDO_FORA_DE_ESTADO}
         </span>
       )}
+
+      {/* RF13 (T83): o botão só aparece ao coordenador e à visita AGENDADA; depois de registrar, a tela recarrega */}
+      <BotaoRegistrarDesfecho
+        visita={{
+          id: visita.visitaAgendadaId,
+          visitaNome: visita.visitaNome,
+          participanteNome: visita.participanteNome,
+          dataHora: visita.dataHora,
+          situacao: visita.situacao,
+        }}
+        statusEstudo={estudo.status}
+        aoRegistrar={(atualizada) => {
+          setConfirmacaoDesfecho(`Desfecho registrado: visita ${rotulosSituacaoVisita[atualizada.situacao].toLowerCase()}.`)
+          aoAlterar()
+        }}
+      />
 
       {reagendando && (
         <div

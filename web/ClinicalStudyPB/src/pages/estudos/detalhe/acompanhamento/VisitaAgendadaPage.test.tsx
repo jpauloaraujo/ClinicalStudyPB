@@ -114,13 +114,26 @@ describe('VisitaAgendadaPage (T77)', () => {
     expect(screen.queryByRole('button', { name: /Reagendar/ })).not.toBeInTheDocument()
   })
 
-  it('visita realizada mostra a data real e não oferece Reagendar', async () => {
+  it('visita realizada mostra o desfecho registrado (T83), em leitura, e não oferece Reagendar nem Registrar desfecho', async () => {
     renderizar('va-0')
 
-    const dados = await screen.findByRole('region', { name: 'Dados da visita' })
-    expect(within(dados).getByText('Realizada em')).toBeInTheDocument()
-    expect(within(dados).getByText('26/10/2026 09:10')).toBeInTheDocument()
+    const desfecho = await screen.findByRole('region', { name: 'Desfecho registrado' })
+    expect(within(desfecho).getByText('Realizada em')).toBeInTheDocument()
+    expect(within(desfecho).getByText('26/10/2026 09:10')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Reagendar/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Registrar desfecho' })).not.toBeInTheDocument()
+  })
+
+  it('o coordenador tem Registrar desfecho (ponto de encaixe da T83) na visita agendada e o pesquisador não', async () => {
+    renderizar('va-1')
+    expect(await screen.findByRole('button', { name: 'Registrar desfecho' })).toBeEnabled()
+    expect(screen.queryByRole('region', { name: 'Desfecho registrado' })).not.toBeInTheDocument()
+  })
+
+  it('o pesquisador não tem Registrar desfecho', async () => {
+    renderizar('va-1', 'PESQUISADOR')
+    await screen.findByRole('region', { name: 'Dados da visita' })
+    expect(screen.queryByRole('button', { name: 'Registrar desfecho' })).not.toBeInTheDocument()
   })
 
   it('com o estudo fora de recrutamento e execução o Reagendar fica desabilitado', async () => {

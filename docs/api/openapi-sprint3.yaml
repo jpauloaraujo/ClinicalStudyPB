@@ -1,7 +1,8 @@
 # Contrato OpenAPI da Sprint 3 (RF12 a RF18). Mantido pela equipe: edite-o diretamente quando houver divergência
 # com o código, no mesmo Pull Request. Este arquivo cresce a cada PBI e cada PBI acrescenta só os seus caminhos, para
-# evitar conflito de merge: a T74 trouxe o agendamento (PBI-19), a T95 o histórico do participante e a T88 os
-# resultados das avaliações (PBI-21); o desfecho, a retirada e o app entram nos PBIs seguintes.
+# evitar conflito de merge: a T74 trouxe o agendamento (PBI-19), a T95 o histórico do participante, a T88 os
+# resultados das avaliações (PBI-21) e a T80/T82 o desfecho da visita e sua consulta (PBI-20); a retirada e o app entram
+# nos PBIs seguintes.
 openapi: 3.0.3
 info:
   title: ClinicalStudyPB — contrato da Sprint 3 (RF12 a RF18)
@@ -17,7 +18,7 @@ info:
     **Erros:** formato único `{"erro", "codigo?"}` (ver o schema `Erro`): 400 validação, 401 sem token, 403 perfil
     sem permissão, 404 recurso inexistente, 409 regra de negócio violada, sempre com `codigo`.
 
-    **Perfis:** a escrita do agendamento é só do COORDENADOR e a dos resultados das avaliações é só do PESQUISADOR; a
+    **Perfis:** a escrita do agendamento e do desfecho das visitas é só do COORDENADOR e a dos resultados das avaliações é só do PESQUISADOR; a
     leitura (visitas, agenda, resultados e histórico) é de COORDENADOR e PESQUISADOR.
 
     **Teste de contrato:** `ContratoOpenApiSprint3Test` confere que o YAML e os DTOs do backend têm os mesmos campos.
@@ -31,6 +32,7 @@ tags:
 - name: Agenda
 - name: Histórico do participante
 - name: Resultados das avaliações
+- name: Visitas agendadas
 paths:
   /api/participacoes/{participacaoId}/visitas:
     get:
@@ -107,6 +109,34 @@ paths:
         '409':
           $ref: '#/components/responses/Erro409'
   /api/visitas-agendadas/{visitaAgendadaId}:
+    get:
+      tags:
+      - Visitas agendadas
+      summary: Consultar uma visita agendada
+      operationId: buscarVisitaAgendada
+      description: |-
+        Devolve a visita agendada completa: situação, datas, dados do desfecho (data e hora reais, motivo e
+        observação, quando houver), a janela de datas da visita prevista, quem criou e quem alterou por último, e a
+        `versao`. É a consulta da tela da visita.
+
+        Perfis: COORDENADOR e PESQUISADOR leem; ADMINISTRADOR e PARTICIPANTE recebem 403.
+      parameters:
+      - $ref: '#/components/parameters/VisitaAgendadaId'
+      responses:
+        '200':
+          description: A visita agendada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisitaAgendadaResponse'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
     put:
       tags:
       - Agendamento
@@ -151,6 +181,114 @@ paths:
           $ref: '#/components/responses/Erro404'
         '409':
           $ref: '#/components/responses/Erro409'
+  /api/visitas-agendadas/{visitaAgendadaId}/desfecho:
+    post:
+      tags:
+      - Visitas agendadas
+      summary: Registrar o desfecho de uma visita agendada
+      operationId: registrarDesfechoVisita
+      description: |-
+        Registra, em um **único endpoint**, o desfecho de uma visita que ainda está AGENDADA: `REALIZADA`, `AUSENTE`
+        ou `CANCELADA`. Os três estados são **finais**: depois do desfecho a visita não volta a AGENDADA, não é
+        reagendada e não recebe outro desfecho. O recurso já existe, então a resposta é **200** com a visita atualizada.
+
+        Dados de cada tipo:
+        - `REALIZADA`: `dataHoraRealizada` (local, sem fuso; omitida assume o instante atual) **não pode ser futura**;
+          `observacao` é opcional.
+        - `AUSENTE`: `observacao` é opcional; não guarda data real.
+        - `CANCELADA`: `motivo` é **obrigatório**, com 5 a 500 caracteres depois do `trim`; `observacao` é opcional.
+
+        Campos que não pertencem ao tipo escolhido são ignorados, sem erro. `motivo` e `observacao` têm no máximo
+        500 caracteres.
+
+        Regras: o estudo precisa estar em RECRUTAMENTO ou EXECUCAO; `REALIZADA` e `AUSENTE` só valem quando o **dia**
+        agendado não é futuro (o dia de hoje é permitido), enquanto `CANCELADA` vale a qualquer momento antes do
+        desfecho. A ordem das verificações é: visita existe (404), estudo, transição, dados, data agendada.
+
+        Códigos 400: VALIDACAO_CAMPOS (tipo ausente), CORPO_INVALIDO (JSON ou tipo inexistente), DATA_REALIZACAO_FUTURA,
+        MOTIVO_OBRIGATORIO.
+
+        Códigos 409: TRANSICAO_VISITA_INVALIDA (a visita já tem desfecho), ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO,
+        VISITA_AINDA_NAO_OCORREU, VISITA_ALTERADA_CONCORRENTEMENTE (duas requisições simultâneas: uma vence e a
+        outra recebe este erro; recarregue a visita).
+
+        Perfis: somente COORDENADOR; PESQUISADOR, PARTICIPANTE e ADMINISTRADOR recebem 403.
+      parameters:
+      - $ref: '#/components/parameters/VisitaAgendadaId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DesfechoRequest'
+            examples:
+              realizada:
+                summary: Visita realizada
+                value:
+                  tipo: REALIZADA
+                  dataHoraRealizada: 2026-11-19T09:40
+                  observacao: Participante chegou no horário
+              ausente:
+                summary: Participante ausente
+                value:
+                  tipo: AUSENTE
+                  observacao: Não atendeu as ligações
+              cancelada:
+                summary: Visita cancelada
+                value:
+                  tipo: CANCELADA
+                  motivo: Participante em viagem
+      responses:
+        '200':
+          description: Desfecho registrado; devolve a visita atualizada (situação final, autor e data da alteração, versão).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisitaAgendadaResponse'
+        '400':
+          description: |-
+            Dado inválido. `VALIDACAO_CAMPOS` (tipo ausente ou texto acima de 500 caracteres), `CORPO_INVALIDO` (JSON
+            malformado ou tipo inexistente), `DATA_REALIZACAO_FUTURA` e `MOTIVO_OBRIGATORIO`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+              examples:
+                dataRealizacaoFutura:
+                  value:
+                    erro: A data e a hora em que a visita foi realizada não podem estar no futuro
+                    codigo: DATA_REALIZACAO_FUTURA
+                motivoObrigatorio:
+                  value:
+                    erro: Informe o motivo do cancelamento, com ao menos 5 caracteres
+                    codigo: MOTIVO_OBRIGATORIO
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          description: |-
+            Regra de negócio violada: `TRANSICAO_VISITA_INVALIDA`, `ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO`,
+            `VISITA_AINDA_NAO_OCORREU` ou `VISITA_ALTERADA_CONCORRENTEMENTE`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+              examples:
+                transicaoInvalida:
+                  value:
+                    erro: A visita já foi registrada como realizada e não pode mais ser alterada
+                    codigo: TRANSICAO_VISITA_INVALIDA
+                visitaAindaNaoOcorreu:
+                  value:
+                    erro: A visita está agendada para o futuro (19/11/2026); até lá ela só pode ser cancelada
+                    codigo: VISITA_AINDA_NAO_OCORREU
+                alteradaConcorrentemente:
+                  value:
+                    erro: A visita foi alterada por outra requisição; recarregue e tente de novo
+                    codigo: VISITA_ALTERADA_CONCORRENTEMENTE
   /api/estudos/{estudoId}/agenda:
     get:
       tags:
@@ -644,6 +782,39 @@ components:
       - AUSENTE
       - CANCELADA
       description: Situação de uma visita agendada. A visita nasce AGENDADA; REALIZADA, AUSENTE e CANCELADA são finais.
+    TipoDesfecho:
+      type: string
+      enum:
+      - REALIZADA
+      - AUSENTE
+      - CANCELADA
+      description: Desfecho que o coordenador registra para uma visita agendada. Cada tipo leva a uma situação final de mesmo nome.
+    DesfechoRequest:
+      type: object
+      description: Desfecho de uma visita agendada. Os campos que não pertencem ao `tipo` escolhido são ignorados.
+      properties:
+        tipo:
+          $ref: '#/components/schemas/TipoDesfecho'
+        dataHoraRealizada:
+          type: string
+          format: date-time
+          nullable: true
+          description: Só para `REALIZADA`. Data e hora reais **locais, sem fuso**; não pode ser futura; omitida assume o instante atual.
+          example: 2026-11-19T09:40
+        motivo:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: Só para `CANCELADA`, onde é **obrigatório**, com 5 ou mais caracteres depois do `trim`.
+          example: Participante em viagem
+        observacao:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: Opcional nos três tipos.
+          example: Participante chegou no horário
+      required:
+      - tipo
     VisitaDoParticipanteResponse:
       type: object
       description: Uma visita prevista do estudo vista pelo participante, com a janela de datas e o agendamento (nulo se ainda não agendada).

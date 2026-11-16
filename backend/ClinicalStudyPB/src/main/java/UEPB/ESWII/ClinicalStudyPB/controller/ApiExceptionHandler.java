@@ -3,6 +3,7 @@ package UEPB.ESWII.ClinicalStudyPB.controller;
 import java.util.Map;
 import java.util.List;
 
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -51,6 +52,14 @@ public class ApiExceptionHandler {
     @ExceptionHandler(ConflitoRegraException.class)
     public ResponseEntity<Map<String, Object>> tratarConflito(ConflitoRegraException ex) {
         return resposta(HttpStatus.CONFLICT, ex.getCodigo(), ex.getMessage(), List.of());
+    }
+
+    // Versão otimista violada fora do método do serviço (por exemplo, no commit): conflito, nunca 500. Hoje só a
+    // visita agendada tem @Version (T73); se outra entidade ganhar versão, este tratamento deve distinguir o código.
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<Map<String, Object>> tratarVersaoConcorrente(OptimisticLockingFailureException ex) {
+        return resposta(HttpStatus.CONFLICT, "VISITA_ALTERADA_CONCORRENTEMENTE",
+                "A visita foi alterada por outra requisição; recarregue e tente de novo", List.of());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

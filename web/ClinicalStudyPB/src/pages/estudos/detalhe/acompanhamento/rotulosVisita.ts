@@ -1,18 +1,8 @@
 import type { SituacaoVisita } from '../../../../api/tipos'
 import type { StatusEstudo } from '../../../../types/estudo'
 
-// Rótulos de texto das situações da visita agendada. A T83 troca o texto pelo SeloSituacaoVisita (rótulo + cor).
+// Os rótulos e o selo das situações da visita ficam em situacaoVisita.ts e SeloSituacaoVisita.tsx (T83)
 export const situacoesVisita: SituacaoVisita[] = ['AGENDADA', 'REALIZADA', 'AUSENTE', 'CANCELADA']
-
-export const rotulosSituacaoVisita: Record<SituacaoVisita, string> = {
-  AGENDADA: 'Agendada',
-  REALIZADA: 'Realizada',
-  AUSENTE: 'Ausente',
-  CANCELADA: 'Cancelada',
-}
-
-// Visita prevista que ainda não tem agendamento
-export const ROTULO_NAO_AGENDADA = 'Não agendada'
 
 // Só as visitas ainda AGENDADAS aceitam alteração de data; as demais já têm desfecho
 export function podeReagendar(situacao: SituacaoVisita): boolean {

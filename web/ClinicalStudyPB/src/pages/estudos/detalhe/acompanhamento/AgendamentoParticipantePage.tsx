@@ -8,13 +8,8 @@ import { dataHoraParaData, dataHoraParaHora, formatarData, formatarDataHora, for
 import { useEstudoDetalhe } from '../contexto'
 import { FormularioDataHora } from './FormularioDataHora'
 import { interpretarErroDeAgendamento } from './mensagensAcompanhamento'
-import {
-  EXPLICACAO_ESTUDO_FORA_DE_ESTADO,
-  ROTULO_NAO_AGENDADA,
-  estudoPermiteAgendar,
-  podeReagendar,
-  rotulosSituacaoVisita,
-} from './rotulosVisita'
+import { EXPLICACAO_ESTUDO_FORA_DE_ESTADO, estudoPermiteAgendar, podeReagendar } from './rotulosVisita'
+import { SeloSituacaoVisita } from './SeloSituacaoVisita'
 import '../recrutamento.css'
 import './acompanhamento.css'
 
@@ -162,9 +157,7 @@ export function AgendamentoParticipantePage() {
                       <td>{formatarJanela(visita.janelaInicio, visita.janelaFim)}</td>
                       <td>{formatarData(visita.dataSugerida)}</td>
                       <td>
-                        <span className="etiqueta">
-                          {agendamento ? rotulosSituacaoVisita[agendamento.situacao] : ROTULO_NAO_AGENDADA}
-                        </span>
+                        <SeloSituacaoVisita situacao={agendamento ? agendamento.situacao : 'NAO_AGENDADA'} />
                       </td>
                       <td>
                         {agendamento ? formatarDataHora(agendamento.dataHora) : '—'}

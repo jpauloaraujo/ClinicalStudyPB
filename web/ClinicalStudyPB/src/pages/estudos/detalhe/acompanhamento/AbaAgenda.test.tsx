@@ -2,6 +2,8 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { agendamentoApi } from '../../../../api/agendamento'
+import { visitasAgendadasApi } from '../../../../api/visitasAgendadas'
+import { visitaAgendadaBase } from '../../../../test/visitaAgendada'
 import type { AgendaItemResponse, PaginaAgenda } from '../../../../api/tipos'
 import { erroHttp, renderizarAba } from '../../../../test/ambiente'
 import type { PerfilUsuario } from '../../../../types/usuario'
@@ -18,7 +20,12 @@ vi.mock('../../../../api/agendamento', () => ({
   },
 }))
 
+vi.mock('../../../../api/visitasAgendadas', () => ({
+  visitasAgendadasApi: { buscar: vi.fn(), registrarDesfecho: vi.fn() },
+}))
+
 const agenda = vi.mocked(agendamentoApi.agenda)
+const registrarDesfecho = vi.mocked(visitasAgendadasApi.registrarDesfecho)
 
 function pagina(conteudo: AgendaItemResponse[], extra: Partial<PaginaAgenda> = {}): PaginaAgenda {
   return { conteudo, pagina: 0, tamanho: 20, totalElementos: conteudo.length, totalPaginas: conteudo.length ? 1 : 0, ...extra }
@@ -146,6 +153,24 @@ describe('AbaAgenda (T77)', () => {
     await userEvent.selectOptions(screen.getByLabelText('Situação'), 'CANCELADA')
 
     expect(await screen.findByText('Nenhuma visita no período.')).toBeInTheDocument()
+  })
+
+  it('Registrar desfecho (T83) pela linha: atualiza a agenda, troca o selo e mantém a confirmação', async () => {
+    registrarDesfecho.mockResolvedValue({ ...visitaAgendadaBase, situacao: 'AUSENTE' })
+    renderizar()
+    const linha = await screen.findByRole('row', { name: /CAND-001/ })
+    await userEvent.click(within(linha).getByRole('button', { name: 'Registrar desfecho' }))
+
+    // Depois do desfecho a agenda é recarregada e a visita já vem como AUSENTE
+    agenda.mockResolvedValue(pagina([{ ...primeiro, situacao: 'AUSENTE' }, segundo]))
+    await userEvent.click(screen.getByRole('radio', { name: 'Ausente' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
+
+    const atualizada = await screen.findByRole('row', { name: /CAND-001/ })
+    expect(within(atualizada).getByText('Ausente')).toHaveClass('selo')
+    expect(within(atualizada).queryByRole('button')).not.toBeInTheDocument()
+    expect(within(atualizada).getByRole('status')).toHaveTextContent('Desfecho registrado: visita ausente.')
+    expect(registrarDesfecho).toHaveBeenCalledWith(primeiro.visitaAgendadaId, expect.objectContaining({ tipo: 'AUSENTE' }))
   })
 
   it('mostra o erro do servidor e permite tentar de novo', async () => {
