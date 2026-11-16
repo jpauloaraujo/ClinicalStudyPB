@@ -32,6 +32,8 @@ import UEPB.ESWII.ClinicalStudyPB.domain.regra.JanelaDeAgendamento;
 import UEPB.ESWII.ClinicalStudyPB.repository.VisitaAgendadaRepository;
 import UEPB.ESWII.ClinicalStudyPB.service.AgendamentoVisitaService;
 import UEPB.ESWII.ClinicalStudyPB.service.ConflitoRegraException;
+import UEPB.ESWII.ClinicalStudyPB.service.RecursoNaoEncontradoException;
+import UEPB.ESWII.ClinicalStudyPB.service.ValidacaoRegraException;
 
 class AgendamentoVisitaServiceTest {
 
@@ -49,6 +51,7 @@ class AgendamentoVisitaServiceTest {
     @BeforeEach
     void preparar() {
         repository = mock(VisitaAgendadaRepository.class);
+        when(repository.saveAndFlush(any(VisitaAgendada.class))).thenAnswer(invocacao -> invocacao.getArgument(0));
         when(repository.save(any(VisitaAgendada.class))).thenAnswer(invocacao -> invocacao.getArgument(0));
         service = new AgendamentoVisitaService(repository, RELOGIO);
 
@@ -86,7 +89,7 @@ class AgendamentoVisitaServiceTest {
     void validaEstadoDoEstudo() {
         participacao.getEstudo().setStatus(StatusEstudo.ENCERRADO);
 
-        esperaConflito("ESTUDO_INVALIDO",
+        esperaConflito("ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO",
                 () -> service.agendarVisita(participacao, visita, HOJE.atStartOfDay(), usuario));
     }
 
@@ -103,14 +106,14 @@ class AgendamentoVisitaServiceTest {
     void validaEstudoDaVisita() {
         visita.setEstudo(estudo(StatusEstudo.RECRUTAMENTO));
 
-        esperaConflito("VISITA_INCOMPATIVEL",
-                () -> service.agendarVisita(participacao, visita, HOJE.atStartOfDay(), usuario));
+        assertThatThrownBy(() -> service.agendarVisita(participacao, visita, HOJE.atStartOfDay(), usuario))
+                .isInstanceOf(RecursoNaoEncontradoException.class);
     }
 
     @Test
     @DisplayName("Rejeita datas passadas antes de verificar a janela")
     void validaDataPassadaAntesDaJanela() {
-        esperaConflito("DATA_PASSADA",
+        esperaValidacao("DATA_NO_PASSADO",
                 () -> service.agendarVisita(participacao, visita, HOJE.minusDays(1).atStartOfDay(), usuario));
     }
 
@@ -136,7 +139,7 @@ class AgendamentoVisitaServiceTest {
         when(repository.existsByParticipacaoIdAndVisitaPlanejadaId(
                 participacao.getId(), visita.getId())).thenReturn(true);
 
-        esperaConflito("AGENDAMENTO_DUPLICADO",
+        esperaConflito("VISITA_JA_AGENDADA",
                 () -> service.agendarVisita(participacao, visita, HOJE.atStartOfDay(), usuario));
     }
 
@@ -166,7 +169,7 @@ class AgendamentoVisitaServiceTest {
 
         esperaConflito("DATA_FORA_DA_JANELA",
                 () -> service.reagendarVisita(agendada, HOJE.plusDays(3).atStartOfDay(), usuario));
-        esperaConflito("REAGENDAMENTO_INVALIDO",
+        esperaConflito("VISITA_NAO_ESTA_AGENDADA",
                 () -> service.reagendarVisita(visitaAgendada(SituacaoVisita.REALIZADA), HOJE.atStartOfDay(), usuario));
     }
 
@@ -199,6 +202,11 @@ class AgendamentoVisitaServiceTest {
 
     private static void esperaConflito(String codigo, ThrowingCallable acao) {
         assertThatThrownBy(acao).isInstanceOfSatisfying(ConflitoRegraException.class,
+                erro -> assertThat(erro.getCodigo()).isEqualTo(codigo));
+    }
+
+    private static void esperaValidacao(String codigo, ThrowingCallable acao) {
+        assertThatThrownBy(acao).isInstanceOfSatisfying(ValidacaoRegraException.class,
                 erro -> assertThat(erro.getCodigo()).isEqualTo(codigo));
     }
 }

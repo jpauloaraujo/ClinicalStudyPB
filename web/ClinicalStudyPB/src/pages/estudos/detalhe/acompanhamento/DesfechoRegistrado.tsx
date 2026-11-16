@@ -1,11 +1,7 @@
 import type { VisitaAgendadaResponse } from '../../../../api/tipos'
+import { formatarDataHora } from '../../../../utils/datas'
 import { SeloSituacaoVisita } from './SeloSituacaoVisita'
 import './acompanhamento.css'
-
-function formatarDataHora(valor: string): string {
-  const data = new Date(valor)
-  return Number.isNaN(data.getTime()) ? valor : data.toLocaleString('pt-BR')
-}
 
 // O que foi registrado em uma visita com desfecho (RF13, T83): somente leitura, sem botão de escrita. Para a
 // visita ainda AGENDADA não mostra nada: ela é tratada pelas ações da visita.

@@ -36,7 +36,7 @@ public class VisitaAgendadaService {
         VisitaAgendada visita = visitaRepository.findById(visitaAgendadaId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         "Visita agendada não encontrada: " + visitaAgendadaId));
-        return VisitaAgendadaResponse.de(visita, clock.getZone());
+        return VisitaAgendadaResponse.de(visita, clock);
     }
 
     @Transactional
@@ -44,6 +44,6 @@ public class VisitaAgendadaService {
         ComandoDesfecho comando = new ComandoDesfecho(dados.tipo(), dados.dataHoraRealizada(), dados.motivo(),
                 dados.observacao());
         VisitaAgendada visita = desfechoService.registrar(visitaAgendadaId, comando, usuarioId);
-        return VisitaAgendadaResponse.de(visita, clock.getZone());
+        return VisitaAgendadaResponse.de(visita, clock);
     }
 }

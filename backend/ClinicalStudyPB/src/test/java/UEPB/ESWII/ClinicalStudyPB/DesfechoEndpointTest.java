@@ -17,8 +17,10 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -52,6 +54,10 @@ class DesfechoEndpointTest {
     @Autowired
     private Clock relogio;
 
+    // O teste é @Transactional: o flush grava a participação antes do INSERT por SQL da visita (ver CenarioDesfecho)
+    @PersistenceContext
+    private EntityManager em;
+
     private String pesquisador;
     private String coordenador;
     private EstudoComVisita estudo;
@@ -70,7 +76,7 @@ class DesfechoEndpointTest {
     }
 
     private String novaVisita(LocalDateTime dataHoraAgendada) throws Exception {
-        return visitaAgendada(mvc, jdbc, coordenador, estudo, dataHoraAgendada);
+        return visitaAgendada(mvc, jdbc, em, coordenador, estudo, dataHoraAgendada);
     }
 
     private String url(String visitaId) {
@@ -325,7 +331,6 @@ class DesfechoEndpointTest {
     }
 
     @Test
-    @Disabled("T76: ligar quando o PUT de reagendamento existir no backend (RQ-T85-09)")
     @DisplayName("Depois do desfecho, o reagendamento responde 409 VISITA_NAO_ESTA_AGENDADA")
     void reagendarDepoisDoDesfecho() throws Exception {
         registrarDesfecho(mvc, coordenador, visita, "{\"tipo\":\"AUSENTE\"}").andExpect(status().isOk());

@@ -12,6 +12,8 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import jakarta.persistence.EntityManager;
+
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -59,8 +61,23 @@ public final class CenarioDesfecho {
      */
     public static String visitaAgendada(MockMvc mvc, JdbcTemplate jdbc, String tokenCoordenador, EstudoComVisita estudo,
             LocalDateTime dataHoraAgendada) throws Exception {
+        return visitaAgendada(mvc, jdbc, null, tokenCoordenador, estudo, dataHoraAgendada);
+    }
+
+    /**
+     * O mesmo que o método acima, para testes que rodam <b>dentro de uma transação</b> ({@code @Transactional}): o
+     * MockMvc usa a transação do teste, então o JPA só guarda a participação em memória e não a grava antes do
+     * {@code INSERT} por SQL da visita, que o banco recusa pela chave estrangeira. Passando o {@code EntityManager}
+     * do teste, a participação é gravada (flush) antes. Testes sem transação passam {@code null} (ou usam o método
+     * acima), pois lá cada requisição já grava de verdade.
+     */
+    public static String visitaAgendada(MockMvc mvc, JdbcTemplate jdbc, EntityManager entityManager,
+            String tokenCoordenador, EstudoComVisita estudo, LocalDateTime dataHoraAgendada) throws Exception {
         String participacao = participanteIncluido(mvc, tokenCoordenador, estudo.estudoId(),
                 "Candidato Desfecho " + UUID.randomUUID().toString().substring(0, 8));
+        if (entityManager != null) {
+            entityManager.flush();
+        }
         return agendada(jdbc, participacao, estudo.visitaPlanejadaId(), dataHoraAgendada);
     }
 

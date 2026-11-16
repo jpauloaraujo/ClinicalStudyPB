@@ -14,7 +14,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -28,9 +27,18 @@ import org.yaml.snakeyaml.Yaml;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.AtividadeComResultadoResponse;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.AgendaItemResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.DesfechoRequest;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.ParticipanteAgendaResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.HistoricoParticipanteResponse;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.ResultadoAtividadeResponse;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.ResultadoRequest;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.ResultadosDaVisitaResponse;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.VisitaAgendadaRequest;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.VisitaAgendadaResponse;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.VisitaDoParticipanteResponse;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.VisitaReagendamentoRequest;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoNoHistorico;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoVisita;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.TipoDesfecho;
@@ -59,7 +67,7 @@ class ContratoOpenApiSprint3Test {
             "POST /api/visitas-agendadas/{visitaAgendadaId}/desfecho",
             "GET /api/visitas-agendadas/{visitaAgendadaId}");
 
-    /** Operações dos resultados das avaliações (T88), implementadas na T90. */
+    /** Operações dos resultados das avaliações (T88), implementadas na T90 ({@code ResultadoAtividadeController}). */
     private static final Set<String> OPERACOES_RESULTADOS = Set.of(
             "GET /api/visitas-agendadas/{visitaAgendadaId}/resultados",
             "PUT /api/visitas-agendadas/{visitaAgendadaId}/resultados/{acaoId}");
@@ -117,7 +125,6 @@ class ContratoOpenApiSprint3Test {
     }
 
     @Test
-    @Disabled("T76: ligar quando os endpoints do agendamento existirem no backend")
     @DisplayName("Todo endpoint do agendamento do contrato existe na API publicada")
     void contratoNaoPrometeEndpointInexistente() throws Exception {
         Set<String> faltandoNaApi = new TreeSet<>(operacoesDoContrato());
@@ -130,8 +137,7 @@ class ContratoOpenApiSprint3Test {
     }
 
     @Test
-    @Disabled("T90: ligar quando os endpoints dos resultados existirem no backend")
-    @DisplayName("Os endpoints dos resultados do contrato existem na API publicada")
+    @DisplayName("T90: os endpoints dos resultados do contrato existem na API publicada")
     void resultadosDoContratoExistemNaApi() throws Exception {
         Set<String> faltandoNaApi = new TreeSet<>(OPERACOES_RESULTADOS);
         faltandoNaApi.removeAll(operacoesDaApi());
@@ -213,6 +219,45 @@ class ContratoOpenApiSprint3Test {
         assertThat(valores).containsExactly(Arrays.stream(SituacaoVisita.values()).map(Enum::name).toArray(String[]::new));
     }
 
+    @ParameterizedTest(name = "T76: o schema {0} tem os mesmos campos do DTO")
+    @ValueSource(strings = {"VisitaDoParticipanteResponse", "VisitaAgendadaRequest", "VisitaReagendamentoRequest",
+            "VisitaAgendadaResponse", "AgendaItemResponse", "ParticipanteAgendaResponse"})
+    void schemaDoAgendamentoTemOsCamposDoDto(String nome) throws Exception {
+        Class<?> dto = switch (nome) {
+            case "VisitaDoParticipanteResponse" -> VisitaDoParticipanteResponse.class;
+            case "VisitaAgendadaRequest" -> VisitaAgendadaRequest.class;
+            case "VisitaReagendamentoRequest" -> VisitaReagendamentoRequest.class;
+            case "VisitaAgendadaResponse" -> VisitaAgendadaResponse.class;
+            case "AgendaItemResponse" -> AgendaItemResponse.class;
+            default -> ParticipanteAgendaResponse.class;
+        };
+        Set<String> camposDoDto = new TreeSet<>();
+        Arrays.stream(dto.getRecordComponents()).forEach(c -> camposDoDto.add(c.getName()));
+        Map<String, Object> schema = schema(nome);
+        Set<String> camposDoContrato = new TreeSet<>(((Map<String, Object>) schema.get("properties")).keySet());
+
+        assertThat(camposDoContrato).as("campos do schema " + nome).isEqualTo(camposDoDto);
+    }
+
+    @Test
+    @DisplayName("T76: o Swagger documenta as operações e parâmetros do contrato de agenda")
+    void swaggerDocumentaPaginacaoFiltrosETags() throws Exception {
+        String json = mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode caminhos = new ObjectMapper().readTree(json).get("paths");
+        JsonNode agenda = caminhos.get("/api/estudos/{estudoId}/agenda").get("get");
+        Set<String> parametros = new TreeSet<>();
+        agenda.get("parameters").forEach(parametro -> parametros.add(parametro.get("name").asText()));
+        Set<String> respostas = new TreeSet<>();
+        agenda.get("responses").fieldNames().forEachRemaining(respostas::add);
+
+        assertThat(agenda.get("tags").get(0).asText()).isEqualTo("Agenda");
+        assertThat(parametros).contains("de", "ate", "situacao", "pagina", "tamanho");
+        assertThat(respostas).contains("200", "400", "401", "403", "404", "409");
+        assertThat(caminhos.get("/api/participacoes/{participacaoId}/visitas-agendadas")
+                .get("post").get("tags").get(0).asText()).isEqualTo("Agendamento");
+    }
+
     @Test
     @DisplayName("T82: o desfecho e a consulta da visita do contrato existem na API publicada")
     void desfechoEConsultaDoContratoExistemNaApi() throws Exception {
@@ -252,17 +297,16 @@ class ContratoOpenApiSprint3Test {
     }
 
     @SuppressWarnings("unchecked")
-    @ParameterizedTest(name = "T82: o schema {0} tem os mesmos campos do DTO")
-    @ValueSource(strings = {"DesfechoRequest", "VisitaAgendadaResponse"})
-    void schemaDoDesfechoTemOsCamposDoDto(String nome) throws Exception {
-        Class<?> dto = nome.equals("DesfechoRequest") ? DesfechoRequest.class : VisitaAgendadaResponse.class;
+    @Test
+    @DisplayName("T82: DesfechoRequest tem os mesmos campos do DTO, e os campos obrigatórios do contrato existem")
+    void desfechoRequestTemOsCamposDoDto() throws Exception {
         Set<String> camposDoDto = new TreeSet<>();
-        Arrays.stream(dto.getRecordComponents()).forEach(c -> camposDoDto.add(c.getName()));
+        Arrays.stream(DesfechoRequest.class.getRecordComponents()).forEach(c -> camposDoDto.add(c.getName()));
 
-        Map<String, Object> schema = schema(nome);
+        Map<String, Object> schema = schema("DesfechoRequest");
         Set<String> camposDoContrato = new TreeSet<>(((Map<String, Object>) schema.get("properties")).keySet());
 
-        assertThat(camposDoContrato).as("campos do schema " + nome).isEqualTo(camposDoDto);
+        assertThat(camposDoContrato).as("campos do schema DesfechoRequest").isEqualTo(camposDoDto);
         assertThat(camposDoContrato).containsAll((List<String>) schema.get("required"));
     }
 
@@ -336,5 +380,39 @@ class ContratoOpenApiSprint3Test {
                 .map(Object::toString).collect(java.util.stream.Collectors.toSet());
 
         assertThat(respostas).contains("200", "201");
+    }
+
+    @SuppressWarnings("unchecked")
+    @ParameterizedTest(name = "T90: o schema {0} tem os mesmos campos do DTO do backend")
+    @ValueSource(strings = {"ResultadosDaVisitaResponse", "AtividadeComResultado", "ResultadoAtividadeResponse",
+            "ResultadoRequest"})
+    void schemaDosResultadosTemOsCamposDoDto(String nome) throws Exception {
+        Class<?> dto = switch (nome) {
+            case "ResultadosDaVisitaResponse" -> ResultadosDaVisitaResponse.class;
+            case "AtividadeComResultado" -> AtividadeComResultadoResponse.class;
+            case "ResultadoAtividadeResponse" -> ResultadoAtividadeResponse.class;
+            default -> ResultadoRequest.class;
+        };
+        Set<String> camposDoDto = new TreeSet<>();
+        Arrays.stream(dto.getRecordComponents()).forEach(c -> camposDoDto.add(c.getName()));
+
+        Set<String> camposDoContrato = new TreeSet<>(((Map<String, Object>) schema(nome).get("properties")).keySet());
+
+        assertThat(camposDoContrato).as("campos do schema " + nome).isEqualTo(camposDoDto);
+    }
+
+    @Test
+    @DisplayName("T90: o Swagger publica as operações dos resultados com a tag do contrato")
+    void swaggerPublicaOsResultadosComATagDoContrato() throws Exception {
+        String json = mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode caminhos = new ObjectMapper().readTree(json).get("paths");
+
+        JsonNode consulta = caminhos.get("/api/visitas-agendadas/{visitaAgendadaId}/resultados").get("get");
+        JsonNode registro = caminhos.get("/api/visitas-agendadas/{visitaAgendadaId}/resultados/{acaoId}").get("put");
+        assertThat(consulta.get("tags").get(0).asText()).isEqualTo("Resultados das avaliações");
+        assertThat(registro.get("tags").get(0).asText()).isEqualTo("Resultados das avaliações");
+        assertThat(registro.get("responses").has("200")).isTrue();
+        assertThat(registro.get("responses").has("201")).isTrue();
     }
 }
