@@ -2,6 +2,7 @@ package UEPB.ESWII.ClinicalStudyPB.service;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,10 @@ import UEPB.ESWII.ClinicalStudyPB.repository.VisitaPlanejadaRepository;
 @Service
 @Transactional(readOnly = true)
 public class AgendaService {
+
+    /** Limites usados quando 'de'/'ate' não são informados (a consulta não aceita parâmetro nulo no PostgreSQL). */
+    private static final LocalDateTime INICIO_SEM_FILTRO = LocalDate.of(1900, 1, 1).atStartOfDay();
+    private static final LocalDateTime FIM_SEM_FILTRO = LocalDate.of(2999, 12, 31).atTime(LocalTime.MAX);
 
     private final EstudoRepository estudos;
     private final ParticipacaoRepository participacoes;
@@ -58,9 +63,9 @@ public class AgendaService {
                 Sort.by(Sort.Order.asc("dataHoraAgendada"), Sort.Order.asc("id")));
         Page<VisitaAgendada> resultado = visitasAgendadas.buscarAgenda(
                 estudoId,
-                de == null ? null : de.atStartOfDay(),
-                ate == null ? null : ate.atTime(LocalTime.MAX),
-                situacao,
+                de == null ? INICIO_SEM_FILTRO : de.atStartOfDay(),
+                ate == null ? FIM_SEM_FILTRO : ate.atTime(LocalTime.MAX),
+                situacao == null ? List.of(SituacaoVisita.values()) : List.of(situacao),
                 paginacao);
         return PaginaResponse.de(resultado, visita -> AgendaItemResponse.de(visita, clock));
     }

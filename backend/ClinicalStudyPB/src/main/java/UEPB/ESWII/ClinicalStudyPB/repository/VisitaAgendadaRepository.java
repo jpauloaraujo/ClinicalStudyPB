@@ -1,5 +1,6 @@
 package UEPB.ESWII.ClinicalStudyPB.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -43,20 +44,24 @@ public interface VisitaAgendadaRepository extends JpaRepository<VisitaAgendada, 
             join fetch va.participacao p
             join fetch p.candidato
             where p.estudo.id = :estudoId
-              and (:de is null or va.dataHoraAgendada >= :de)
-              and (:ate is null or va.dataHoraAgendada <= :ate)
-              and (:situacao is null or va.situacao = :situacao)
+              and va.dataHoraAgendada >= :de
+              and va.dataHoraAgendada <= :ate
+              and va.situacao in :situacoes
             """,
             countQuery = """
                     select count(va) from VisitaAgendada va
                     where va.participacao.estudo.id = :estudoId
-                      and (:de is null or va.dataHoraAgendada >= :de)
-                      and (:ate is null or va.dataHoraAgendada <= :ate)
-                      and (:situacao is null or va.situacao = :situacao)
+                      and va.dataHoraAgendada >= :de
+                      and va.dataHoraAgendada <= :ate
+                      and va.situacao in :situacoes
                     """)
+    /**
+     * Nenhum parâmetro pode ser nulo: o PostgreSQL não infere o tipo de {@code ? is null}. Quem chama passa um
+     * intervalo amplo no lugar de "sem filtro de data" e a lista de todas as situações no lugar de "sem filtro".
+     */
     Page<VisitaAgendada> buscarAgenda(@Param("estudoId") UUID estudoId,
             @Param("de") LocalDateTime de, @Param("ate") LocalDateTime ate,
-            @Param("situacao") SituacaoVisita situacao, Pageable pageable);
+            @Param("situacoes") Collection<SituacaoVisita> situacoes, Pageable pageable);
 
     @Query("""
             select va.participacao.id as participacaoId, count(va.id) as total

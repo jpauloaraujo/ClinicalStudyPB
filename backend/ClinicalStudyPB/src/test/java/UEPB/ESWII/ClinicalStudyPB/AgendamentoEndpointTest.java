@@ -143,6 +143,11 @@ class AgendamentoEndpointTest {
                 .andExpect(jsonPath("$.totalElementos").value(1))
                 .andExpect(jsonPath("$.totalPaginas").value(1))
                 .andExpect(jsonPath("$.conteudo[0].situacao").value("AGENDADA"));
+
+        // Sem nenhum filtro (de, ate e situacao ausentes): todas as visitas do estudo, sem parâmetro nulo no SQL
+        mvc.perform(get("/api/estudos/{id}/agenda", ESTUDO).header("Authorization", pesquisador))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElementos").value(3));
     }
 
     @Test
