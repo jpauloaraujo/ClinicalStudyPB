@@ -406,24 +406,41 @@ Meta mínima: **80% de cobertura de linhas do código de negócio do backend**, 
 
 ### Resumo dos testes por sprint
 
-Última execução em 13/11/2026, no ramo `develop` (Sprint 3 em andamento). O detalhe por classe, a cobertura, a rastreabilidade RF × testes e os riscos estão no [relatório de testes das Sprints 1 a 3](docs/testes/relatorio-de-testes-sprints-1-a-3.md).
+Última execução em **16/11/2026**, no ramo `develop` (commit `3257595`, Sprint 3 em andamento). O detalhe por classe (execução de 13/11), a cobertura, a rastreabilidade RF × testes e os riscos estão no [relatório de testes das Sprints 1 a 3](docs/testes/relatorio-de-testes-sprints-1-a-3.md).
 
-| Suíte | Sprint 1 | Sprint 2 | Sprint 3 (em andamento) | Total | Falhas |
-|---|---|---|---|---|---|
-| Backend (JUnit) | 72 | 362 | 44 (2 ignorados de propósito) | **478** | 0 |
-| Web (Vitest) | 9 | 124 | 0 | **133** | 0 |
-| E2E (Playwright) | 9 | 20 | 0 | **29** | 0 |
-| Mobile | 0 | 0 | 0 (previstos na Sprint 3) | **0** | — |
-| **Total** | **90** | **506** | **44** | **640** | **0** |
+| Suíte | Em 13/11 | Em 16/11 | Falhas |
+|---|---|---|---|
+| Backend (JUnit) | 478 | **672** | 0 |
+| Web (Vitest) | 133 | **257** | 0 |
+| E2E (Playwright) | 29 | **29** (listados; não executados nesta rodada) | — |
+| Mobile | 0 | **0** (previstos na Sprint 3) | — |
+| **Total** | **640** | **958** | **0** |
 
 | Indicador | Valor | Meta |
 |---|---|---|
-| Cobertura de linhas do código de negócio (backend) | **99,2%** (621 de 626) | 80% |
-| Requisitos verificados | RF01 a RF11 (Sprints 1 e 2) | RF01 a RF22 |
-| Defeitos abertos na `develop` | 0 | 0 |
-| Defeitos abertos em Pull Requests | 1 erro de teste + 4 pontos de revisão no PR #12 (T75) | 0 |
+| Cobertura de linhas do código de negócio (backend) | **99,0%** (967 de 977) | 80% |
+| Requisitos verificados | RF01 a RF11 (Sprints 1 e 2); RF12, RF13 e RF15 com testes de backend e de componentes web, sem E2E ainda; RF14 só no backend | RF01 a RF22 |
+| Falhas de teste na `develop` | 0 | 0 |
+| Itens de defeito abertos ou em verificação | 6 (de 29 registrados) | 0 |
 
-Os defeitos e não conformidades ficam no [registro de defeitos](docs/testes/registro-de-defeitos.md), com identificador, causa, evidência e estado.
+### Rastreabilidade de erros
+
+Todo erro, defeito ou não conformidade das Sprints 1 a 3 tem um identificador, a causa, a resolução e o que funciona e o que não funciona depois de cada alteração. O histórico completo está na [rastreabilidade de erros e alterações](docs/rastreabilidade/rastreabilidade-erros-e-alteracoes.md) e a lista oficial, no [registro de defeitos](docs/testes/registro-de-defeitos.md). Situação em 16/11/2026:
+
+| Sprint | Itens registrados | Fechados | Em verificação ou abertos |
+|---|---|---|---|
+| Sprint 1 | 1 defeito + 4 dívidas técnicas | 3 | 2 dívidas (DT-S1-02, DT-S1-03) |
+| Sprint 2 | 9 | 9 | 0 |
+| Sprint 3 | 19 | 13 | 6 (D-S3-03, 06, 09, 10, 11 e 14) |
+
+| ID | O que está em aberto ou em verificação | Estado |
+|---|---|---|
+| D-S3-03 | T96 entrou na `develop` por push direto, sem Pull Request; falta o review do commit | Aberto |
+| D-S3-06 | T84 (RQ-T84-07 a 10), T86, T78 e T79 por fazer | Aberto (parcial) |
+| D-S3-09 | Consulta da agenda no PostgreSQL (T76): corrigida e mesclada; falta confirmar o job do CI | Em verificação |
+| D-S3-10 | `DemoDataIntegrationTest` falhou numa rodada local e não se reproduziu; causa não esclarecida | Em verificação |
+| D-S3-11 | O `@PreUpdate` de `VisitaAgendada` foi removido na T76; o revisor decide | Em verificação |
+| D-S3-14 | Docker: o Maven Central respondeu 429 no CI; retry mesclado, falta um job verde | Em verificação |
 
 ### Backend
 
@@ -693,7 +710,7 @@ ClinicalStudyPB/
 │           ├── api/              # Cliente HTTP e armazenamento seguro do token
 │           ├── components/       # Tema e componentes de interface
 │           └── contexts/         # Sessão do participante
-├── docs/                         # Especificação, planejamento, diagramas, design por task, imagens e relatório de testes
+├── docs/                         # Especificação, planejamento, diagramas, design por task, imagens, relatórios de testes e rastreabilidade de erros
 ├── releases/                     # Documentação de cada release (release1/README.md)
 ├── scripts/                      # verificar-ambiente.py (T67) e verificar-recrutamento.py (T68)
 ├── docker-compose.yml            # Ambiente completo: PostgreSQL + backend + web (T67)
@@ -714,7 +731,7 @@ ClinicalStudyPB/
 - [Mapeamento e complemento das tasks da Sprint 2 até 01/11](<docs/sprint2/Tasks até 01-11 — mapeamento e complemento.md>) — o que já estava feito, o que foi acrescentado, como funciona e o que ainda depende de pessoas.
 - [Contrato OpenAPI da Sprint 2](docs/api/openapi-sprint2.yaml) — endpoints de recrutamento e de estado do estudo (T37).
 - [Diagramas do domínio](docs/diagramas/dominio.md), [casos de uso](docs/diagramas/casos-de-uso.md), [sequência: avançar o estado](docs/diagramas/sequencia-avancar-estado.md), [sequência: incluir participante](docs/diagramas/sequencia-inclusao-participante.md) e [arquitetura](docs/diagramas/arquitetura.md) (T36 e T69).
-- [Relatório de testes das Sprints 1 a 3](docs/testes/relatorio-de-testes-sprints-1-a-3.md) — resultados consolidados por sprint, cobertura atual, rastreabilidade RF × testes e situação dos testes da Sprint 3; e o [registro de defeitos](docs/testes/registro-de-defeitos.md), com a rastreabilidade de cada defeito.
+- [Relatório de testes das Sprints 1 a 3](docs/testes/relatorio-de-testes-sprints-1-a-3.md) — resultados consolidados por sprint, cobertura atual, rastreabilidade RF × testes e situação dos testes da Sprint 3; o [registro de defeitos](docs/testes/registro-de-defeitos.md), com a lista oficial de defeitos; e a [rastreabilidade de erros e alterações](docs/rastreabilidade/rastreabilidade-erros-e-alteracoes.md), com o histórico de cada erro, a resolução e o que funciona ou não depois de cada mudança.
 - [Relatório de testes da Release 1](docs/testes/relatorio-de-testes-release1.md) — estratégia, ambiente, resultados por suíte, cobertura, rastreabilidade RF × testes, defeitos, riscos e conclusão.
 - [Release 1](releases/release1/README.md) — relatório da entrega: requisitos, resultados dos testes, problemas conhecidos e processo de desenvolvimento.
 - [Integração do planejamento (T67)](<docs/sprint2/T67 — Integração do planejamento (ambiente Docker).md>) e [do recrutamento (T68)](<docs/sprint2/T68 — Integração do recrutamento (roteiro e correções).md>) — roteiros executáveis e defeitos encontrados.
