@@ -8,9 +8,10 @@ import { formatarData } from '../../../../utils/datas'
 import { useEstudoDetalhe } from '../contexto'
 import '../recrutamento.css'
 
-// RF11 (T61) e RF12 (T77): participantes incluídos no estudo, o contador de vagas e o progresso de agendamento de cada
-// um ("X de N visitas agendadas"). A aba é recarregada sempre que é aberta, então mostra a inclusão feita há pouco na
-// ficha do candidato. O coordenador abre o agendamento do participante; o pesquisador só consulta (somente leitura).
+// RF11 (T61), RF12 (T77) e RF15 (T97): participantes incluídos no estudo, o contador de vagas e o progresso de
+// agendamento de cada um ("X de N visitas agendadas"). A aba é recarregada sempre que é aberta, então mostra a
+// inclusão feita há pouco na ficha do candidato. O nome de cada participante abre a ficha com o histórico de visitas
+// (T97). O coordenador abre o agendamento do participante; o pesquisador só consulta (somente leitura).
 export function AbaParticipantes() {
   const { estudo } = useEstudoDetalhe()
   const usuario = useUsuarioLogado()
@@ -67,7 +68,14 @@ export function AbaParticipantes() {
                 return (
                   <tr key={participante.id}>
                     <td>{participante.codigo}</td>
-                    <td>{participante.nomeFicticio}</td>
+                    <td>
+                      <Link
+                        to={`/estudos/${estudo.id}/participantes/${participante.id}`}
+                        aria-label={`Abrir a ficha de ${participante.nomeFicticio}`}
+                      >
+                        {participante.nomeFicticio}
+                      </Link>
+                    </td>
                     <td>{formatarData(participante.dataInclusao)}</td>
                     <td>{participante.incluidoPor}</td>
                     <td>
