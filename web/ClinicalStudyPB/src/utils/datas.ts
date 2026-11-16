@@ -10,11 +10,15 @@ export function formatarJanela(inicio: string, fim: string): string {
   return `${formatarData(inicio)} a ${formatarData(fim)}`
 }
 
-// Data e hora da API (aaaa-mm-ddTHH:mm:ss-03:00) para dd/mm/aaaa HH:mm. Lê o texto sem converter o fuso:
-// a API já devolve o horário local do estudo, e converter pelo fuso do navegador mudaria o dia ou a hora.
-export function formatarDataHora(dataHora: string | null): string {
+// Converte a data e hora ISO 8601 da API (ex.: 2026-11-20T09:30:00-03:00) para dd/MM/yyyy HH:mm.
+// A API já devolve no fuso do centro de pesquisa; o texto é lido como veio, sem converter para o fuso do navegador,
+// para a tela mostrar o mesmo horário em qualquer computador (e o dia não mudar perto da meia-noite).
+export function formatarDataHora(dataHora: string | null | undefined): string {
   if (!dataHora) return '—'
-  return `${formatarData(dataHoraParaData(dataHora))} ${dataHoraParaHora(dataHora)}`
+  const partes = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(dataHora)
+  if (!partes) return dataHora
+  const [, ano, mes, dia, hora, minuto] = partes
+  return `${dia}/${mes}/${ano} ${hora}:${minuto}`
 }
 
 // Parte da data (aaaa-mm-dd) de uma data e hora da API, para preencher campos de formulário

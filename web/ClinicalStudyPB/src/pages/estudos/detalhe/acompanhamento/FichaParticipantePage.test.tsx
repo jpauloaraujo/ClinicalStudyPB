@@ -1,0 +1,159 @@
+import { screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { historicoApi } from '../../../../api/historico'
+import { erroHttp, estudoBase, renderizarAba } from '../../../../test/ambiente'
+import type { PerfilUsuario } from '../../../../types/usuario'
+import { FichaParticipantePage } from './FichaParticipantePage'
+import { historicoBase, participacaoId } from './historicoFixture'
+
+vi.mock('../../../../api/historico', () => ({ historicoApi: { buscar: vi.fn() } }))
+
+const buscar = vi.mocked(historicoApi.buscar)
+
+function abrir(perfil: PerfilUsuario = 'COORDENADOR') {
+  return renderizarAba(<FichaParticipantePage />, {
+    perfil,
+    rota: 'participantes/:participacaoId',
+    caminho: `/participantes/${participacaoId}`,
+  })
+}
+
+describe('FichaParticipantePage (T97)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    buscar.mockResolvedValue(historicoBase)
+  })
+
+  it('busca o histórico da participação da rota e mostra código, nome fictício e data de inclusão', async () => {
+    abrir()
+
+    expect(await screen.findByRole('heading', { name: 'CAND-001 · Pessoa Teta (Ficticia)' })).toBeInTheDocument()
+    expect(screen.getByText('Incluído em 20/10/2026')).toBeInTheDocument()
+    expect(buscar).toHaveBeenCalledWith(participacaoId)
+  })
+
+  it('mostra os 4 cartões de resumo com os valores do servidor, sem recalcular no cliente', async () => {
+    // Números propositalmente diferentes da contagem das visitas: a tela só repassa o que o servidor mandou
+    buscar.mockResolvedValue({
+      ...historicoBase,
+      resumo: { previstas: 9, realizadas: 4, ausentes: 3, canceladas: 2, agendadas: 5, naoAgendadas: 6, pendentes: 11 },
+    })
+    abrir()
+
+    const resumo = await screen.findByRole('region', { name: 'Resumo do histórico' })
+    const cartao = (rotulo: string) => within(resumo).getByText(rotulo).closest('li')
+    expect(cartao('Realizadas')).toHaveTextContent('4')
+    expect(cartao('Ausentes')).toHaveTextContent('3')
+    expect(cartao('Canceladas')).toHaveTextContent('2')
+    expect(cartao('Pendentes')).toHaveTextContent('11')
+    expect(within(resumo).getAllByRole('listitem')).toHaveLength(4)
+  })
+
+  it('lista todas as visitas previstas na ordem, inclusive as não agendadas', async () => {
+    abrir()
+
+    const visitas = await screen.findByRole('region', { name: 'Visitas do participante' })
+    const titulos = within(visitas).getAllByRole('heading', { level: 4 })
+    expect(titulos).toHaveLength(3)
+    expect(titulos[0]).toHaveTextContent('Triagem')
+    expect(titulos[0]).toHaveTextContent('Realizada')
+    expect(titulos[1]).toHaveTextContent('Retorno 30 dias')
+    expect(titulos[1]).toHaveTextContent('Agendada')
+    expect(titulos[2]).toHaveTextContent('Retorno 60 dias')
+    expect(titulos[2]).toHaveTextContent('Não agendada')
+  })
+
+  it('mostra os resultados ao expandir a visita', async () => {
+    abrir()
+    await userEvent.click(await screen.findByRole('button', { name: /Triagem/ }))
+
+    expect(screen.getByText('Aferir pressão arterial')).toBeInTheDocument()
+    expect(screen.getByText('120/80 mmHg')).toBeInTheDocument()
+  })
+
+  it('o filtro por situação mostra só as visitas escolhidas e a contagem exibida', async () => {
+    abrir()
+    await userEvent.selectOptions(await screen.findByLabelText('Filtrar por situação'), 'Realizada')
+
+    const visitas = screen.getByRole('region', { name: 'Visitas do participante' })
+    expect(within(visitas).getAllByRole('heading', { level: 4 })).toHaveLength(1)
+    expect(within(visitas).getByRole('heading', { level: 4 })).toHaveTextContent('Triagem')
+    expect(screen.getByRole('status')).toHaveTextContent('Exibindo 1 de 3 visitas')
+  })
+
+  it('estudo sem visitas previstas mostra a lista vazia e o resumo zerado', async () => {
+    buscar.mockResolvedValue({
+      ...historicoBase,
+      visitas: [],
+      resumo: { previstas: 0, realizadas: 0, ausentes: 0, canceladas: 0, agendadas: 0, naoAgendadas: 0, pendentes: 0 },
+    })
+    abrir()
+
+    expect(await screen.findByText('Este estudo ainda não tem visitas previstas.')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Filtrar por situação')).not.toBeInTheDocument()
+    const resumo = screen.getByRole('region', { name: 'Resumo do histórico' })
+    expect(within(resumo).getAllByRole('listitem')).toHaveLength(4)
+  })
+
+  it('indica o carregamento enquanto o histórico não chega', async () => {
+    buscar.mockReturnValue(new Promise(() => {}))
+    abrir()
+
+    expect(await screen.findByText('Carregando histórico do participante…')).toBeInTheDocument()
+  })
+
+  it('erro do servidor mostra a mensagem e o botão "Tentar de novo", que busca de novo', async () => {
+    buscar.mockRejectedValueOnce(erroHttp(500, 'Erro interno do servidor'))
+    abrir()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Erro interno do servidor')
+    expect(screen.getByRole('heading', { name: 'Não foi possível carregar o histórico' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }))
+
+    expect(await screen.findByRole('heading', { name: 'CAND-001 · Pessoa Teta (Ficticia)' })).toBeInTheDocument()
+    expect(buscar).toHaveBeenCalledTimes(2)
+  })
+
+  it('participante inexistente (404) mostra mensagem clara e o caminho de volta, sem "Tentar de novo"', async () => {
+    buscar.mockRejectedValue(erroHttp(404, 'Participação não encontrada.', 'RECURSO_NAO_ENCONTRADO'))
+    abrir()
+
+    expect(await screen.findByRole('heading', { name: 'Participante não encontrado' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('O participante solicitado não existe neste estudo.')
+    expect(screen.queryByRole('button', { name: 'Tentar de novo' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Voltar para participantes' })).toHaveAttribute(
+      'href',
+      `/estudos/${estudoBase.id}/participantes`,
+    )
+  })
+
+  it('o coordenador tem o link "Agendar visitas" para o agendamento do participante', async () => {
+    abrir('COORDENADOR')
+
+    expect(await screen.findByRole('link', { name: 'Agendar visitas' })).toHaveAttribute(
+      'href',
+      `/estudos/${estudoBase.id}/participantes/${participacaoId}/agendamento`,
+    )
+  })
+
+  it('o pesquisador só lê: vê o histórico, mas não tem "Agendar visitas" nem botões de escrita', async () => {
+    abrir('PESQUISADOR')
+
+    expect(await screen.findByRole('heading', { name: 'CAND-001 · Pessoa Teta (Ficticia)' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Agendar visitas' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Ações do participante' })).not.toBeInTheDocument()
+    // Os únicos botões da tela são os que expandem as visitas
+    for (const botao of screen.getAllByRole('button')) {
+      expect(botao).toHaveAttribute('aria-expanded')
+    }
+  })
+
+  it('tem as regiões nomeadas "Resumo do histórico" e "Visitas do participante"', async () => {
+    abrir()
+
+    expect(await screen.findByRole('region', { name: 'Resumo do histórico' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Visitas do participante' })).toBeInTheDocument()
+  })
+})

@@ -76,6 +76,20 @@ describe('AbaParticipantes (T61 e T77)', () => {
     expect(screen.getByText('Seu perfil tem acesso apenas para consulta dos participantes e da agenda.')).toBeInTheDocument()
   })
 
+  it('o nome de cada participante abre a ficha com o histórico (T97), para o coordenador e para o pesquisador', async () => {
+    renderizarAba(<AbaParticipantes />, { perfil: 'PESQUISADOR' })
+
+    const linha = await screen.findByRole('row', { name: /CAND-002/ })
+    expect(within(linha).getByRole('link', { name: 'Abrir a ficha de M. P.' })).toHaveAttribute(
+      'href',
+      `/estudos/${estudoBase.id}/participantes/p-2`,
+    )
+    expect(screen.getByRole('link', { name: 'Abrir a ficha de J. S.' })).toHaveAttribute(
+      'href',
+      `/estudos/${estudoBase.id}/participantes/p-1`,
+    )
+  })
+
   it('sem participantes explica que a inclusão é feita na ficha do candidato', async () => {
     listar.mockResolvedValue([])
     vagas.mockResolvedValue({ incluidos: 0, limite: 30, restantes: 30 })
