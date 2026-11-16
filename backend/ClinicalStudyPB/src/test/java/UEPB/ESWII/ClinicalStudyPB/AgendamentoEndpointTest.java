@@ -25,6 +25,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.test.web.servlet.MockMvc;
@@ -123,7 +124,11 @@ class AgendamentoEndpointTest {
     @Test
     @DisplayName("Agenda filtra datas e situação e respeita página e tamanho")
     void filtraEPaginaAgenda() throws Exception {
-        String hoje = LocalDate.now(clock).toString();
+        // A visita de demonstração é criada com current_date do banco, que pode estar em outro fuso
+        // (ex.: CI em UTC) e cair num dia diferente do relógio da aplicação; por isso lê a data do próprio dado.
+        String hoje = new JdbcTemplate(dataSource).queryForObject(
+                "select cast(cast(data_hora_agendada as date) as varchar) from visitas_agendadas "
+                        + "where id = cast('d6300000-0000-4000-8000-000000001983' as uuid)", String.class);
         mvc.perform(get("/api/estudos/{id}/agenda", ESTUDO)
                         .header("Authorization", pesquisador)
                         .param("de", hoje)
