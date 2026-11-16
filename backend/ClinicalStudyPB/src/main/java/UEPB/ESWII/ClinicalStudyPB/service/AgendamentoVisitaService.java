@@ -85,12 +85,12 @@ public class AgendamentoVisitaService {
 
     private void validarRegrasDeAgendamento(Participacao participacao, VisitaPlanejada visitaPlanejada,
             LocalDateTime dataDesejada) {
-        validarEstadoDoEstudo(participacao);
-
         Candidato candidato = participacao.getCandidato();
         if (candidato == null || !candidato.estaIncluido()) {
             throw conflito("PARTICIPANTE_RETIRADO", "O participante não está ativo no estudo.");
         }
+
+        validarEstadoDoEstudo(participacao);
 
         if (visitaPlanejada.getEstudo().getId() == null
                 || !visitaPlanejada.getEstudo().getId().equals(participacao.getEstudo().getId())) {
