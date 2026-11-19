@@ -65,7 +65,7 @@ public class VisitaParticipanteService {
                 .toList();
 
         String motivoCancelamento = visita.getSituacao() == SituacaoVisita.CANCELADA
-                ? visita.getMotivo()
+                ? visita.getMotivo()    
                 : null;
 
         return new VisitaParticipanteDTO(
