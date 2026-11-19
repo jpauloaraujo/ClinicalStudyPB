@@ -85,4 +85,18 @@ public interface VisitaAgendadaRepository extends JpaRepository<VisitaAgendada, 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select v from VisitaAgendada v where v.id = :id")
     Optional<VisitaAgendada> buscarComBloqueio(@Param("id") UUID id);
+
+    // 1. Próximas visitas: AGENDADA, dataHoraAgendada >= agora, ordenadas da mais próxima para a mais distante
+    List<VisitaAgendada> findByParticipacao_Candidato_IdAndSituacaoAndDataHoraAgendadaGreaterThanEqualOrderByDataHoraAgendadaAsc(
+            UUID participanteId,
+            SituacaoVisita situacao,
+            LocalDateTime agora
+    );
+
+    // 2. Histórico: REALIZADA, AUSENTE, CANCELADA, ordenadas da mais recente para a mais antiga, com paginação
+    Page<VisitaAgendada> findByParticipacao_Candidato_IdAndSituacaoInOrderByDataHoraAgendadaDesc(
+            UUID participanteId,
+            Collection<SituacaoVisita> situacoes,
+            Pageable pageable
+    );
 }
