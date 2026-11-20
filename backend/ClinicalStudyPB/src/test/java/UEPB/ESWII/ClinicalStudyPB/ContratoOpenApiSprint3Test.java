@@ -60,7 +60,12 @@ class ContratoOpenApiSprint3Test {
      * Quantas operações o YAML tem agora: 5 do agendamento (T74), 1 do histórico (T95), 2 dos resultados (T88) e 2
      * do desfecho (T80 e T82: o POST do desfecho e o GET da visita). Cada PBI só atualiza este número.
      */
-    private static final int OPERACOES_ESPERADAS = 10;
+    private static final int OPERACOES_ESPERADAS = 12;
+
+    /** Operações do app do participante (T109): os estudos do participante logado, implementadas no {@code MeController}. */
+    private static final Set<String> OPERACOES_ME = Set.of(
+            "GET /api/me/estudos",
+            "GET /api/me/estudos/{estudoId}");
 
     /** Operações do desfecho da visita (T80 e T82), implementadas na T82. */
     private static final Set<String> OPERACOES_DESFECHO = Set.of(
@@ -115,7 +120,7 @@ class ContratoOpenApiSprint3Test {
     @DisplayName("O contrato da Sprint 3 tem as operações previstas até aqui (agendamento da T74, histórico da T95, resultados da T88 e desfecho da T80/T82)")
     void contratoTemAsOperacoesEsperadas() throws Exception {
         assertThat(operacoesDoContrato()).hasSize(OPERACOES_ESPERADAS).containsAll(OPERACOES_RESULTADOS)
-                .containsAll(OPERACOES_DESFECHO).contains(
+                .containsAll(OPERACOES_DESFECHO).containsAll(OPERACOES_ME).contains(
                 "GET /api/participacoes/{participacaoId}/visitas",
                 "POST /api/participacoes/{participacaoId}/visitas-agendadas",
                 "PUT /api/visitas-agendadas/{visitaAgendadaId}",
@@ -143,6 +148,42 @@ class ContratoOpenApiSprint3Test {
         faltandoNaApi.removeAll(operacoesDaApi());
 
         assertThat(faltandoNaApi).as("operações dos resultados que a API não tem").isEmpty();
+    }
+
+    @Test
+    @DisplayName("T109: os endpoints /me do contrato existem na API publicada")
+    void meDoContratoExistemNaApi() throws Exception {
+        Set<String> faltandoNaApi = new TreeSet<>(OPERACOES_ME);
+        faltandoNaApi.removeAll(operacoesDaApi());
+
+        assertThat(faltandoNaApi).as("operações /me que a API não tem").isEmpty();
+    }
+
+    @SuppressWarnings("unchecked")
+    @ParameterizedTest(name = "T109: o schema {0} tem os mesmos campos do DTO")
+    @ValueSource(strings = {"MeuEstudoResponse", "MeuEstudoDetalheResponse", "RetiradaDoMeuEstudo"})
+    void schemaMeTemOsCamposDoDto(String nome) throws Exception {
+        Class<?> dto = switch (nome) {
+            case "MeuEstudoResponse" -> UEPB.ESWII.ClinicalStudyPB.controller.dto.MeuEstudoResponse.class;
+            case "MeuEstudoDetalheResponse" -> UEPB.ESWII.ClinicalStudyPB.controller.dto.MeuEstudoDetalheResponse.class;
+            default -> UEPB.ESWII.ClinicalStudyPB.controller.dto.RetiradaDoMeuEstudo.class;
+        };
+        Set<String> camposDoDto = new TreeSet<>();
+        Arrays.stream(dto.getRecordComponents()).forEach(c -> camposDoDto.add(c.getName()));
+        Set<String> camposDoContrato = new TreeSet<>(((Map<String, Object>) schema(nome).get("properties")).keySet());
+
+        assertThat(camposDoContrato).as("campos do schema " + nome).isEqualTo(camposDoDto);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    @DisplayName("T109: o enum SituacaoParticipacao do contrato tem os mesmos valores do enum do backend")
+    void situacaoParticipacaoDoContratoIgualAoDoBackend() throws Exception {
+        List<String> valores = (List<String>) schema("SituacaoParticipacao").get("enum");
+
+        assertThat(valores).containsExactly(Arrays.stream(
+                UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoParticipacao.values()).map(Enum::name)
+                .toArray(String[]::new));
     }
 
     @Test
@@ -188,7 +229,16 @@ class ContratoOpenApiSprint3Test {
             }
             Set<String> respostas = ((Map<Object, Object>) ((Map<String, Object>) definicao).get("responses"))
                     .keySet().stream().map(Object::toString).collect(java.util.stream.Collectors.toSet());
-            assertThat(respostas).as(metodo + " " + caminho).contains("401", "403", "404", "409");
+            assertThat(respostas).as(metodo + " " + caminho).contains("401", "403");
+            // D-T109-01: /api/me/** é só leitura do próprio participante, sem regra de negócio (nada de 409), e a
+            // lista não recebe id (nada de 404). O 404 continua exigido em toda operação com parâmetro de caminho.
+            boolean doMe = caminho.startsWith("/api/me/");
+            if (!doMe || caminho.contains("{")) {
+                assertThat(respostas).as(metodo + " " + caminho).contains("404");
+            }
+            if (!doMe) {
+                assertThat(respostas).as(metodo + " " + caminho).contains("409");
+            }
             if (!metodo.equals("get")) {
                 assertThat(respostas).as(metodo + " " + caminho).contains("400");
             }

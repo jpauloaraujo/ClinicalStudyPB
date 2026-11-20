@@ -22,6 +22,16 @@ public interface ParticipacaoRepository extends JpaRepository<Participacao, UUID
     @Query("select p from Participacao p join fetch p.candidato where p.id = :id")
     Optional<Participacao> buscarComCandidato(@Param("id") UUID id);
 
+    /** Participações da conta (candidato.usuario), da inclusão mais recente para a mais antiga; sem N+1 (T109). */
+    @EntityGraph(attributePaths = {"estudo", "estudo.responsavel"})
+    List<Participacao> findByCandidatoUsuarioIdOrderByDataInclusaoDesc(UUID usuarioId);
+
+    @EntityGraph(attributePaths = {"estudo", "estudo.responsavel"})
+    Optional<Participacao> findByCandidatoUsuarioIdAndEstudoId(UUID usuarioId, UUID estudoId);
+
+    @EntityGraph(attributePaths = {"estudo", "estudo.responsavel"})
+    Optional<Participacao> findByIdAndCandidatoUsuarioId(UUID participacaoId, UUID usuarioId);
+
     long countByEstudoId(UUID estudoId);
 
     boolean existsByCandidatoId(UUID candidatoId);
