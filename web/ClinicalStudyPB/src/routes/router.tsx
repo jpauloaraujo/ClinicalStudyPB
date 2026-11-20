@@ -1,11 +1,15 @@
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router'
 import { AppLayout } from '../components/layout/AppLayout'
 import { PublicLayout } from '../components/layout/PublicLayout'
+import { AbaAgenda } from '../pages/estudos/detalhe/acompanhamento/AbaAgenda'
+import { AgendamentoParticipantePage } from '../pages/estudos/detalhe/acompanhamento/AgendamentoParticipantePage'
+import { VisitaAgendadaPage } from '../pages/estudos/detalhe/acompanhamento/VisitaAgendadaPage'
 import { AbaCandidatos } from '../pages/estudos/detalhe/abas/AbaCandidatos'
 import { AbaCriterios } from '../pages/estudos/detalhe/abas/AbaCriterios'
 import { AbaParticipantes } from '../pages/estudos/detalhe/abas/AbaParticipantes'
 import { AbaResumo } from '../pages/estudos/detalhe/abas/AbaResumo'
 import { AbaVisitas } from '../pages/estudos/detalhe/abas/AbaVisitas'
+import { FichaParticipantePage } from '../pages/estudos/detalhe/acompanhamento/FichaParticipantePage'
 import { FichaCandidatoPage } from '../pages/estudos/detalhe/candidato/FichaCandidatoPage'
 import { perfisDaAba } from '../pages/estudos/detalhe/abas'
 import { EstudoDetalhePage } from '../pages/estudos/detalhe/EstudoDetalhePage'
@@ -109,6 +113,41 @@ export const rotas: RouteObject[] = [
                 element: (
                   <RequerPerfil perfis={perfisDaAba('participantes')}>
                     <AbaParticipantes />
+                  </RequerPerfil>
+                ),
+              },
+              // Agendamento de visitas (RF12, T77): agenda do estudo, ficha de agendamento e tela da visita.
+              // Leitura para pesquisador e coordenador; os botões de escrita só aparecem ao coordenador.
+              {
+                path: 'agenda',
+                element: (
+                  <RequerPerfil perfis={perfisDaAba('agenda')}>
+                    <AbaAgenda />
+                  </RequerPerfil>
+                ),
+              },
+              {
+                path: 'participantes/:participacaoId/agendamento',
+                element: (
+                  <RequerPerfil perfis={perfisDaAba('participantes')}>
+                    <AgendamentoParticipantePage />
+                  </RequerPerfil>
+                ),
+              },
+              {
+                path: 'participantes/:participacaoId/visitas/:visitaAgendadaId',
+                element: (
+                  <RequerPerfil perfis={perfisDaAba('participantes')}>
+                    <VisitaAgendadaPage />
+                  </RequerPerfil>
+                ),
+              },
+              // Ficha do participante com o histórico (T97, RF15): pesquisador e coordenador, somente leitura
+              {
+                path: 'participantes/:participacaoId',
+                element: (
+                  <RequerPerfil perfis={perfisDaAba('participantes')}>
+                    <FichaParticipantePage />
                   </RequerPerfil>
                 ),
               },

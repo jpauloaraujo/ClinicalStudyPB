@@ -3,7 +3,7 @@
 > **Sprint 3** · PBI-20 · RF13 Realização, ausência e cancelamento de visitas  
 > **Responsável:** I3 · **Estimativa:** 4h · **Prazo:** Sex 13/11  
 > **Depende de:** T80, T82  
-> **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
+> **Situação:** 🟡 Componentes prontos e testados (39 testes; lint, tsc e build ok). Falta encaixar `BotaoRegistrarDesfecho`, `SeloSituacaoVisita` e `DesfechoRegistrado` na agenda e na tela da visita, que dependem do `AcoesDaVisita`/`AbaAgenda` da T77 (ainda não está na `main`)
 
 > Antes de começar, leia as [convenções e o contrato compartilhado da Sprint 3](00-convencoes-e-contrato-compartilhado.md): nomes, endpoints, DTOs, códigos de erro, tabelas e dados de demonstração valem para esta task. A origem dos requisitos (especificação, critério de aceite do PBI, regras de negócio e o texto original da task) está na [seção 9](#9-origem-dos-requisitos-especificação-e-planejamento).
 

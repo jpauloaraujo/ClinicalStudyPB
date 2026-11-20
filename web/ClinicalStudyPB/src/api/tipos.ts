@@ -36,6 +36,8 @@ export type VisitaDoParticipanteResponse = EsquemasSprint3['VisitaDoParticipante
 export type VisitaAgendadaRequest = EsquemasSprint3['VisitaAgendadaRequest']
 export type VisitaReagendamentoRequest = EsquemasSprint3['VisitaReagendamentoRequest']
 export type VisitaAgendadaResponse = EsquemasSprint3['VisitaAgendadaResponse']
+export type TipoDesfecho = EsquemasSprint3['TipoDesfecho']
+export type DesfechoRequest = EsquemasSprint3['DesfechoRequest']
 export type AgendaItemResponse = EsquemasSprint3['AgendaItemResponse']
 export type PaginaAgenda = EsquemasSprint3['PaginaAgenda']
 export type ParticipanteAgendaResponse = EsquemasSprint3['ParticipanteAgendaResponse']
@@ -47,6 +49,13 @@ export type ParticipanteDoHistorico = EsquemasSprint3['ParticipanteDoHistorico']
 export type ResumoDoHistorico = EsquemasSprint3['ResumoDoHistorico']
 export type VisitaDoHistorico = EsquemasSprint3['VisitaDoHistorico']
 export type ResultadoDoHistorico = EsquemasSprint3['ResultadoDoHistorico']
+
+// Resultados das avaliações (Sprint 3, T88) — valores fictícios
+export type BloqueioResultados = EsquemasSprint3['BloqueioResultados']
+export type ResultadosDaVisitaResponse = EsquemasSprint3['ResultadosDaVisitaResponse']
+export type AtividadeComResultado = EsquemasSprint3['AtividadeComResultado']
+export type ResultadoAtividadeResponse = EsquemasSprint3['ResultadoAtividadeResponse']
+export type ResultadoRequest = EsquemasSprint3['ResultadoRequest']
 
 export const categoriasAcao: CategoriaAcao[] = [
   'AVALIACAO_CLINICA',

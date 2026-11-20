@@ -1,5 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
-import { autenticacaoApi, ErroApi, tokenArmazenado, type UsuarioSessao } from '@/api/cliente';
+import {
+  autenticacaoApi,
+  definirAoExpirarSessao,
+  ErroApi,
+  tokenArmazenado,
+  type UsuarioSessao,
+} from '@/api/cliente';
 
 type Sessao = {
   usuario: UsuarioSessao | null;
@@ -35,6 +41,15 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
         }
       })
       .finally(() => setCarregando(false));
+  }, []);
+
+  // 401 fora do login (token expirado ou inválido): limpa o token e a sessão; o Stack.Protected volta ao login
+  useEffect(() => {
+    definirAoExpirarSessao(() => {
+      tokenArmazenado.remover().catch(() => undefined);
+      setUsuario(null);
+    });
+    return () => definirAoExpirarSessao(null);
   }, []);
 
   const entrar = useCallback(async (email: string, senha: string) => {

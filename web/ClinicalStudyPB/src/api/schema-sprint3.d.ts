@@ -65,7 +65,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Consultar uma visita agendada
+         * @description Devolve a visita agendada completa: situação, datas, dados do desfecho (data e hora reais, motivo e
+         *     observação, quando houver), a janela de datas da visita prevista, quem criou e quem alterou por último, e a
+         *     `versao`. É a consulta da tela da visita.
+         *
+         *     Perfis: COORDENADOR e PESQUISADOR leem; ADMINISTRADOR e PARTICIPANTE recebem 403.
+         */
+        get: operations["buscarVisitaAgendada"];
         /**
          * Reagendar uma visita
          * @description Troca a data e a hora de uma visita que ainda está AGENDADA. A nova `dataHora` é local, sem fuso, e passa pelas
@@ -78,6 +86,50 @@ export interface paths {
          */
         put: operations["reagendarVisita"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/visitas-agendadas/{visitaAgendadaId}/desfecho": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registrar o desfecho de uma visita agendada
+         * @description Registra, em um **único endpoint**, o desfecho de uma visita que ainda está AGENDADA: `REALIZADA`, `AUSENTE`
+         *     ou `CANCELADA`. Os três estados são **finais**: depois do desfecho a visita não volta a AGENDADA, não é
+         *     reagendada e não recebe outro desfecho. O recurso já existe, então a resposta é **200** com a visita atualizada.
+         *
+         *     Dados de cada tipo:
+         *     - `REALIZADA`: `dataHoraRealizada` (local, sem fuso; omitida assume o instante atual) **não pode ser futura**;
+         *       `observacao` é opcional.
+         *     - `AUSENTE`: `observacao` é opcional; não guarda data real.
+         *     - `CANCELADA`: `motivo` é **obrigatório**, com 5 a 500 caracteres depois do `trim`; `observacao` é opcional.
+         *
+         *     Campos que não pertencem ao tipo escolhido são ignorados, sem erro. `motivo` e `observacao` têm no máximo
+         *     500 caracteres.
+         *
+         *     Regras: o estudo precisa estar em RECRUTAMENTO ou EXECUCAO; `REALIZADA` e `AUSENTE` só valem quando o **dia**
+         *     agendado não é futuro (o dia de hoje é permitido), enquanto `CANCELADA` vale a qualquer momento antes do
+         *     desfecho. A ordem das verificações é: visita existe (404), estudo, transição, dados, data agendada.
+         *
+         *     Códigos 400: VALIDACAO_CAMPOS (tipo ausente), CORPO_INVALIDO (JSON ou tipo inexistente), DATA_REALIZACAO_FUTURA,
+         *     MOTIVO_OBRIGATORIO.
+         *
+         *     Códigos 409: TRANSICAO_VISITA_INVALIDA (a visita já tem desfecho), ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO,
+         *     VISITA_AINDA_NAO_OCORREU, VISITA_ALTERADA_CONCORRENTEMENTE (duas requisições simultâneas: uma vence e a
+         *     outra recebe este erro; recarregue a visita).
+         *
+         *     Perfis: somente COORDENADOR; PESQUISADOR, PARTICIPANTE e ADMINISTRADOR recebem 403.
+         */
+        post: operations["registrarDesfechoVisita"];
         delete?: never;
         options?: never;
         head?: never;
@@ -140,7 +192,7 @@ export interface paths {
         /**
          * Histórico de um participante
          * @description Somente leitura. Devolve os dados do participante, o resumo por situação e **uma linha para cada visita
-         *     prevista do estudo**, ordenadas por `ordem` e dia previsto, inclusive as ainda não agendadas
+         *     prevista do estudo**, ordenadas pelo dia previsto (e, no empate, por `ordem`), inclusive as ainda não agendadas
          *     (`situacao = NAO_AGENDADA`, com os campos do agendamento nulos). Cada visita traz a situação, as datas e a
          *     lista de resultados das atividades.
          *
@@ -158,6 +210,195 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/visitas-agendadas/{visitaAgendadaId}/resultados": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resultados das avaliações de uma visita
+         * @description Lista **cada atividade da categoria `AVALIACAO_CLINICA`** da visita prevista desta visita agendada, ordenada
+         *     pelo nome, com o resultado registrado ou `resultado: null` (pendente), e as contagens `total`, `registrados` e
+         *     `pendentes` (`pendentes = total - registrados`). Atividades de outras categorias não aparecem. **Os resultados
+         *     são fictícios**: o sistema não armazena dados reais de pessoas.
+         *
+         *     Responde 200 em qualquer situação da visita. Quando a visita **não aceita** registro nem edição de resultados,
+         *     o campo `bloqueio` diz por quê, e a tela mostra os resultados **somente leitura**:
+         *     - `VISITA_NAO_REALIZADA`: a visita está AGENDADA, AUSENTE ou CANCELADA (resultado só existe para REALIZADA);
+         *     - `ESTUDO_ENCERRADO`: o estudo foi encerrado;
+         *     - `PARTICIPANTE_RETIRADO`: o participante foi retirado do estudo (a partir da retirada, T102).
+         *
+         *     `bloqueio` é a decisão **do servidor pelo estado**; o perfil é decidido **pela tela**: o COORDENADOR vê os
+         *     resultados sempre somente leitura, mesmo com `bloqueio: null`.
+         *
+         *     Perfis: PESQUISADOR e COORDENADOR leem; ADMINISTRADOR e PARTICIPANTE recebem 403.
+         */
+        get: operations["resultadosDaVisita"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/visitas-agendadas/{visitaAgendadaId}/resultados/{acaoId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Registrar ou editar o resultado de uma atividade
+         * @description Registra o resultado **fictício** de uma atividade de avaliação ou, se ela já tiver resultado, o edita (há um
+         *     resultado por atividade e por visita agendada). Responde **201** no primeiro registro e **200** na edição,
+         *     sempre com o resultado salvo. Quem registrou e quando não mudam na edição; quem alterou e quando passam a ser
+         *     os da última edição.
+         *
+         *     Regras, na ordem em que são verificadas (depois do 403 do perfil):
+         *     1. a visita agendada existe e a atividade existe (404);
+         *     2. a visita está REALIZADA (409 `VISITA_NAO_REALIZADA`);
+         *     3. a atividade é da visita prevista desta visita agendada (409 `ATIVIDADE_NAO_PERTENCE_A_VISITA`);
+         *     4. a atividade é da categoria `AVALIACAO_CLINICA` (409 `ATIVIDADE_FORA_DA_CATEGORIA_AVALIACAO`);
+         *     5. o estudo não está encerrado (409 `ESTUDO_ENCERRADO`) e, a partir da retirada (T102), o participante não foi
+         *        retirado (409 `PARTICIPANTE_RETIRADO`);
+         *     6. o valor não está em branco (400 `VALOR_OBRIGATORIO`) e os tamanhos são respeitados (400 `VALIDACAO_CAMPOS`).
+         *
+         *     Perfis: somente PESQUISADOR. O COORDENADOR **nunca** escreve resultados (recebe 403), assim como ADMINISTRADOR e
+         *     PARTICIPANTE.
+         */
+        put: operations["registrarResultado"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/estudos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Estudos do participante logado
+         * @description Lista os estudos em que a conta logada está incluída, **um item por participação**, do mais recente para o mais
+         *     antigo (pela data de inclusão). O participante é identificado **pelo token**: o endpoint não recebe id de
+         *     participante. Conta sem candidato vinculado devolve **200 com lista vazia** (não é erro). Participações retiradas
+         *     continuam na lista, com `situacaoParticipacao = RETIRADO`.
+         *
+         *     Enquanto a retirada de participante (T101 a T103) não existir, `situacaoParticipacao` vem sempre `ATIVO`.
+         *
+         *     Perfis: só PARTICIPANTE; ADMINISTRADOR, PESQUISADOR e COORDENADOR recebem 403.
+         */
+        get: operations["meusEstudos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/estudos/{estudoId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detalhe de um estudo do participante logado
+         * @description Detalhe de um estudo em que a conta logada está incluída. Devolve **404** (`RECURSO_NAO_ENCONTRADO`) quando o
+         *     estudo não existe **ou** existe mas a conta não participa dele, sem distinguir os dois casos, para não revelar
+         *     que o dado existe. O motivo da retirada nunca é exposto ao app: `retirada` traz só `dataRetirada`.
+         *
+         *     Enquanto a retirada de participante (T101 a T103) não existir, `retirada` vem sempre `null`.
+         *
+         *     Perfis: só PARTICIPANTE; ADMINISTRADOR, PESQUISADOR e COORDENADOR recebem 403.
+         */
+        get: operations["meuEstudo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/visitas/proximas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Próximas visitas do participante logado
+         * @description Visitas **AGENDADA** das participações da conta logada, com `dataHora` **de agora em diante**, da **mais
+         *     próxima para a mais distante**. O participante é identificado **pelo token**: o endpoint não recebe id de
+         *     participante (regra 7).
+         *
+         *     Devolve **200 com lista vazia** (nunca erro) quando o participante não tem visita futura, foi retirado (a
+         *     retirada cancela as visitas futuras, T101 a T103) ou a conta não tem candidato vinculado. O parâmetro opcional
+         *     `estudoId` restringe a lista a um estudo; um `estudoId` que **não é do participante** também devolve lista
+         *     vazia, **nunca 404 e nunca dados de outro participante**.
+         *
+         *     Cada visita traz só os **nomes das atividades previstas**. **Não traz resultados** das avaliações: eles ficam
+         *     fora do escopo do RF18 (privacidade).
+         *
+         *     Perfis: só PARTICIPANTE; ADMINISTRADOR, PESQUISADOR e COORDENADOR recebem 403.
+         */
+        get: operations["minhasProximasVisitas"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/visitas/historico": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Histórico de comparecimento do participante logado
+         * @description Visitas **REALIZADA**, **AUSENTE** e **CANCELADA** das participações da conta logada, da **mais recente para a
+         *     mais antiga** (pela data e hora agendadas), **paginadas** (`pagina` base 0, `tamanho` padrão 20 e máximo 100).
+         *     O participante é identificado **pelo token**: o endpoint não recebe id de participante (regra 7).
+         *
+         *     O `resumo` traz os totais de comparecimento do participante (`realizadas`, `ausentes` e `canceladas`) e é
+         *     **independente da página** pedida. As visitas canceladas trazem o `motivo` (inclusive "retirada do estudo", das
+         *     visitas futuras canceladas na retirada) e as realizadas, a `dataHoraRealizada`.
+         *
+         *     O parâmetro opcional `estudoId` restringe o histórico (e o resumo) a um estudo. Um `estudoId` que **não é do
+         *     participante**, ou uma conta sem vínculo, devolve **200 com lista vazia e resumo zerado**, **nunca 404 e nunca
+         *     dados de outro participante**.
+         *
+         *     Cada visita traz só os **nomes das atividades previstas**. **Não traz resultados** das avaliações: eles ficam
+         *     fora do escopo do RF18 (privacidade).
+         *
+         *     Perfis: só PARTICIPANTE; ADMINISTRADOR, PESQUISADOR e COORDENADOR recebem 403.
+         */
+        get: operations["meuHistoricoDeVisitas"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -167,6 +408,31 @@ export interface components {
          * @enum {string}
          */
         SituacaoVisita: "AGENDADA" | "REALIZADA" | "AUSENTE" | "CANCELADA";
+        /**
+         * @description Desfecho que o coordenador registra para uma visita agendada. Cada tipo leva a uma situação final de mesmo nome.
+         * @enum {string}
+         */
+        TipoDesfecho: "REALIZADA" | "AUSENTE" | "CANCELADA";
+        /** @description Desfecho de uma visita agendada. Os campos que não pertencem ao `tipo` escolhido são ignorados. */
+        DesfechoRequest: {
+            tipo: components["schemas"]["TipoDesfecho"];
+            /**
+             * Format: date-time
+             * @description Só para `REALIZADA`. Data e hora reais **locais, sem fuso**; não pode ser futura; omitida assume o instante atual.
+             * @example 2026-11-19T09:40
+             */
+            dataHoraRealizada?: string | null;
+            /**
+             * @description Só para `CANCELADA`, onde é **obrigatório**, com 5 ou mais caracteres depois do `trim`.
+             * @example Participante em viagem
+             */
+            motivo?: string | null;
+            /**
+             * @description Opcional nos três tipos.
+             * @example Participante chegou no horário
+             */
+            observacao?: string | null;
+        };
         /** @description Uma visita prevista do estudo vista pelo participante, com a janela de datas e o agendamento (nulo se ainda não agendada). */
         VisitaDoParticipanteResponse: {
             /** Format: uuid */
@@ -361,7 +627,7 @@ export interface components {
         HistoricoParticipanteResponse: {
             participante: components["schemas"]["ParticipanteDoHistorico"];
             resumo: components["schemas"]["ResumoDoHistorico"];
-            /** @description Uma linha para cada visita prevista do estudo, ordenadas por `ordem` e dia previsto, inclusive as ainda não agendadas. */
+            /** @description Uma linha para cada visita prevista do estudo, ordenadas pelo dia previsto (e, no empate, por `ordem`), inclusive as ainda não agendadas. */
             visitas: components["schemas"]["VisitaDoHistorico"][];
         };
         /** @description Participante a que o histórico se refere. */
@@ -443,8 +709,211 @@ export interface components {
             unidade?: string | null;
             observacao?: string | null;
         };
+        /**
+         * @description Motivo pelo qual a visita não aceita registro nem edição de resultados; a tela mostra os resultados somente leitura. VISITA_NAO_REALIZADA: a visita não está REALIZADA. ESTUDO_ENCERRADO: o estudo foi encerrado. PARTICIPANTE_RETIRADO: o participante foi retirado (a partir da T102). Quando há mais de um motivo, vale o primeiro nesta ordem: VISITA_NAO_REALIZADA, ESTUDO_ENCERRADO, PARTICIPANTE_RETIRADO.
+         * @enum {string}
+         */
+        BloqueioResultados: "VISITA_NAO_REALIZADA" | "ESTUDO_ENCERRADO" | "PARTICIPANTE_RETIRADO";
+        /** @description Atividades de avaliação clínica de uma visita agendada, com o resultado fictício de cada uma (nulo se pendente). */
+        ResultadosDaVisitaResponse: {
+            /** Format: uuid */
+            visitaAgendadaId: string;
+            situacaoVisita: components["schemas"]["SituacaoVisita"];
+            /** @description Nulo quando a visita aceita registro e edição; senão, o motivo do modo somente leitura. */
+            bloqueio: components["schemas"]["BloqueioResultados"] | null;
+            /**
+             * @description Quantidade de atividades AVALIACAO_CLINICA da visita prevista.
+             * @example 1
+             */
+            total: number;
+            /**
+             * @description Quantas dessas atividades já têm resultado.
+             * @example 1
+             */
+            registrados: number;
+            /**
+             * @description total - registrados.
+             * @example 0
+             */
+            pendentes: number;
+            atividades: components["schemas"]["AtividadeComResultado"][];
+        };
+        /** @description Uma atividade de avaliação clínica da visita prevista e o seu resultado (nulo = pendente). */
+        AtividadeComResultado: {
+            /** Format: uuid */
+            acaoId: string;
+            /** @example Aferir pressão arterial */
+            nome: string;
+            /** @example Medida simulada */
+            descricao?: string | null;
+            /** @description Nulo enquanto o resultado estiver pendente. */
+            resultado: components["schemas"]["ResultadoAtividadeResponse"] | null;
+        };
+        /** @description Resultado fictício de uma atividade, com quem registrou e quem alterou por último (nome do usuário). */
+        ResultadoAtividadeResponse: {
+            /** Format: uuid */
+            acaoId: string;
+            /** @example 120/80 */
+            valor: string;
+            /** @example mmHg */
+            unidade?: string | null;
+            /** @example Sentado, após 5 minutos */
+            observacao?: string | null;
+            /** @example Pesquisador Demo (Ficticio) */
+            registradoPor: string;
+            /**
+             * Format: date-time
+             * @example 2026-11-14T10:00:00-03:00
+             */
+            registradoEm: string;
+            /** @example Pesquisador Demo (Ficticio) */
+            alteradoPor: string;
+            /**
+             * Format: date-time
+             * @example 2026-11-14T10:00:00-03:00
+             */
+            alteradoEm: string;
+        };
+        /** @description Resultado fictício de uma atividade de avaliação. O valor é texto curto livre (sem faixa de referência). */
+        ResultadoRequest: {
+            /**
+             * @description Obrigatório; não pode ser só espaços (VALOR_OBRIGATORIO).
+             * @example 120/80
+             */
+            valor: string;
+            /** @example mmHg */
+            unidade?: string | null;
+            /** @example Sentado, após 5 minutos */
+            observacao?: string | null;
+        };
+        /**
+         * @description Situação da participação. Enquanto a retirada (T101 a T103) não existir, toda participação é ATIVO.
+         * @enum {string}
+         */
+        SituacaoParticipacao: "ATIVO" | "RETIRADO";
+        /** @description Estudo em que o participante logado está incluído (um item por participação). Não traz dado de candidato. */
+        MeuEstudoResponse: {
+            /** Format: uuid */
+            participacaoId: string;
+            /** Format: uuid */
+            estudoId: string;
+            titulo: string;
+            /** @description Objetivo do estudo cortado em 160 caracteres (termina com reticências quando foi cortado). */
+            resumo: string;
+            /** @enum {string} */
+            statusEstudo: "PLANEJAMENTO" | "RECRUTAMENTO" | "EXECUCAO" | "ENCERRADO";
+            /**
+             * Format: date
+             * @description Dia 0 da participação.
+             */
+            dataInclusao: string;
+            situacaoParticipacao: components["schemas"]["SituacaoParticipacao"];
+        };
+        /** @description Dados da retirada visíveis ao app. O motivo da retirada nunca é exposto. */
+        RetiradaDoMeuEstudo: {
+            /** Format: date */
+            dataRetirada: string;
+        };
+        /** @description Detalhe de um estudo do participante logado (os campos de `MeuEstudoResponse` mais os abaixo). */
+        MeuEstudoDetalheResponse: {
+            /** Format: uuid */
+            participacaoId: string;
+            /** Format: uuid */
+            estudoId: string;
+            titulo: string;
+            resumo: string;
+            /** @enum {string} */
+            statusEstudo: "PLANEJAMENTO" | "RECRUTAMENTO" | "EXECUCAO" | "ENCERRADO";
+            /** Format: date */
+            dataInclusao: string;
+            situacaoParticipacao: components["schemas"]["SituacaoParticipacao"];
+            /** @description Objetivo completo do estudo. */
+            objetivo: string;
+            /** Format: date */
+            dataInicio?: string | null;
+            /** Format: date */
+            dataFim?: string | null;
+            /** @description Nome do responsável pelo estudo. */
+            responsavelNome: string;
+            retirada?: components["schemas"]["RetiradaDoMeuEstudo"] | null;
+        };
+        /**
+         * @description Visita do participante logado, para o app (RF18). Traz só os **nomes** das atividades previstas e **nenhum
+         *     resultado** das avaliações (decisão de escopo e de privacidade).
+         */
+        MinhaVisitaResponse: {
+            /**
+             * Format: uuid
+             * @description Identificador da visita agendada.
+             */
+            id: string;
+            /** Format: uuid */
+            participacaoId: string;
+            /** Format: uuid */
+            estudoId: string;
+            estudoTitulo: string;
+            /**
+             * @description Nome da visita prevista.
+             * @example Retorno 30 dias
+             */
+            visitaNome: string;
+            /**
+             * Format: date-time
+             * @description Data e hora agendadas, com o deslocamento do fuso do centro (ISO 8601).
+             * @example 2026-11-24T09:30:00-03:00
+             */
+            dataHora: string;
+            situacao: components["schemas"]["SituacaoVisita"];
+            /**
+             * Format: date-time
+             * @description Preenchida nas visitas REALIZADA.
+             */
+            dataHoraRealizada?: string | null;
+            /** @description Preenchido nas visitas CANCELADA (inclusive "retirada do estudo"). */
+            motivo?: string | null;
+            /** @description Nomes das atividades previstas da visita, em ordem alfabética. */
+            atividades: string[];
+        };
+        /**
+         * @description Totais de comparecimento do participante (e do estudo, quando `estudoId` é informado), calculados no servidor e
+         *     **independentes da página** pedida.
+         */
+        ResumoComparecimentoResponse: {
+            /** Format: int64 */
+            realizadas: number;
+            /** Format: int64 */
+            ausentes: number;
+            /** Format: int64 */
+            canceladas: number;
+        };
+        /** @description Página do histórico de comparecimento do participante logado, com o resumo. */
+        HistoricoMinhasVisitasResponse: {
+            resumo: components["schemas"]["ResumoComparecimentoResponse"];
+            conteudo: components["schemas"]["MinhaVisitaResponse"][];
+            /** @description Base 0. */
+            pagina: number;
+            tamanho: number;
+            /** Format: int64 */
+            totalElementos: number;
+            totalPaginas: number;
+        };
     };
     responses: {
+        /** @description Parâmetro de consulta inválido (`estudoId` que não é um UUID, `pagina` negativa ou `tamanho` fora de 1 a 100). */
+        ErroParametroInvalido: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "erro": "Valor inválido para o parâmetro estudoId",
+                 *       "codigo": "PARAMETRO_INVALIDO"
+                 *     }
+                 */
+                "application/json": components["schemas"]["Erro"];
+            };
+        };
         /** @description Validação falhou (campo obrigatório, formato de data) ou regra de formato. */
         Erro400: {
             headers: {
@@ -521,6 +990,13 @@ export interface components {
     parameters: {
         /** @description UUID da participação (o participante incluído no estudo). */
         ParticipacaoId: string;
+        /** @description UUID da visita agendada. */
+        VisitaAgendadaId: string;
+        /**
+         * @description Restringe a consulta a um estudo do participante. Um `estudoId` que **não é do participante** devolve lista
+         *     vazia (nunca 404 e nunca dados de outro participante). Valor que não é um UUID responde 400.
+         */
+        EstudoIdOpcional: string;
     };
     requestBodies: never;
     headers: never;
@@ -552,6 +1028,7 @@ export interface operations {
             401: components["responses"]["Erro401"];
             403: components["responses"]["Erro403"];
             404: components["responses"]["Erro404"];
+            409: components["responses"]["Erro409"];
         };
     };
     agendarVisita: {
@@ -580,6 +1057,33 @@ export interface operations {
                 };
             };
             400: components["responses"]["Erro400"];
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+            404: components["responses"]["Erro404"];
+            409: components["responses"]["Erro409"];
+        };
+    };
+    buscarVisitaAgendada: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID da visita agendada. */
+                visitaAgendadaId: components["parameters"]["VisitaAgendadaId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A visita agendada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VisitaAgendadaResponse"];
+                };
+            };
             401: components["responses"]["Erro401"];
             403: components["responses"]["Erro403"];
             404: components["responses"]["Erro404"];
@@ -618,6 +1122,60 @@ export interface operations {
             409: components["responses"]["Erro409"];
         };
     };
+    registrarDesfechoVisita: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID da visita agendada. */
+                visitaAgendadaId: components["parameters"]["VisitaAgendadaId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DesfechoRequest"];
+            };
+        };
+        responses: {
+            /** @description Desfecho registrado; devolve a visita atualizada (situação final, autor e data da alteração, versão). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VisitaAgendadaResponse"];
+                };
+            };
+            /**
+             * @description Dado inválido. `VALIDACAO_CAMPOS` (tipo ausente ou texto acima de 500 caracteres), `CORPO_INVALIDO` (JSON
+             *     malformado ou tipo inexistente), `DATA_REALIZACAO_FUTURA` e `MOTIVO_OBRIGATORIO`.
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Erro"];
+                };
+            };
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+            404: components["responses"]["Erro404"];
+            /**
+             * @description Regra de negócio violada: `TRANSICAO_VISITA_INVALIDA`, `ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO`,
+             *     `VISITA_AINDA_NAO_OCORREU` ou `VISITA_ALTERADA_CONCORRENTEMENTE`.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Erro"];
+                };
+            };
+        };
+    };
     agendaDoEstudo: {
         parameters: {
             query?: {
@@ -654,6 +1212,7 @@ export interface operations {
             401: components["responses"]["Erro401"];
             403: components["responses"]["Erro403"];
             404: components["responses"]["Erro404"];
+            409: components["responses"]["Erro409"];
         };
     };
     participantesDaAgenda: {
@@ -680,6 +1239,7 @@ export interface operations {
             401: components["responses"]["Erro401"];
             403: components["responses"]["Erro403"];
             404: components["responses"]["Erro404"];
+            409: components["responses"]["Erro409"];
         };
     };
     historicoDoParticipante: {
@@ -781,6 +1341,410 @@ export interface operations {
             401: components["responses"]["Erro401"];
             403: components["responses"]["Erro403"];
             404: components["responses"]["Erro404"];
+            409: components["responses"]["Erro409"];
+        };
+    };
+    resultadosDaVisita: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID da visita agendada. */
+                visitaAgendadaId: components["parameters"]["VisitaAgendadaId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Atividades de avaliação da visita, com o resultado de cada uma ou nulo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "visitaAgendadaId": "d6300000-0000-4000-8000-000000001981",
+                     *       "situacaoVisita": "REALIZADA",
+                     *       "bloqueio": null,
+                     *       "total": 1,
+                     *       "registrados": 1,
+                     *       "pendentes": 0,
+                     *       "atividades": [
+                     *         {
+                     *           "acaoId": "d6300000-0000-4000-8000-000000001941",
+                     *           "nome": "Aferir pressão arterial",
+                     *           "descricao": "Medida simulada",
+                     *           "resultado": {
+                     *             "valor": "120/80",
+                     *             "unidade": "mmHg",
+                     *             "observacao": null,
+                     *             "registradoPor": "Pesquisador Demo (Ficticio)",
+                     *             "registradoEm": "2026-10-25T11:00:00-03:00",
+                     *             "alteradoPor": "Pesquisador Demo (Ficticio)",
+                     *             "alteradoEm": "2026-10-25T11:00:00-03:00"
+                     *           }
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ResultadosDaVisitaResponse"];
+                };
+            };
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+            /** @description Visita agendada inexistente. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "erro": "Visita agendada não encontrada: d6300000-0000-4000-8000-000000009999",
+                     *       "codigo": "RECURSO_NAO_ENCONTRADO"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Erro"];
+                };
+            };
+            409: components["responses"]["Erro409"];
+        };
+    };
+    registrarResultado: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID da visita agendada. */
+                visitaAgendadaId: components["parameters"]["VisitaAgendadaId"];
+                /** @description UUID da atividade (ação) da visita prevista. */
+                acaoId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "valor": "120/80",
+                 *       "unidade": "mmHg",
+                 *       "observacao": "Sentado, após 5 minutos"
+                 *     }
+                 */
+                "application/json": components["schemas"]["ResultadoRequest"];
+            };
+        };
+        responses: {
+            /** @description Resultado editado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "acaoId": "d6300000-0000-4000-8000-000000001941",
+                     *       "valor": "130/85",
+                     *       "unidade": "mmHg",
+                     *       "observacao": "Repetida após 10 minutos",
+                     *       "registradoPor": "Pesquisador Demo (Ficticio)",
+                     *       "registradoEm": "2026-10-25T11:00:00-03:00",
+                     *       "alteradoPor": "Pesquisador Demo (Ficticio)",
+                     *       "alteradoEm": "2026-11-14T10:20:00-03:00"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ResultadoAtividadeResponse"];
+                };
+            };
+            /** @description Resultado registrado pela primeira vez. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "acaoId": "d6300000-0000-4000-8000-000000001941",
+                     *       "valor": "120/80",
+                     *       "unidade": "mmHg",
+                     *       "observacao": "Sentado, após 5 minutos",
+                     *       "registradoPor": "Pesquisador Demo (Ficticio)",
+                     *       "registradoEm": "2026-11-14T10:00:00-03:00",
+                     *       "alteradoPor": "Pesquisador Demo (Ficticio)",
+                     *       "alteradoEm": "2026-11-14T10:00:00-03:00"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ResultadoAtividadeResponse"];
+                };
+            };
+            /** @description Dado inválido: corpo ausente ou malformado (`CORPO_INVALIDO`), valor em branco (`VALOR_OBRIGATORIO`) ou tamanho acima do limite (`VALIDACAO_CAMPOS`, com `errosCampo`). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Erro"];
+                };
+            };
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+            /** @description Visita agendada ou atividade inexistente. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "erro": "Atividade não encontrada: d6300000-0000-4000-8000-000000009999",
+                     *       "codigo": "RECURSO_NAO_ENCONTRADO"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Erro"];
+                };
+            };
+            /** @description Regra de negócio violada: `VISITA_NAO_REALIZADA`, `ATIVIDADE_FORA_DA_CATEGORIA_AVALIACAO`, `ATIVIDADE_NAO_PERTENCE_A_VISITA`, `ESTUDO_ENCERRADO` e, a partir da retirada (T102), `PARTICIPANTE_RETIRADO`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Erro"];
+                };
+            };
+        };
+    };
+    meusEstudos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estudos do participante (lista vazia se a conta não tem participação). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "participacaoId": "d6300000-0000-4000-8000-000000002401",
+                     *         "estudoId": "d6300000-0000-4000-8000-000000001901",
+                     *         "titulo": "Demo - Acompanhamento de participantes",
+                     *         "resumo": "Demonstrar o acompanhamento de participantes com dados fictícios.",
+                     *         "statusEstudo": "EXECUCAO",
+                     *         "dataInclusao": "2026-11-09",
+                     *         "situacaoParticipacao": "ATIVO"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["MeuEstudoResponse"][];
+                };
+            };
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+        };
+    };
+    meuEstudo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estudoId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Detalhe do estudo do participante. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "participacaoId": "d6300000-0000-4000-8000-000000002401",
+                     *       "estudoId": "d6300000-0000-4000-8000-000000001901",
+                     *       "titulo": "Demo - Acompanhamento de participantes",
+                     *       "resumo": "Demonstrar o acompanhamento de participantes com dados fictícios.",
+                     *       "statusEstudo": "EXECUCAO",
+                     *       "dataInclusao": "2026-11-09",
+                     *       "situacaoParticipacao": "ATIVO",
+                     *       "objetivo": "Demonstrar o acompanhamento de participantes com dados fictícios.",
+                     *       "dataInicio": "2026-11-01",
+                     *       "dataFim": "2027-05-01",
+                     *       "responsavelNome": "Pesquisador Demo (Ficticio)",
+                     *       "retirada": null
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MeuEstudoDetalheResponse"];
+                };
+            };
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+            404: components["responses"]["Erro404"];
+        };
+    };
+    minhasProximasVisitas: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Restringe a consulta a um estudo do participante. Um `estudoId` que **não é do participante** devolve lista
+                 *     vazia (nunca 404 e nunca dados de outro participante). Valor que não é um UUID responde 400.
+                 */
+                estudoId?: components["parameters"]["EstudoIdOpcional"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Próximas visitas do participante, da mais próxima para a mais distante (lista vazia se não houver). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "id": "d6300000-0000-4000-8000-000000002501",
+                     *         "participacaoId": "d6300000-0000-4000-8000-000000002401",
+                     *         "estudoId": "d6300000-0000-4000-8000-000000001901",
+                     *         "estudoTitulo": "Demo - Acompanhamento de participantes",
+                     *         "visitaNome": "Retorno 30 dias",
+                     *         "dataHora": "2026-11-24T09:30:00-03:00",
+                     *         "situacao": "AGENDADA",
+                     *         "dataHoraRealizada": null,
+                     *         "motivo": null,
+                     *         "atividades": [
+                     *           "Escala de dor",
+                     *           "Exame físico"
+                     *         ]
+                     *       },
+                     *       {
+                     *         "id": "d6300000-0000-4000-8000-000000002502",
+                     *         "participacaoId": "d6300000-0000-4000-8000-000000002401",
+                     *         "estudoId": "d6300000-0000-4000-8000-000000001901",
+                     *         "estudoTitulo": "Demo - Acompanhamento de participantes",
+                     *         "visitaNome": "Retorno 60 dias",
+                     *         "dataHora": "2026-12-24T10:00:00-03:00",
+                     *         "situacao": "AGENDADA",
+                     *         "dataHoraRealizada": null,
+                     *         "motivo": null,
+                     *         "atividades": [
+                     *           "Avaliação final",
+                     *           "Entrega de medicação"
+                     *         ]
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["MinhaVisitaResponse"][];
+                };
+            };
+            400: components["responses"]["ErroParametroInvalido"];
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+        };
+    };
+    meuHistoricoDeVisitas: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Restringe a consulta a um estudo do participante. Um `estudoId` que **não é do participante** devolve lista
+                 *     vazia (nunca 404 e nunca dados de outro participante). Valor que não é um UUID responde 400.
+                 */
+                estudoId?: components["parameters"]["EstudoIdOpcional"];
+                /** @description Página, base 0. */
+                pagina?: number;
+                /** @description Itens por página (máximo 100). */
+                tamanho?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Página do histórico de comparecimento, com o resumo do participante. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "resumo": {
+                     *         "realizadas": 1,
+                     *         "ausentes": 1,
+                     *         "canceladas": 1
+                     *       },
+                     *       "conteudo": [
+                     *         {
+                     *           "id": "d6300000-0000-4000-8000-000000002511",
+                     *           "participacaoId": "d6300000-0000-4000-8000-000000002401",
+                     *           "estudoId": "d6300000-0000-4000-8000-000000001901",
+                     *           "estudoTitulo": "Demo - Acompanhamento de participantes",
+                     *           "visitaNome": "Retorno 60 dias",
+                     *           "dataHora": "2026-11-18T10:00:00-03:00",
+                     *           "situacao": "CANCELADA",
+                     *           "dataHoraRealizada": null,
+                     *           "motivo": "retirada do estudo",
+                     *           "atividades": [
+                     *             "Avaliação final",
+                     *             "Entrega de medicação"
+                     *           ]
+                     *         },
+                     *         {
+                     *           "id": "d6300000-0000-4000-8000-000000002512",
+                     *           "participacaoId": "d6300000-0000-4000-8000-000000002401",
+                     *           "estudoId": "d6300000-0000-4000-8000-000000001901",
+                     *           "estudoTitulo": "Demo - Acompanhamento de participantes",
+                     *           "visitaNome": "Retorno 30 dias",
+                     *           "dataHora": "2026-11-12T09:30:00-03:00",
+                     *           "situacao": "AUSENTE",
+                     *           "dataHoraRealizada": null,
+                     *           "motivo": null,
+                     *           "atividades": [
+                     *             "Escala de dor",
+                     *             "Exame físico"
+                     *           ]
+                     *         },
+                     *         {
+                     *           "id": "d6300000-0000-4000-8000-000000002513",
+                     *           "participacaoId": "d6300000-0000-4000-8000-000000002401",
+                     *           "estudoId": "d6300000-0000-4000-8000-000000001901",
+                     *           "estudoTitulo": "Demo - Acompanhamento de participantes",
+                     *           "visitaNome": "Triagem",
+                     *           "dataHora": "2026-11-09T09:00:00-03:00",
+                     *           "situacao": "REALIZADA",
+                     *           "dataHoraRealizada": "2026-11-09T09:10:00-03:00",
+                     *           "motivo": null,
+                     *           "atividades": [
+                     *             "Aferir pressão arterial",
+                     *             "Coletar sangue"
+                     *           ]
+                     *         }
+                     *       ],
+                     *       "pagina": 0,
+                     *       "tamanho": 20,
+                     *       "totalElementos": 3,
+                     *       "totalPaginas": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["HistoricoMinhasVisitasResponse"];
+                };
+            };
+            400: components["responses"]["ErroParametroInvalido"];
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
         };
     };
 }

@@ -45,16 +45,35 @@ public final class CenarioVisitaAgendada {
                 + "VALUES (CAST(? AS UUID), CAST(? AS UUID), ?, ?, 3, ?)", id.toString(), ESTUDO, nome, dia, ordem);
     }
 
-    /** Insere uma visita agendada por SQL, sem passar pela entidade, para provar o que o banco recusa. */
-    public static void inserirVisitaAgendada(JdbcTemplate jdbc, Ids ids, UUID visita, String situacao,
+    /**
+     * Insere uma visita agendada por SQL, sem passar pela entidade, para provar o que o banco recusa.
+     *
+     * @return o id da visita agendada inserida
+     */
+    public static UUID inserirVisitaAgendada(JdbcTemplate jdbc, Ids ids, UUID visita, String situacao,
             LocalDateTime dataHoraRealizada, String motivo) {
         Timestamp agora = Timestamp.valueOf(LocalDateTime.now());
+        UUID id = UUID.randomUUID();
         jdbc.update("INSERT INTO visitas_agendadas (id, participacao_id, visita_planejada_id, data_hora_agendada, "
                 + "situacao, data_hora_realizada, motivo, versao, criado_por_id, criado_em, alterado_por_id, alterado_em) "
                 + "VALUES (CAST(? AS UUID), CAST(? AS UUID), CAST(? AS UUID), ?, ?, ?, ?, 0, CAST(? AS UUID), ?, "
                 + "CAST(? AS UUID), ?)",
-                UUID.randomUUID().toString(), ids.participacao().toString(), visita.toString(), agora, situacao,
+                id.toString(), ids.participacao().toString(), visita.toString(), agora, situacao,
                 dataHoraRealizada == null ? null : Timestamp.valueOf(dataHoraRealizada), motivo,
                 ids.usuario().toString(), agora, ids.usuario().toString(), agora);
+        return id;
+    }
+
+    /**
+     * Insere uma atividade ({@code acoes}) na visita prevista informada (T87: resultados de avaliação).
+     *
+     * @return o id da atividade inserida
+     */
+    public static UUID inserirAcao(JdbcTemplate jdbc, UUID visita, String nome, String categoria) {
+        UUID id = UUID.randomUUID();
+        jdbc.update("INSERT INTO acoes (id, visita_id, nome, descricao, categoria) "
+                + "VALUES (CAST(? AS UUID), CAST(? AS UUID), ?, 'Atividade ficticia de teste', ?)",
+                id.toString(), visita.toString(), nome, categoria);
+        return id;
     }
 }

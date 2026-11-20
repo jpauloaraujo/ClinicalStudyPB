@@ -404,6 +404,44 @@ Os seguintes usuários fictícios são criados automaticamente pela migration `V
 
 Meta mínima: **80% de cobertura de linhas do código de negócio do backend**, além de testes de componentes web e mobile e ao menos um fluxo E2E em cada interface. Os testes devem ser executados automaticamente a cada pull request.
 
+### Resumo dos testes por sprint
+
+Última execução em **16/11/2026**, no ramo `develop` (commit `3257595`, Sprint 3 em andamento). O detalhe por classe (execução de 13/11), a cobertura, a rastreabilidade RF × testes e os riscos estão no [relatório de testes das Sprints 1 a 3](docs/testes/relatorio-de-testes-sprints-1-a-3.md).
+
+| Suíte | Em 13/11 | Em 16/11 | Falhas |
+|---|---|---|---|
+| Backend (JUnit) | 478 | **672** | 0 |
+| Web (Vitest) | 133 | **257** | 0 |
+| E2E (Playwright) | 29 | **29** (listados; não executados nesta rodada) | — |
+| Mobile | 0 | **0** (previstos na Sprint 3) | — |
+| **Total** | **640** | **958** | **0** |
+
+| Indicador | Valor | Meta |
+|---|---|---|
+| Cobertura de linhas do código de negócio (backend) | **99,0%** (967 de 977) | 80% |
+| Requisitos verificados | RF01 a RF11 (Sprints 1 e 2); RF12, RF13 e RF15 com testes de backend e de componentes web, sem E2E ainda; RF14 só no backend | RF01 a RF22 |
+| Falhas de teste na `develop` | 0 | 0 |
+| Itens de defeito abertos ou em verificação | 6 (de 29 registrados) | 0 |
+
+### Rastreabilidade de erros
+
+Todo erro, defeito ou não conformidade das Sprints 1 a 3 tem um identificador, a causa, a resolução e o que funciona e o que não funciona depois de cada alteração. O histórico completo está na [rastreabilidade de erros e alterações](docs/rastreabilidade/rastreabilidade-erros-e-alteracoes.md) e a lista oficial, no [registro de defeitos](docs/testes/registro-de-defeitos.md). Situação em 16/11/2026:
+
+| Sprint | Itens registrados | Fechados | Em verificação ou abertos |
+|---|---|---|---|
+| Sprint 1 | 1 defeito + 4 dívidas técnicas | 3 | 2 dívidas (DT-S1-02, DT-S1-03) |
+| Sprint 2 | 9 | 9 | 0 |
+| Sprint 3 | 19 | 13 | 6 (D-S3-03, 06, 09, 10, 11 e 14) |
+
+| ID | O que está em aberto ou em verificação | Estado |
+|---|---|---|
+| D-S3-03 | T96 entrou na `develop` por push direto, sem Pull Request; falta o review do commit | Aberto |
+| D-S3-06 | T84 (RQ-T84-07 a 10), T86, T78 e T79 por fazer | Aberto (parcial) |
+| D-S3-09 | Consulta da agenda no PostgreSQL (T76): corrigida e mesclada; falta confirmar o job do CI | Em verificação |
+| D-S3-10 | `DemoDataIntegrationTest` falhou numa rodada local e não se reproduziu; causa não esclarecida | Em verificação |
+| D-S3-11 | O `@PreUpdate` de `VisitaAgendada` foi removido na T76; o revisor decide | Em verificação |
+| D-S3-14 | Docker: o Maven Central respondeu 429 no CI; retry mesclado, falta um job verde | Em verificação |
+
 ### Backend
 
 Testes com JUnit 5, Spring Boot Test, MockMvc, Mockito e banco H2 em memória no modo de compatibilidade PostgreSQL (executando as mesmas migrations do Flyway e validando o schema JPA):
@@ -415,7 +453,7 @@ cd backend/ClinicalStudyPB
 
 No Windows (PowerShell): `mvnw.cmd test`. Os testes locais usam H2; a CI roda os mesmos testes também contra PostgreSQL real (job "Backend (testes no PostgreSQL)", abaixo). O relatório de cobertura do JaCoCo é gerado em `target/site/jacoco/index.html`.
 
-**Resultado em 09/11/2026:** 434 testes, 0 falhas, 0 erros. Cobertura de linhas do código de negócio (domínio e serviços, a medida da regra de 80%): **99,2%**; backend inteiro, exceto a classe `main`, `config` e os DTOs: 99,1%. Ficam fora da medição a classe `main`, `config` e os DTOs.
+**Resultado em 13/11/2026 (`develop`):** 478 testes, 0 falhas, 0 erros e 2 ignorados de propósito (casos do contrato que dependem da T76 e da T96). Cobertura de linhas do código de negócio (domínio e serviços, a medida da regra de 80%): **99,2%**; backend inteiro, exceto a classe `main`, `config` e os DTOs: 99,1%. Ficam fora da medição a classe `main`, `config` e os DTOs. Na Release 1 (09/11/2026) eram 434 testes.
 
 Suítes atuais:
 - `ClinicalStudyPbApplicationTests`: validação do contexto Spring Boot, Flyway e Hibernate (`ddl-auto=validate`).
@@ -672,7 +710,7 @@ ClinicalStudyPB/
 │           ├── api/              # Cliente HTTP e armazenamento seguro do token
 │           ├── components/       # Tema e componentes de interface
 │           └── contexts/         # Sessão do participante
-├── docs/                         # Especificação, planejamento, diagramas, design por task, imagens e relatório de testes
+├── docs/                         # Especificação, planejamento, diagramas, design por task, imagens, relatórios de testes e rastreabilidade de erros
 ├── releases/                     # Documentação de cada release (release1/README.md)
 ├── scripts/                      # verificar-ambiente.py (T67) e verificar-recrutamento.py (T68)
 ├── docker-compose.yml            # Ambiente completo: PostgreSQL + backend + web (T67)
@@ -693,6 +731,7 @@ ClinicalStudyPB/
 - [Mapeamento e complemento das tasks da Sprint 2 até 01/11](<docs/sprint2/Tasks até 01-11 — mapeamento e complemento.md>) — o que já estava feito, o que foi acrescentado, como funciona e o que ainda depende de pessoas.
 - [Contrato OpenAPI da Sprint 2](docs/api/openapi-sprint2.yaml) — endpoints de recrutamento e de estado do estudo (T37).
 - [Diagramas do domínio](docs/diagramas/dominio.md), [casos de uso](docs/diagramas/casos-de-uso.md), [sequência: avançar o estado](docs/diagramas/sequencia-avancar-estado.md), [sequência: incluir participante](docs/diagramas/sequencia-inclusao-participante.md) e [arquitetura](docs/diagramas/arquitetura.md) (T36 e T69).
+- [Relatório de testes das Sprints 1 a 3](docs/testes/relatorio-de-testes-sprints-1-a-3.md) — resultados consolidados por sprint, cobertura atual, rastreabilidade RF × testes e situação dos testes da Sprint 3; o [registro de defeitos](docs/testes/registro-de-defeitos.md), com a lista oficial de defeitos; e a [rastreabilidade de erros e alterações](docs/rastreabilidade/rastreabilidade-erros-e-alteracoes.md), com o histórico de cada erro, a resolução e o que funciona ou não depois de cada mudança.
 - [Relatório de testes da Release 1](docs/testes/relatorio-de-testes-release1.md) — estratégia, ambiente, resultados por suíte, cobertura, rastreabilidade RF × testes, defeitos, riscos e conclusão.
 - [Release 1](releases/release1/README.md) — relatório da entrega: requisitos, resultados dos testes, problemas conhecidos e processo de desenvolvimento.
 - [Integração do planejamento (T67)](<docs/sprint2/T67 — Integração do planejamento (ambiente Docker).md>) e [do recrutamento (T68)](<docs/sprint2/T68 — Integração do recrutamento (roteiro e correções).md>) — roteiros executáveis e defeitos encontrados.

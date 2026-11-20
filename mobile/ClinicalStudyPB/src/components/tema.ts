@@ -9,6 +9,10 @@ export const cores = {
   primariaFundo: '#e6eef8',
   perigo: '#b42318',
   perigoFundo: '#fef3f2',
+  sucesso: '#067647',
+  sucessoFundo: '#ecfdf3',
+  aviso: '#93370d',
+  avisoFundo: '#fffaeb',
 };
 
 export const espaco = { 1: 4, 2: 8, 3: 12, 4: 16, 6: 24, 8: 32 };
