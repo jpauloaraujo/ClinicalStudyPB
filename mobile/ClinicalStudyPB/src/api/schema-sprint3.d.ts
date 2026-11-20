@@ -279,6 +279,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/estudos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Estudos do participante logado
+         * @description Lista os estudos em que a conta logada está incluída, **um item por participação**, do mais recente para o mais
+         *     antigo (pela data de inclusão). O participante é identificado **pelo token**: o endpoint não recebe id de
+         *     participante. Conta sem candidato vinculado devolve **200 com lista vazia** (não é erro). Participações retiradas
+         *     continuam na lista, com `situacaoParticipacao = RETIRADO`.
+         *
+         *     Enquanto a retirada de participante (T101 a T103) não existir, `situacaoParticipacao` vem sempre `ATIVO`.
+         *
+         *     Perfis: só PARTICIPANTE; ADMINISTRADOR, PESQUISADOR e COORDENADOR recebem 403.
+         */
+        get: operations["meusEstudos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/estudos/{estudoId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detalhe de um estudo do participante logado
+         * @description Detalhe de um estudo em que a conta logada está incluída. Devolve **404** (`RECURSO_NAO_ENCONTRADO`) quando o
+         *     estudo não existe **ou** existe mas a conta não participa dele, sem distinguir os dois casos, para não revelar
+         *     que o dado existe. O motivo da retirada nunca é exposto ao app: `retirada` traz só `dataRetirada`.
+         *
+         *     Enquanto a retirada de participante (T101 a T103) não existir, `retirada` vem sempre `null`.
+         *
+         *     Perfis: só PARTICIPANTE; ADMINISTRADOR, PESQUISADOR e COORDENADOR recebem 403.
+         */
+        get: operations["meuEstudo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -665,6 +718,57 @@ export interface components {
             unidade?: string | null;
             /** @example Sentado, após 5 minutos */
             observacao?: string | null;
+        };
+        /**
+         * @description Situação da participação. Enquanto a retirada (T101 a T103) não existir, toda participação é ATIVO.
+         * @enum {string}
+         */
+        SituacaoParticipacao: "ATIVO" | "RETIRADO";
+        /** @description Estudo em que o participante logado está incluído (um item por participação). Não traz dado de candidato. */
+        MeuEstudoResponse: {
+            /** Format: uuid */
+            participacaoId: string;
+            /** Format: uuid */
+            estudoId: string;
+            titulo: string;
+            /** @description Objetivo do estudo cortado em 160 caracteres (termina com reticências quando foi cortado). */
+            resumo: string;
+            /** @enum {string} */
+            statusEstudo: "PLANEJAMENTO" | "RECRUTAMENTO" | "EXECUCAO" | "ENCERRADO";
+            /**
+             * Format: date
+             * @description Dia 0 da participação.
+             */
+            dataInclusao: string;
+            situacaoParticipacao: components["schemas"]["SituacaoParticipacao"];
+        };
+        /** @description Dados da retirada visíveis ao app. O motivo da retirada nunca é exposto. */
+        RetiradaDoMeuEstudo: {
+            /** Format: date */
+            dataRetirada: string;
+        };
+        /** @description Detalhe de um estudo do participante logado (os campos de `MeuEstudoResponse` mais os abaixo). */
+        MeuEstudoDetalheResponse: {
+            /** Format: uuid */
+            participacaoId: string;
+            /** Format: uuid */
+            estudoId: string;
+            titulo: string;
+            resumo: string;
+            /** @enum {string} */
+            statusEstudo: "PLANEJAMENTO" | "RECRUTAMENTO" | "EXECUCAO" | "ENCERRADO";
+            /** Format: date */
+            dataInclusao: string;
+            situacaoParticipacao: components["schemas"]["SituacaoParticipacao"];
+            /** @description Objetivo completo do estudo. */
+            objetivo: string;
+            /** Format: date */
+            dataInicio?: string | null;
+            /** Format: date */
+            dataFim?: string | null;
+            /** @description Nome do responsável pelo estudo. */
+            responsavelNome: string;
+            retirada?: components["schemas"]["RetiradaDoMeuEstudo"] | null;
         };
     };
     responses: {
@@ -1262,6 +1366,82 @@ export interface operations {
                     "application/json": components["schemas"]["Erro"];
                 };
             };
+        };
+    };
+    meusEstudos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estudos do participante (lista vazia se a conta não tem participação). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "participacaoId": "d6300000-0000-4000-8000-000000002401",
+                     *         "estudoId": "d6300000-0000-4000-8000-000000001901",
+                     *         "titulo": "Demo - Acompanhamento de participantes",
+                     *         "resumo": "Demonstrar o acompanhamento de participantes com dados fictícios.",
+                     *         "statusEstudo": "EXECUCAO",
+                     *         "dataInclusao": "2026-11-09",
+                     *         "situacaoParticipacao": "ATIVO"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["MeuEstudoResponse"][];
+                };
+            };
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+        };
+    };
+    meuEstudo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estudoId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Detalhe do estudo do participante. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "participacaoId": "d6300000-0000-4000-8000-000000002401",
+                     *       "estudoId": "d6300000-0000-4000-8000-000000001901",
+                     *       "titulo": "Demo - Acompanhamento de participantes",
+                     *       "resumo": "Demonstrar o acompanhamento de participantes com dados fictícios.",
+                     *       "statusEstudo": "EXECUCAO",
+                     *       "dataInclusao": "2026-11-09",
+                     *       "situacaoParticipacao": "ATIVO",
+                     *       "objetivo": "Demonstrar o acompanhamento de participantes com dados fictícios.",
+                     *       "dataInicio": "2026-11-01",
+                     *       "dataFim": "2027-05-01",
+                     *       "responsavelNome": "Pesquisador Demo (Ficticio)",
+                     *       "retirada": null
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MeuEstudoDetalheResponse"];
+                };
+            };
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+            404: components["responses"]["Erro404"];
         };
     };
 }
