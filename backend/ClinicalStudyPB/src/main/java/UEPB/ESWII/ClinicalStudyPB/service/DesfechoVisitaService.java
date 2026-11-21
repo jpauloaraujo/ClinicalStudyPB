@@ -54,6 +54,7 @@ import UEPB.ESWII.ClinicalStudyPB.repository.VisitaAgendadaRepository;
 public class DesfechoVisitaService {
 
     public static final String ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO = "ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO";
+    public static final String PARTICIPANTE_RETIRADO = "PARTICIPANTE_RETIRADO";
     public static final String VISITA_AINDA_NAO_OCORREU = "VISITA_AINDA_NAO_OCORREU";
     public static final String VISITA_ALTERADA_CONCORRENTEMENTE = "VISITA_ALTERADA_CONCORRENTEMENTE";
 
@@ -134,13 +135,12 @@ public class DesfechoVisitaService {
         }
     }
 
-    /**
-     * Ponto único da regra 6 (participante retirado). A T101 cria a situação da participação e a T102 preenche
-     * este método para lançar {@code ConflitoRegraException("PARTICIPANTE_RETIRADO", ...)} quando o participante
-     * foi retirado do estudo. Até lá, a coluna não existe e nenhum participante está retirado.
-     */
+    /** Regra 6 (T102): participante retirado não pode receber registro de desfecho de visita. */
     private void exigirParticipacaoAtiva(VisitaAgendada visita) {
-        // T102: if (participacao.estaRetirada()) throw new ConflitoRegraException("PARTICIPANTE_RETIRADO", ...)
+        if (visita.getParticipacao().estaRetirada()) {
+            throw new ConflitoRegraException(PARTICIPANTE_RETIRADO,
+                    "O participante foi retirado do estudo; não é possível registrar o desfecho da visita");
+        }
     }
 
     /**
