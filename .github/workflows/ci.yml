@@ -262,3 +262,5 @@ jobs:
         run: npm run lint
       - name: Verificação de tipos
         run: npm run typecheck
+      - name: Testes (Jest)
+        run: npm test
