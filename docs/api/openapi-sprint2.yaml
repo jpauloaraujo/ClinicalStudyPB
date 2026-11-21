@@ -1604,6 +1604,12 @@ components:
           description: Dia 0 do cronograma do participante.
         incluidoPor:
           type: string
+        situacao:
+          type: string
+          enum:
+          - ATIVO
+          - RETIRADO
+          description: Situação da participação no estudo. Nasce ATIVO e passa a RETIRADO de forma irreversível (RF16, T101).
       required:
       - id
       - candidatoId
@@ -1612,6 +1618,7 @@ components:
       - estudoId
       - dataInclusao
       - incluidoPor
+      - situacao
     VagasResponse:
       type: object
       description: Resumo das vagas do estudo.

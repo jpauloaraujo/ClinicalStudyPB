@@ -14,6 +14,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -40,7 +41,9 @@ import UEPB.ESWII.ClinicalStudyPB.controller.dto.VisitaAgendadaResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.VisitaDoParticipanteResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.VisitaReagendamentoRequest;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoNoHistorico;
+import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoParticipacao;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoVisita;
+import UEPB.ESWII.ClinicalStudyPB.domain.enums.SolicitanteRetirada;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.TipoDesfecho;
 
 /**
@@ -57,10 +60,11 @@ class ContratoOpenApiSprint3Test {
     private static final Set<String> METODOS = Set.of("get", "post", "put", "delete", "patch");
 
     /**
-     * Quantas operações o YAML tem agora: 5 do agendamento (T74), 1 do histórico (T95), 2 dos resultados (T88) e 2
-     * do desfecho (T80 e T82: o POST do desfecho e o GET da visita). Cada PBI só atualiza este número.
+     * Quantas operações o YAML tem agora: 5 do agendamento (T74), 1 do histórico (T95), 2 dos resultados (T88), 2
+     * do desfecho (T80 e T82: o POST do desfecho e o GET da visita) e 2 da retirada (T101: POST e GET). Cada PBI
+     * só atualiza este número.
      */
-    private static final int OPERACOES_ESPERADAS = 10;
+    private static final int OPERACOES_ESPERADAS = 12;
 
     /** Operações do desfecho da visita (T80 e T82), implementadas na T82. */
     private static final Set<String> OPERACOES_DESFECHO = Set.of(
@@ -71,6 +75,11 @@ class ContratoOpenApiSprint3Test {
     private static final Set<String> OPERACOES_RESULTADOS = Set.of(
             "GET /api/visitas-agendadas/{visitaAgendadaId}/resultados",
             "PUT /api/visitas-agendadas/{visitaAgendadaId}/resultados/{acaoId}");
+
+    /** Operações da retirada de participante (T101), implementadas na T103 ({@code RetiradaController}). */
+    private static final Set<String> OPERACOES_RETIRADA = Set.of(
+            "POST /api/participacoes/{participacaoId}/retirada",
+            "GET /api/participacoes/{participacaoId}/retirada");
 
     // Caminhos da Sprint 3 (nenhum colide com o regex do ContratoOpenApiTest da Sprint 2)
     private static final Pattern SPRINT3 = Pattern.compile(
@@ -112,10 +121,10 @@ class ContratoOpenApiSprint3Test {
     }
 
     @Test
-    @DisplayName("O contrato da Sprint 3 tem as operações previstas até aqui (agendamento da T74, histórico da T95, resultados da T88 e desfecho da T80/T82)")
+    @DisplayName("O contrato da Sprint 3 tem as operações previstas até aqui (agendamento da T74, histórico da T95, resultados da T88, desfecho da T80/T82 e retirada da T101)")
     void contratoTemAsOperacoesEsperadas() throws Exception {
         assertThat(operacoesDoContrato()).hasSize(OPERACOES_ESPERADAS).containsAll(OPERACOES_RESULTADOS)
-                .containsAll(OPERACOES_DESFECHO).contains(
+                .containsAll(OPERACOES_DESFECHO).containsAll(OPERACOES_RETIRADA).contains(
                 "GET /api/participacoes/{participacaoId}/visitas",
                 "POST /api/participacoes/{participacaoId}/visitas-agendadas",
                 "PUT /api/visitas-agendadas/{visitaAgendadaId}",
@@ -131,6 +140,7 @@ class ContratoOpenApiSprint3Test {
         faltandoNaApi.removeIf(operacao -> operacao.endsWith("/historico"));
         faltandoNaApi.removeAll(OPERACOES_RESULTADOS);
         faltandoNaApi.removeAll(OPERACOES_DESFECHO);
+        faltandoNaApi.removeAll(OPERACOES_RETIRADA);
         faltandoNaApi.removeAll(operacoesDaApi());
 
         assertThat(faltandoNaApi).as("operações do contrato que a API não tem").isEmpty();
@@ -414,5 +424,46 @@ class ContratoOpenApiSprint3Test {
         assertThat(registro.get("tags").get(0).asText()).isEqualTo("Resultados das avaliações");
         assertThat(registro.get("responses").has("200")).isTrue();
         assertThat(registro.get("responses").has("201")).isTrue();
+    }
+
+    @Test
+    @Disabled("T103")
+    @DisplayName("T103: os endpoints da retirada do contrato existem na API publicada")
+    void retiradaDoContratoExisteNaApi() throws Exception {
+        Set<String> faltandoNaApi = new TreeSet<>(OPERACOES_RETIRADA);
+        faltandoNaApi.removeAll(operacoesDaApi());
+
+        assertThat(faltandoNaApi).as("operações da retirada que a API não tem").isEmpty();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    @DisplayName("T101: os enums SituacaoParticipacao e SolicitanteRetirada do contrato têm os mesmos valores do backend")
+    void enumsDaRetiradaNoContratoIguaisAosDoBackend() throws Exception {
+        List<String> situacoes = (List<String>) schema("SituacaoParticipacao").get("enum");
+        List<String> solicitantes = (List<String>) schema("SolicitanteRetirada").get("enum");
+
+        assertThat(situacoes).containsExactly(
+                Arrays.stream(SituacaoParticipacao.values()).map(Enum::name).toArray(String[]::new));
+        assertThat(solicitantes).containsExactly(
+                Arrays.stream(SolicitanteRetirada.values()).map(Enum::name).toArray(String[]::new));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    @DisplayName("T101: o contrato declara os schemas RetiradaRequest e RetiradaResponse com limites e campos obrigatórios")
+    void contratoDeclaraSchemasDaRetirada() throws Exception {
+        Map<String, Object> request = schema("RetiradaRequest");
+        Map<String, Map<String, Object>> camposRequest = (Map<String, Map<String, Object>>) request.get("properties");
+        assertThat((List<String>) request.get("required"))
+                .containsExactlyInAnyOrder("motivo", "solicitante", "dataRetirada");
+        assertThat(camposRequest.get("motivo")).containsEntry("minLength", 5).containsEntry("maxLength", 500);
+
+        Map<String, Object> response = schema("RetiradaResponse");
+        Map<String, Object> camposResponse = (Map<String, Object>) response.get("properties");
+        assertThat(camposResponse.keySet()).containsExactlyInAnyOrder(
+                "id", "participacaoId", "motivo", "solicitante", "dataRetirada",
+                "registradoPor", "registradoEm", "visitasCanceladas");
+        assertThat((List<String>) response.get("required")).containsExactlyInAnyOrderElementsOf(camposResponse.keySet());
     }
 }
