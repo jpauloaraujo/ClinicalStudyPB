@@ -165,3 +165,16 @@ Resumo em 16/11/2026: **29 itens** registrados; **23 fechados**, **4 em verifica
 | **Determinístico?** | Sim |
 | **Correção** | (a) Restaurar o fechamento do `describe` original. (b) Procurar a confirmação dentro da região "Ações do participante" |
 | **Estado** | **Fechado** em 22/11/2026: corrigido e confirmado nas rodadas seguintes (backend completo: 757 testes, 0 falhas; ver [testes-t111](testes-t111-vinculo-da-conta-do-participante.md), seção 5) |
+
+### D-T111-06 · Teste novo do Flyway usou uma consulta que só existe no H2 e quebrou no PostgreSQL (CI)
+
+| Campo | Valor |
+|---|---|
+| **Data e rodada** | 22/11/2026 · CI do PR #42, job "Backend (testes no PostgreSQL)" (757 testes, 1 erro; os outros 5 jobs passaram) |
+| **Task e requisito** | T111, RQ-T111-01 (a migration deve funcionar no H2 **e** no PostgreSQL) |
+| **Teste** | `FlywayMigrationIntegrationTest.uniqueDaContaDoCandidato:208`, escrito nesta task |
+| **Mensagem** | `BadSqlGrammar StatementCallback; bad SQL grammar [SELECT COUNT(*) FROM information_schema.indexes WHERE LOWER(index_name) = 'uk_candidatos_usuario']` |
+| **Causa** | Erro do **teste novo**: `information_schema.indexes` existe no H2, mas **não no PostgreSQL**. A migration e o índice estão certos (as demais asserções do mesmo teste e o job H2 passaram). Era exatamente a lacuna que o documento de testes registrava ("não rodei o job do PostgreSQL localmente") |
+| **Determinístico?** | Sim |
+| **Correção** | Verificar a existência do índice pelo `DatabaseMetaData.getIndexInfo` do JDBC, que é portável, comparando o nome sem diferenciar maiúsculas; o resto do teste (aceita vários sem conta e recusa a mesma conta) não muda |
+| **Estado** | **Fechado** em 22/11/2026: com a consulta portável, a suíte completa do backend foi executada contra um **PostgreSQL 16 real** (mesmo setup do job do CI): 757 testes, 0 falhas, `BUILD SUCCESS`; no H2 o `FlywayMigrationIntegrationTest` também passa (14 de 14) |

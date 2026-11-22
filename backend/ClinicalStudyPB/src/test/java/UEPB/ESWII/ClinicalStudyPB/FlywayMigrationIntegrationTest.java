@@ -205,9 +205,7 @@ class FlywayMigrationIntegrationTest {
         UUID estudo = inserirEstudoParaConta();
         UUID conta = inserirContaParticipante();
 
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.indexes "
-                + "WHERE LOWER(index_name) = 'uk_candidatos_usuario'", Integer.class))
-                .as("índice uk_candidatos_usuario").isGreaterThanOrEqualTo(1);
+        assertThat(indicesUnicosDeCandidatos()).as("índices únicos de candidatos").contains("uk_candidatos_usuario");
 
         inserirCandidatoComConta(estudo, null, "T111-A");
         inserirCandidatoComConta(estudo, null, "T111-B");
@@ -228,6 +226,28 @@ class FlywayMigrationIntegrationTest {
 
         assertThat(jdbc.queryForObject("SELECT COUNT(DISTINCT usuario_id) FROM candidatos WHERE estudo_id = CAST(? AS UUID)",
                 Integer.class, estudo.toString())).isEqualTo(2);
+    }
+
+    /**
+     * Nomes (em minúsculas) dos índices únicos da tabela candidatos, pelo {@code DatabaseMetaData} do JDBC: a consulta
+     * funciona no H2 e no PostgreSQL (D-T111-06: {@code information_schema.indexes} só existe no H2).
+     */
+    private List<String> indicesUnicosDeCandidatos() {
+        return jdbc.execute((java.sql.Connection conexao) -> {
+            java.util.Set<String> nomes = new java.util.TreeSet<>();
+            // o H2 e o PostgreSQL guardam o nome da tabela em caixas diferentes
+            for (String tabela : new String[] { "candidatos", "CANDIDATOS" }) {
+                try (java.sql.ResultSet indices = conexao.getMetaData().getIndexInfo(null, null, tabela, true, false)) {
+                    while (indices.next()) {
+                        String nome = indices.getString("INDEX_NAME");
+                        if (nome != null) {
+                            nomes.add(nome.toLowerCase());
+                        }
+                    }
+                }
+            }
+            return new java.util.ArrayList<>(nomes);
+        });
     }
 
     private UUID inserirEstudoParaConta() {

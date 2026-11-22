@@ -2,7 +2,7 @@
 
 > Plano: [T111-plano-de-implementacao](../design/sprint3/T111-plano-de-implementacao.md) · Guia: [T111](../design/sprint3/T111-vinculo-da-conta-do-participante-backend-e-web.md)
 > Branch: `feat/task111-vinculo-conta-participante` (criada a partir de `feat/task109-acesso-participante-endpoints-me`, que ainda não está na `develop`).
-> Regra seguida: **nenhum teste foi excluído**. Toda falha foi registrada em [registro-de-defeitos](registro-de-defeitos.md#4-falhas-de-teste-da-t111-vínculo-da-conta-do-participante) (D-T111-01 a 05) e depois corrigida. Os testes tocados por causa do `UNIQUE` foram **reescritos, não removidos** (seção 4).
+> Regra seguida: **nenhum teste foi excluído**. Toda falha foi registrada em [registro-de-defeitos](registro-de-defeitos.md#4-falhas-de-teste-da-t111-vínculo-da-conta-do-participante) (D-T111-01 a 06) e depois corrigida. Os testes tocados por causa do `UNIQUE` foram **reescritos, não removidos** (seção 4).
 
 ## 1. Escopo e comandos
 
@@ -12,7 +12,7 @@
 | Web | `npx vitest run` (`web/ClinicalStudyPB`) | **27 arquivos, 315 testes, todos passando** |
 | Web | `npm run lint`, `npx tsc -b --noEmit`, `npm run build` | sem erros |
 
-Ambiente: H2 (perfil de teste). O job "Backend (testes no PostgreSQL)" do CI roda a mesma suíte no PostgreSQL; **não foi executado localmente** (lacuna da seção 6).
+Ambiente: H2 (perfil de teste) e, depois da falha D-T111-06, também **PostgreSQL 16 real** (container local com as variáveis `SPRING_DATASOURCE_*` do job do CI): 757 testes, 0 falhas, `BUILD SUCCESS`.
 
 ## 2. Testes novos e alterados (rastreabilidade RQ × teste)
 
@@ -55,6 +55,7 @@ Descritas no [registro de defeitos](registro-de-defeitos.md#4-falhas-de-teste-da
 | D-T111-03 | Helpers do endpoint e da corrida repetiam o nome (mesma causa do 01) | Erro do **teste novo** | Nome derivado do código | Fechado |
 | D-T111-04 | 4 testes antigos da web estouraram 5 s na suíte completa | **Ambiente** (carga); passaram isolados e na reexecução completa | Nenhuma | Fechado (não reproduzido) |
 | D-T111-05 | `AreaAcoesParticipante.test` não executou (`})` removido sem querer) e seletor `status` ambíguo na ficha | Erros de **autoria** dos testes novos | Fechamento restaurado; busca dentro da região "Ações do participante" | Fechado |
+| D-T111-06 | Teste novo do Flyway usou `information_schema.indexes`, que só existe no H2: quebrou no job do PostgreSQL do CI | Erro do **teste novo** (portabilidade); a migration estava certa | Consulta pelo `DatabaseMetaData` do JDBC; suíte completa verificada num PostgreSQL 16 local | Fechado |
 
 Nota de processo: no D-T111-03 e no D-T111-05 a correção chegou a ser tocada antes de eu gravar o registro; o registro foi feito logo em seguida, com a causa e a evidência da rodada que falhou, e os testes não foram apagados.
 
@@ -67,7 +68,7 @@ Nota de processo: no D-T111-03 e no D-T111-05 a correção chegou a ser tocada a
 ## 6. Lacunas conhecidas
 
 1. **Retirada (T101/T103):** o passo "participação ativa" é fixo (`true`, `TODO(T101)`), então o 409 `PARTICIPANTE_RETIRADO` só tem teste **unitário** (`VinculoContaServiceTest.participanteRetirado`, que força o método). Não há teste de ponta a ponta até a T101 entrar (pendência P24).
-2. **PostgreSQL:** não rodei o job do PostgreSQL localmente; o CI o confirma. As consultas usam JPQL e SQL comuns aos dois bancos, e o teste da lista de disponíveis não depende da collation.
+2. **PostgreSQL:** a primeira versão do `FlywayMigrationIntegrationTest.uniqueDaContaDoCandidato` usava `information_schema.indexes` (só do H2) e quebrou no job do PostgreSQL do CI (D-T111-06). Depois da correção, a suíte completa passou num PostgreSQL 16 local. O teste da lista de disponíveis não depende da collation.
 3. **Sem E2E do vínculo** (pendência P28); sem conferência manual no navegador com o backend real.
 4. **Um candidato por conta:** a confirmação do PO ainda é pendência (P27).
 
