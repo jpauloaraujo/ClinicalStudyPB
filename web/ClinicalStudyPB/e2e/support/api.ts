@@ -43,8 +43,13 @@ export class ApiE2E {
     await this.contexto.dispose()
   }
 
-  private async chamar(metodo: 'post' | 'get', url: string, dados?: Corpo, esperado = [200, 201]) {
-    const resposta = metodo === 'post' ? await this.contexto.post(url, { data: dados }) : await this.contexto.get(url)
+  private async chamar(metodo: 'post' | 'put' | 'get', url: string, dados?: Corpo, esperado = [200, 201]) {
+    const resposta =
+      metodo === 'post'
+        ? await this.contexto.post(url, { data: dados })
+        : metodo === 'put'
+          ? await this.contexto.put(url, { data: dados })
+          : await this.contexto.get(url)
     expect(esperado, `${metodo.toUpperCase()} ${url} respondeu HTTP ${resposta.status()}: ${await resposta.text()}`)
       .toContain(resposta.status())
     return resposta
@@ -120,5 +125,57 @@ export class ApiE2E {
     await this.avaliar(estudoId, id, true)
     await this.consentir(id)
     return id
+  }
+
+  async criarAtividade(visitaId: string, nome: string, categoria = 'AVALIACAO_CLINICA'): Promise<string> {
+    const resposta = await this.chamar('post', `/api/visitas/${visitaId}/acoes`, { nome, categoria })
+    return ((await resposta.json()) as { id: string }).id
+  }
+
+  /**
+   * (Como pesquisador) estudo já em recrutamento para o fluxo de acompanhamento (T99): um critério de inclusão, um de
+   * exclusão e UMA visita prevista (dia 0, tolerância 0, então a janela é o dia da inclusão) com uma atividade de avaliação.
+   */
+  async estudoParaAcompanhamento(titulo: string, limite = 5) {
+    const estudoId = await this.criarEstudo(titulo, limite)
+    await this.criarCriterio(estudoId, 'INCLUSAO', 'Idade adulta', 'Candidato com 18 anos ou mais')
+    await this.criarCriterio(estudoId, 'EXCLUSAO', 'Gestante', 'Candidata em gestação confirmada')
+    const visitaId = await this.criarVisita(estudoId, 'Triagem', 0)
+    const acaoId = await this.criarAtividade(visitaId, 'Pressão arterial')
+    await this.avancar(estudoId, 'RECRUTAMENTO')
+    return { estudoId, visitaId, acaoId }
+  }
+
+  /** (Como coordenador) candidato pronto e incluído no estudo; devolve o id da participação e o código do candidato. */
+  async participanteIncluido(estudoId: string, nomeFicticio: string) {
+    const candidatoId = await this.candidatoPronto(estudoId, nomeFicticio)
+    await this.incluir(estudoId, candidatoId)
+    const lista = (await (await this.chamar('get', `/api/estudos/${estudoId}/participantes`)).json()) as {
+      id: string
+      candidatoId: string
+      codigo: string
+    }[]
+    const participacao = lista.find((p) => p.candidatoId === candidatoId)
+    expect(participacao, 'a participação recém-criada deve aparecer na lista do estudo').toBeDefined()
+    return { participacaoId: participacao!.id, codigo: participacao!.codigo }
+  }
+
+  /** (Como coordenador) agenda a visita prevista; devolve o id da visita agendada. */
+  async agendar(participacaoId: string, visitaPlanejadaId: string, dataHora: string): Promise<string> {
+    const resposta = await this.chamar('post', `/api/participacoes/${participacaoId}/visitas-agendadas`, {
+      visitaPlanejadaId,
+      dataHora,
+    })
+    return ((await resposta.json()) as { id: string }).id
+  }
+
+  /** (Como coordenador) registra o desfecho da visita agendada. */
+  async registrarDesfecho(visitaAgendadaId: string, corpo: Corpo) {
+    await this.chamar('post', `/api/visitas-agendadas/${visitaAgendadaId}/desfecho`, corpo)
+  }
+
+  /** (Como pesquisador) registra o resultado de uma atividade de avaliação de uma visita realizada. */
+  async registrarResultado(visitaAgendadaId: string, acaoId: string, valor: string, unidade?: string) {
+    await this.chamar('put', `/api/visitas-agendadas/${visitaAgendadaId}/resultados/${acaoId}`, { valor, unidade })
   }
 }
