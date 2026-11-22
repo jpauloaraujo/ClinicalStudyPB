@@ -150,7 +150,8 @@ Diagramas de arquitetura (Mermaid) — T01 / T03 (ver [docs/sprint1/arquitetura.
 | RF09 | Avaliação de elegibilidade | Web | ✅ Concluído (Sprint 2) |
 | RF10 | Consentimento simulado | Web | ✅ Concluído (Sprint 2) |
 | RF11 | Inclusão de participantes e limite de vagas | Web | ✅ Concluído (Sprint 2) |
-| RF12 – RF22 | Acompanhamento, app do participante e monitoramento | Web/Mobile | ⏳ Release 2 e 3 |
+| RF15 | Histórico do participante (ficha com resumo e visitas) e fluxo de acompanhamento | Web | ✅ Concluído (Sprint 3; E2E do fluxo na T99) |
+| RF12 – RF14, RF16 – RF22 | Acompanhamento, app do participante e monitoramento | Web/Mobile | ⏳ Release 2 e 3 (RF12 a RF14 em andamento na Sprint 3) |
 
 | RF | Comportamento | Casos de erro e validação |
 |---|---|---|
@@ -165,12 +166,13 @@ Diagramas de arquitetura (Mermaid) — T01 / T03 (ver [docs/sprint1/arquitetura.
 | RF09 | Na ficha, o coordenador responde a todos os critérios; o sistema calcula elegível ou não elegível, a pontuação e os critérios reprovadores, e guarda o histórico de reavaliações | "Salvar avaliação" só com todas as respostas; critério de exclusão "se aplica" reprova; candidato já incluído não é reavaliado (`CANDIDATO_JA_INCLUIDO`) |
 | RF10 | Na ficha, o coordenador lê o termo simulado (TCLE-SIMULADO), confirma e registra; depois só o comprovante (data, responsável e versão do termo) é exibido | Botão desabilitado até confirmar; segundo registro → `CONSENTIMENTO_DUPLICADO`; data futura recusada; fora do recrutamento ou para candidato incluído o formulário não aparece |
 | RF11 | A seção **Inclusão** mostra as quatro pré-condições (estudo em recrutamento, elegível, consentido e vaga disponível) e inclui com confirmação; a aba **Participantes** lista os incluídos e o contador "X de N vagas" | Cada pré-condição pendente explica o motivo e mantém o botão desabilitado; o servidor ainda valida: `CANDIDATO_NAO_ELEGIVEL`, `CONSENTIMENTO_AUSENTE`, `VAGAS_ESGOTADAS` (inclusive sob requisições simultâneas, pelo bloqueio do estudo) |
+| RF15 | Na ficha do participante (aba **Participantes**), o pesquisador e o coordenador veem o resumo (realizadas, ausentes, canceladas e pendentes) e todas as visitas previstas na ordem do dia previsto, com situação, datas, motivo e os resultados das avaliações; só o coordenador tem o atalho para o agendamento | Participante inexistente → 404 com o caminho de volta; estudo sem visitas previstas mostra a lista vazia e o resumo zerado; administrador e participante recebem `403` na API |
 
 Todas as telas dos perfis web só mostram o que o perfil pode fazer, e a API responde `403` quando o perfil não tem permissão.
 
 ### Capturas de tela
 
-As imagens estão em `docs/imagens/` e foram geradas por `web/ClinicalStudyPB/scripts/capturar-telas.mjs`, percorrendo a aplicação real com os usuários fictícios de demonstração. Para refazê-las: suba o backend com o perfil `demo`, rode `npm run dev` e execute `node scripts/capturar-telas.mjs` em `web/ClinicalStudyPB`.
+As imagens da Release 1 estão em `docs/imagens/` e foram geradas por `web/ClinicalStudyPB/scripts/capturar-telas.mjs`, percorrendo a aplicação real com os usuários fictícios de demonstração. Para refazê-las: suba o backend com o perfil `demo`, rode `npm run dev` e execute `node scripts/capturar-telas.mjs` em `web/ClinicalStudyPB`.
 
 | Tela | Sucesso | Erro |
 |---|---|---|
@@ -186,6 +188,9 @@ As imagens estão em `docs/imagens/` e foram geradas por `web/ClinicalStudyPB/sc
 | Inclusão (RF11) | ![Pré-condições](docs/imagens/13-inclusao-precondicoes.png) | ![Vagas esgotadas](docs/imagens/17-inclusao-vagas-esgotadas.png) |
 | Confirmação e resultado da inclusão | ![Confirmação](docs/imagens/14-inclusao-confirmacao.png) | ![Inclusão concluída](docs/imagens/15-inclusao-concluida.png) |
 | Participantes (RF11) | ![Participantes](docs/imagens/16-participantes.png) | |
+| Histórico do participante (RF15) | ![Histórico](docs/imagens/sprint3/rf15-historico.png) | ![Resumo do histórico](docs/imagens/sprint3/rf15-historico-resumo.png) |
+| Fluxo de acompanhamento (RF12 a RF15) | ![Visita agendada](docs/imagens/sprint3/fluxo-acompanhamento-01-visita-agendada.png) | ![Visita realizada](docs/imagens/sprint3/fluxo-acompanhamento-02-visita-realizada.png) |
+| Resultado e leitura (RF14) | ![Resultado registrado pelo pesquisador](docs/imagens/sprint3/fluxo-acompanhamento-03-resultado-registrado.png) | ![Avaliação somente leitura para o coordenador](docs/imagens/sprint3/fluxo-acompanhamento-05-avaliacao-somente-leitura.png) |
 
 ## 4. Stack tecnológico
 
@@ -419,9 +424,11 @@ Meta mínima: **80% de cobertura de linhas do código de negócio do backend**, 
 | Indicador | Valor | Meta |
 |---|---|---|
 | Cobertura de linhas do código de negócio (backend) | **99,0%** (967 de 977) | 80% |
-| Requisitos verificados | RF01 a RF11 (Sprints 1 e 2); RF12, RF13 e RF15 com testes de backend e de componentes web, sem E2E ainda; RF14 só no backend | RF01 a RF22 |
+| Requisitos verificados | RF01 a RF11 (Sprints 1 e 2); RF12, RF13, RF14 e RF15 com testes de backend, de componentes web e o E2E do fluxo de acompanhamento (`fluxo-acompanhamento.spec.ts`, T99) | RF01 a RF22 |
 | Falhas de teste na `develop` | 0 | 0 |
 | Itens de defeito abertos ou em verificação | 6 (de 29 registrados) | 0 |
+
+As capturas da Sprint 3 (`docs/imagens/sprint3/`) vêm do E2E `e2e/tests/fluxo-acompanhamento.spec.ts` (T99), que percorre o acompanhamento com dois perfis: o coordenador agenda a visita e registra que foi realizada, o pesquisador registra o resultado e os dois conferem o histórico. Para refazê-las: `npm run test:e2e -- fluxo-acompanhamento` em `web/ClinicalStudyPB` (as imagens saem em `test-results/capturas/`).
 
 ### Rastreabilidade de erros
 
