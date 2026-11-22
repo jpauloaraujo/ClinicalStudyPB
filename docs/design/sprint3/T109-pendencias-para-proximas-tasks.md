@@ -54,10 +54,10 @@
 
 | # | Alterar | Onde |
 |---|---|---|
-| P13 | Tipos prontos em `src/api/schema-sprint3.d.ts` (`MeuEstudoResponse`, `MeuEstudoDetalheResponse`). **O design da T109 cita `schema.d.ts`, mas o `npm run api:tipos` gera os da Sprint 3 em `schema-sprint3.d.ts`**: corrigir o texto dos designs da T109, T112 e T115 |
-| P14 | `situacaoParticipacao` e `retirada` já existem no tipo, mas só têm valor real depois da T101; a tela deve tratar `RETIRADO` (selo) desde já |
-| P15 | `resumo` termina com `…` quando cortado e tem no máximo 160 caracteres; o detalhe traz `objetivo` completo |
-| P16 | Atualizar os mocks do app (`src/api/mocks`) para o formato real de `MeuEstudoResponse` e `MeuEstudoDetalheResponse` |
+| P13 | Tipos prontos em `src/api/schema-sprint3.d.ts` (`MeuEstudoResponse`, `MeuEstudoDetalheResponse`). **O design da T109 cita `schema.d.ts`, mas o `npm run api:tipos` gera os da Sprint 3 em `schema-sprint3.d.ts`**: corrigir o texto dos designs da T109, T112 e T115 🟡 **Parcial na T112**: os tipos certos foram usados; falta corrigir o texto dos designs da T109, T112 e T115 |
+| P14 | `situacaoParticipacao` e `retirada` já existem no tipo, mas só têm valor real depois da T101; a tela deve tratar `RETIRADO` (selo) desde já ✅ **Fechada na T112** |
+| P15 | `resumo` termina com `…` quando cortado e tem no máximo 160 caracteres; o detalhe traz `objetivo` completo ✅ **Fechada na T112** |
+| P16 | Atualizar os mocks do app (`src/api/mocks`) para o formato real de `MeuEstudoResponse` e `MeuEstudoDetalheResponse` ✅ **Fechada na T112** |
 
 ### T115 / T116 · consultas de visitas do participante
 
@@ -75,3 +75,11 @@
 | P21 | Marcar a T109 no README da Sprint 3 como concluída **com ressalva**: a situação `RETIRADO` e a data de retirada dependem da T101/T103 | `docs/design/sprint3/README.md` |
 | P22 | RQ-T109-14: avisar a **I5** de que o `AcessoParticipante` está pronto. Ação humana, no Pull Request | PR |
 | P23 | Atualizar a rastreabilidade de erros (`docs/rastreabilidade/rastreabilidade-erros-e-alteracoes.md`) e o `README.md` com D-T109-01 e D-T109-02, **em branch de documentação própria**, como manda o registro de defeitos | docs |
+
+### Pendências criadas pela T112 (telas Meus estudos e detalhe)
+
+| # | Alterar | Onde | Como conferir |
+|---|---|---|---|
+| P30 | **T117:** a aba Visitas ainda ignora o parâmetro `estudoId` que o atalho "Ver visitas deste estudo" envia (`router.push({ pathname: '/visitas', params: { estudoId } })`). Ler o parâmetro com `useLocalSearchParams` e filtrar | `mobile/ClinicalStudyPB/src/app/(tabs)/visitas.tsx` | Teste da T117: abrir com `estudoId` mostra só as visitas daquele estudo |
+| P31 | **T101/T103/T105:** o selo "Retirado" e a data da retirada só aparecem com mocks e testes de componente; com o backend atual a situação vem sempre `ATIVO`. Quando a retirada entrar, repetir o RQ-T112-11 com um participante retirado real | Roteiro manual de `testes-t112-...md` | `demo.participante@` (P6, após a T105) mostra "Retirado" |
+| P32 | **T113/T114:** reaproveitar os 20 testes de componente (`src/telas/__tests__/estudos.test.tsx`) e acrescentar o E2E (Maestro) lista → detalhe → visitas; faltam o teste do desmonte durante a carga e a conferência visual do cabeçalho "Estudo" e do botão "Voltar" | `mobile/ClinicalStudyPB`, `e2e` | Fluxo no emulador |
