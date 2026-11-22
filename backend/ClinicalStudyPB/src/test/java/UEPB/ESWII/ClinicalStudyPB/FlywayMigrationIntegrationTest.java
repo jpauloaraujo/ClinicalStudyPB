@@ -199,6 +199,62 @@ class FlywayMigrationIntegrationTest {
                 acao.toString()));
     }
 
+    @Test
+    @DisplayName("T111 - O índice único de candidatos.usuario_id existe, aceita vários candidatos sem conta e recusa a mesma conta duas vezes")
+    void uniqueDaContaDoCandidato() {
+        UUID estudo = inserirEstudoParaConta();
+        UUID conta = inserirContaParticipante();
+
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.indexes "
+                + "WHERE LOWER(index_name) = 'uk_candidatos_usuario'", Integer.class))
+                .as("índice uk_candidatos_usuario").isGreaterThanOrEqualTo(1);
+
+        inserirCandidatoComConta(estudo, null, "T111-A");
+        inserirCandidatoComConta(estudo, null, "T111-B");
+        inserirCandidatoComConta(estudo, conta, "T111-C");
+
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM candidatos WHERE estudo_id = CAST(? AS UUID) "
+                + "AND usuario_id IS NULL", Integer.class, estudo.toString())).isEqualTo(2);
+        recusadoPeloBanco(() -> inserirCandidatoComConta(estudo, conta, "T111-D"));
+    }
+
+    @Test
+    @DisplayName("T111 - Contas diferentes em candidatos diferentes convivem; o índice não atrapalha o um para um")
+    void contasDiferentesConvivem() {
+        UUID estudo = inserirEstudoParaConta();
+
+        inserirCandidatoComConta(estudo, inserirContaParticipante(), "T111-E");
+        inserirCandidatoComConta(estudo, inserirContaParticipante(), "T111-F");
+
+        assertThat(jdbc.queryForObject("SELECT COUNT(DISTINCT usuario_id) FROM candidatos WHERE estudo_id = CAST(? AS UUID)",
+                Integer.class, estudo.toString())).isEqualTo(2);
+    }
+
+    private UUID inserirEstudoParaConta() {
+        UUID estudo = UUID.randomUUID();
+        jdbc.update("INSERT INTO estudos (id, titulo, objetivo, responsavel_id, data_inicio, data_fim, "
+                + "limite_participantes, status) SELECT CAST(? AS UUID), 'Estudo T111', 'Objetivo.', id, "
+                + "DATE '2026-11-01', DATE '2027-05-01', 6, 'RECRUTAMENTO' FROM usuarios "
+                + "WHERE email = 'pesquisador@clinicalstudy.test'", estudo.toString());
+        return estudo;
+    }
+
+    private UUID inserirContaParticipante() {
+        UUID id = UUID.randomUUID();
+        jdbc.update("INSERT INTO usuarios (id, nome, email, senha, perfil, ativo) VALUES (CAST(? AS UUID), "
+                + "'Conta T111 (Ficticia)', ?, 'x', 'PARTICIPANTE', TRUE)", id.toString(),
+                "t111." + id + "@clinicalstudy.test");
+        return id;
+    }
+
+    private void inserirCandidatoComConta(UUID estudo, UUID conta, String codigo) {
+        jdbc.update("INSERT INTO candidatos (id, estudo_id, codigo, nome_ficticio, data_nascimento, usuario_id, "
+                + "situacao) VALUES (CAST(? AS UUID), CAST(? AS UUID), ?, ?, DATE '1990-01-01', "
+                + "CAST(? AS UUID), 'CONSENTIDO')", UUID.randomUUID().toString(), estudo.toString(), codigo,
+                // nome único por candidato: o índice da Sprint 2 recusa o mesmo nome e data no mesmo estudo (D-T111-01)
+                "Pessoa " + codigo + " (Ficticia)", conta == null ? null : conta.toString());
+    }
+
     /**
      * Confere que o banco recusa o comando com {@link DataIntegrityViolationException}, dentro de um savepoint: no
      * PostgreSQL um erro aborta a transação inteira do teste, e o savepoint deixa os comandos seguintes rodarem.

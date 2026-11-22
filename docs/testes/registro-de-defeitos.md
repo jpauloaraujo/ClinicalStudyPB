@@ -95,3 +95,73 @@ Resumo em 16/11/2026: **29 itens** registrados; **23 fechados**, **4 em verifica
 | **Determinístico?** | Sim: o relógio é fixo no teste (`Clock.fixed`) |
 | **Correção** | `961952f` (zePadd, 14/11); PR #12 mesclado em `8d54754` |
 | **Estado** | **Fechado** |
+
+---
+
+## 4. Falhas de teste da T111 (vínculo da conta do participante)
+
+> Seção própria da T111, em ordem de ocorrência. Regra do projeto: **a falha é registrada aqui antes de ser corrigida** e nenhum teste é excluído. Os testes e o contexto estão em [testes-t111](testes-t111-vinculo-da-conta-do-participante.md). Os registros D-T109-01/02 e D-T110-01 a 04 estão nas branches da T109 e da T110.
+
+### D-T111-01 · Dados do teste novo repetiam nome e data de nascimento no mesmo estudo
+
+| Campo | Valor |
+|---|---|
+| **Data e rodada** | 22/11/2026 · 1ª rodada completa do backend (`./mvnw test`, 718 testes) |
+| **Task e requisito** | T111, RQ-T111-01 (migration `V6_24_1`) |
+| **Testes** | `FlywayMigrationIntegrationTest.uniqueDaContaDoCandidato` e `contasDiferentesConvivem` (2 erros, ambos meus, escritos nesta task) |
+| **Mensagem** | `DuplicateKey ... Unique index or primary key violation: "uk_candidatos_estudo_nome_nascimento" (estudo_id, nome_ficticio, data_nascimento)` ao inserir o segundo candidato |
+| **Causa** | Erro do **teste novo**, não da migration: o helper `inserirCandidatoComConta` inseria todos os candidatos de um estudo com o mesmo `nome_ficticio` e a mesma data de nascimento, e o índice único da Sprint 2 (`uk_candidatos_estudo_nome_nascimento`, V4) recusa a segunda linha antes de o teste chegar ao índice novo. A migration `V6_24_1` não tem relação com o erro |
+| **Determinístico?** | Sim |
+| **Correção** | Gerar o `nome_ficticio` a partir do código do candidato, como nos demais testes |
+| **Estado** | **Fechado** em 22/11/2026: corrigido e confirmado nas rodadas seguintes (backend completo: 757 testes, 0 falhas; ver [testes-t111](testes-t111-vinculo-da-conta-do-participante.md), seção 5) |
+
+### D-T111-02 · `MeEndpointTest.listaSoOsEstudosDaConta` vincula duas participações à mesma conta
+
+| Campo | Valor |
+|---|---|
+| **Data e rodada** | 22/11/2026 · 1ª rodada completa do backend (`./mvnw test`, 718 testes) |
+| **Task e requisito** | T111, RQ-T111-01 (índice único `uk_candidatos_usuario`); pendência **P10** da T109 |
+| **Teste** | `MeEndpointTest.listaSoOsEstudosDaConta` (T109) |
+| **Mensagem** | `DuplicateKey ... Unique index or primary key violation: "uk_candidatos_usuario ON candidatos(usuario_id)" VALUES (UUID '44444444-4444-4444-8444-444444444444')` em `incluir:81`, na linha 101 do teste |
+| **Causa** | **Esperada e prevista** na [pendência P10](../design/sprint3/T109-pendencias-para-proximas-tasks.md): o teste liga **dois candidatos à mesma conta** (`CAND-901` e `CAND-902`), o que a regra 7 (um para um) agora proíbe no banco. O erro é da **premissa do teste**; o código de produção está certo e a falha prova que o índice funciona |
+| **Determinístico?** | Sim |
+| **Correção** | Reescrever o teste sem repetir a conta: a lista de uma conta traz um estudo, e a ordem "da inclusão mais recente para a mais antiga" passa a ser provada no nível do serviço (`MeusEstudosService`, sem o `UNIQUE`). O teste **não é excluído** |
+| **Estado** | **Fechado** em 22/11/2026: corrigido e confirmado nas rodadas seguintes (backend completo: 757 testes, 0 falhas; ver [testes-t111](testes-t111-vinculo-da-conta-do-participante.md), seção 5) |
+
+### D-T111-03 · Os helpers dos testes de endpoint e de corrida repetiam o nome do candidato (mesma causa do D-T111-01)
+
+| Campo | Valor |
+|---|---|
+| **Data e rodada** | 22/11/2026 · 2ª rodada (testes da T111 e dos arquivos que ela tocou, 133 testes, 2 erros) |
+| **Task e requisito** | T111, RQ-T111-03/04 (regras e corrida do vínculo) |
+| **Testes** | `ContaParticipanteEndpointTest.contaJaVinculada` (linha 264) e `ContaParticipanteConcorrenciaTest.mesmaContaEmVariosParticipantes` (linha 134), ambos escritos nesta task. Na rodada, os outros 14 testes do endpoint e o outro de corrida passaram |
+| **Mensagem** | `DuplicateKey ... uk_candidatos_estudo_nome_nascimento` ao inserir o **segundo** candidato do mesmo estudo (só os testes que criam dois candidatos no mesmo estudo chegam a esse ponto) |
+| **Causa** | Erro do **teste novo**, igual ao D-T111-01: os helpers `criarParticipacao` e `novaParticipacao` fixam `nome_ficticio` e `data_nascimento`, e o índice único da Sprint 2 recusa o segundo candidato igual no mesmo estudo. Repeti o padrão porque copiei os helpers sem tornar o nome único. O vínculo e o banco estão certos |
+| **Determinístico?** | Sim |
+| **Correção** | Nome do candidato derivado do código (`"Pessoa " + codigo`), nos dois helpers |
+| **Estado** | **Fechado** em 22/11/2026: corrigido e confirmado nas rodadas seguintes (backend completo: 757 testes, 0 falhas; ver [testes-t111](testes-t111-vinculo-da-conta-do-participante.md), seção 5) |
+
+### D-T111-04 · Quatro testes antigos da web estouraram 5 s na rodada completa e passaram isolados
+
+| Campo | Valor |
+|---|---|
+| **Data e rodada** | 22/11/2026 · 1ª rodada completa da web (`npx vitest run`, 275 testes: 271 passaram, 4 falharam) |
+| **Task e requisito** | T111 (a mudança da ficha e da área de ações); nenhum requisito específico |
+| **Testes** | `mocks.test.tsx` (2: "a aba de critérios lista os dados do mock…" e "o mock devolve o erro de duplicidade…"), `FichaCandidatoPage.test.tsx` ("mostra os dados do candidato e as três seções…") e `AbaAgenda.test.tsx` ("lista a agenda do estudo…"). Nenhum é da T111 e nenhum dos arquivos foi alterado |
+| **Mensagem** | Estouro do tempo do teste (5,0 a 7,1 s; o limite do Vitest é 5 s) |
+| **Causa** | Provável **carga da máquina** na execução em paralelo: os mesmos 3 arquivos, rodados sozinhos logo depois, passaram (33 de 33). Os arquivos da T111 (ficha, área de ações, diálogo) passaram na mesma rodada. Causa não confirmada além disso |
+| **Determinístico?** | **Não** (intermitente) |
+| **Correção** | Nenhuma no código. Reexecutar a suíte completa e conferir no CI; se voltar a ocorrer, tratar como defeito de teste lento (aumentar o limite desses arquivos) em registro próprio |
+| **Estado** | **Fechado (não reproduzido)** em 22/11/2026: a suíte completa da web foi reexecutada (27 arquivos, 315 testes) e passou inteira, inclusive com o `mvn verify` rodando ao mesmo tempo. Se voltar no CI, abrir registro próprio |
+
+### D-T111-05 · Dois erros de autoria nos testes novos da web (sintaxe e seletor ambíguo)
+
+| Campo | Valor |
+|---|---|
+| **Data e rodada** | 22/11/2026 · 1ª execução dos testes novos da web (`npx vitest run src/api/contaParticipante.test.ts src/pages/estudos/detalhe/acompanhamento`: 161 passaram, 1 falhou, 1 arquivo não executou) |
+| **Task e requisito** | T111, RQ-T111-09, 10 e 12 (testes de componente) |
+| **Testes** | (a) `AreaAcoesParticipante.test.tsx`: **o arquivo inteiro não executou** (`BabelError: Unexpected token (111:0)`; o `eslint` e o `tsc` acusaram `'}' expected`). (b) `FichaParticipantePage.test.tsx` › "depois de vincular, recarrega a conta, mostra a confirmação e esconde o botão": `Found multiple elements with the role "status"` |
+| **Causa** | **Erros do teste novo**, nenhum do código de produção. (a) Ao acrescentar o `describe` novo com um script de substituição, removi sem querer o `})` que fechava o `describe` original da T97; os testes antigos não foram apagados, só ficaram sem o fechamento. (b) A ficha já tem outro elemento `role="status"` (a contagem "Exibindo N de N visitas" do filtro), então `getByRole('status')` sem escopo é ambíguo |
+| **Determinístico?** | Sim |
+| **Correção** | (a) Restaurar o fechamento do `describe` original. (b) Procurar a confirmação dentro da região "Ações do participante" |
+| **Estado** | **Fechado** em 22/11/2026: corrigido e confirmado nas rodadas seguintes (backend completo: 757 testes, 0 falhas; ver [testes-t111](testes-t111-vinculo-da-conta-do-participante.md), seção 5) |
