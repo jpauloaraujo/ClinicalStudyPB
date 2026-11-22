@@ -14,6 +14,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -57,10 +58,27 @@ class ContratoOpenApiSprint3Test {
     private static final Set<String> METODOS = Set.of("get", "post", "put", "delete", "patch");
 
     /**
-     * Quantas operações o YAML tem agora: 5 do agendamento (T74), 1 do histórico (T95), 2 dos resultados (T88) e 2
-     * do desfecho (T80 e T82: o POST do desfecho e o GET da visita). Cada PBI só atualiza este número.
+     * Quantas operações o YAML tem agora: 5 do agendamento (T74), 1 do histórico (T95), 2 dos resultados (T88), 2
+     * do desfecho (T80 e T82: o POST do desfecho e o GET da visita), 2 dos estudos do participante (T109) e 2 das
+     * visitas do participante (T115). Cada PBI só atualiza este número.
      */
-    private static final int OPERACOES_ESPERADAS = 10;
+    private static final int OPERACOES_ESPERADAS = 14;
+
+    /** Operações do app do participante (T109): os estudos do participante logado, implementadas no {@code MeController}. */
+    private static final Set<String> OPERACOES_ME = Set.of(
+            "GET /api/me/estudos",
+            "GET /api/me/estudos/{estudoId}");
+
+    /**
+     * Operações do app do participante descritas na T115 (próximas visitas e histórico de comparecimento): o contrato
+     * vem antes; a implementação é da T116, que liga os casos {@code @Disabled("T116")} e tira estas operações da
+     * lista de pendentes de {@link #contratoNaoPrometeEndpointInexistente()}.
+     */
+    private static final Set<String> OPERACOES_ME_VISITAS = Set.of(
+            "GET /api/me/visitas/proximas",
+            "GET /api/me/visitas/historico");
+
+    private static final String PACOTE_DTO = "UEPB.ESWII.ClinicalStudyPB.controller.dto.";
 
     /** Operações do desfecho da visita (T80 e T82), implementadas na T82. */
     private static final Set<String> OPERACOES_DESFECHO = Set.of(
@@ -115,7 +133,7 @@ class ContratoOpenApiSprint3Test {
     @DisplayName("O contrato da Sprint 3 tem as operações previstas até aqui (agendamento da T74, histórico da T95, resultados da T88 e desfecho da T80/T82)")
     void contratoTemAsOperacoesEsperadas() throws Exception {
         assertThat(operacoesDoContrato()).hasSize(OPERACOES_ESPERADAS).containsAll(OPERACOES_RESULTADOS)
-                .containsAll(OPERACOES_DESFECHO).contains(
+                .containsAll(OPERACOES_DESFECHO).containsAll(OPERACOES_ME).containsAll(OPERACOES_ME_VISITAS).contains(
                 "GET /api/participacoes/{participacaoId}/visitas",
                 "POST /api/participacoes/{participacaoId}/visitas-agendadas",
                 "PUT /api/visitas-agendadas/{visitaAgendadaId}",
@@ -128,12 +146,140 @@ class ContratoOpenApiSprint3Test {
     @DisplayName("Todo endpoint do agendamento do contrato existe na API publicada")
     void contratoNaoPrometeEndpointInexistente() throws Exception {
         Set<String> faltandoNaApi = new TreeSet<>(operacoesDoContrato());
-        faltandoNaApi.removeIf(operacao -> operacao.endsWith("/historico"));
+        faltandoNaApi.removeIf(operacao -> operacao.endsWith("/participacoes/{participacaoId}/historico"));
         faltandoNaApi.removeAll(OPERACOES_RESULTADOS);
         faltandoNaApi.removeAll(OPERACOES_DESFECHO);
+        // T115: as visitas do participante estão no contrato, mas só a T116 as implementa (apague esta linha lá)
+        faltandoNaApi.removeAll(OPERACOES_ME_VISITAS);
         faltandoNaApi.removeAll(operacoesDaApi());
 
         assertThat(faltandoNaApi).as("operações do contrato que a API não tem").isEmpty();
+    }
+
+    @Test
+    @Disabled("T116: ligar quando as consultas de visitas do participante existirem no backend")
+    @DisplayName("T115: as consultas de visitas do participante do contrato existem na API publicada")
+    void meVisitasDoContratoExistemNaApi() throws Exception {
+        Set<String> faltandoNaApi = new TreeSet<>(OPERACOES_ME_VISITAS);
+        faltandoNaApi.removeAll(operacoesDaApi());
+
+        assertThat(faltandoNaApi).as("operações /me/visitas que a API não tem").isEmpty();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Disabled("T116: ligar quando os DTOs das consultas de visitas do participante existirem no backend")
+    @ParameterizedTest(name = "T115: o schema {0} tem os mesmos campos do DTO")
+    @ValueSource(strings = {"MinhaVisitaResponse", "ResumoComparecimentoResponse", "HistoricoMinhasVisitasResponse"})
+    void schemaMeVisitasTemOsCamposDoDto(String nome) throws Exception {
+        Class<?> dto = Class.forName(PACOTE_DTO + nome);
+        Set<String> camposDoDto = new TreeSet<>();
+        Arrays.stream(dto.getRecordComponents()).forEach(c -> camposDoDto.add(c.getName()));
+        Set<String> camposDoContrato = new TreeSet<>(((Map<String, Object>) schema(nome).get("properties")).keySet());
+
+        assertThat(camposDoContrato).as("campos do schema " + nome).isEqualTo(camposDoDto);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    @DisplayName("T115: o contrato descreve as duas consultas do participante: sem id, só PARTICIPANTE, paginação e erros")
+    void contratoDescreveAsConsultasDoParticipante() throws Exception {
+        Map<String, Map<String, Object>> caminhos = (Map<String, Map<String, Object>>) documento().get("paths");
+        Map<String, Object> proximas = (Map<String, Object>) caminhos.get("/api/me/visitas/proximas").get("get");
+        Map<String, Object> historico = (Map<String, Object>) caminhos.get("/api/me/visitas/historico").get("get");
+
+        // RQ-T115-03: nenhuma recebe o id do participante (nem no caminho nem como parâmetro); o dono é o token
+        for (Map<String, Object> operacao : List.of(proximas, historico)) {
+            assertThat(nomesDosParametros(operacao)).doesNotContain("participanteId", "participacaoId", "usuarioId");
+            assertThat(((List<String>) operacao.get("tags"))).containsExactly("Participante (me)");
+            assertThat((String) operacao.get("description")).contains("só PARTICIPANTE").contains("Não traz resultados");
+            // RQ-T115-08: 400 (PARAMETRO_INVALIDO), 401 e 403; nunca 404 (estudoId alheio devolve lista vazia)
+            assertThat(((Map<Object, Object>) operacao.get("responses")).keySet().stream().map(Object::toString))
+                    .containsExactlyInAnyOrder("200", "400", "401", "403");
+        }
+        assertThat(nomesDosParametros(proximas)).containsExactly("estudoId");
+        // RQ-T115-02: estudoId, pagina e tamanho (padrão 0 e 20, máximo 100)
+        assertThat(nomesDosParametros(historico)).containsExactly("estudoId", "pagina", "tamanho");
+        Map<String, Object> tamanho = ((List<Map<String, Object>>) historico.get("parameters")).get(2);
+        Map<String, Object> esquemaTamanho = (Map<String, Object>) tamanho.get("schema");
+        assertThat(esquemaTamanho.get("default")).isEqualTo(20);
+        assertThat(esquemaTamanho.get("minimum")).isEqualTo(1);
+        assertThat(esquemaTamanho.get("maximum")).isEqualTo(100);
+        Map<String, Object> pagina = ((List<Map<String, Object>>) historico.get("parameters")).get(1);
+        assertThat(((Map<String, Object>) pagina.get("schema")).get("default")).isEqualTo(0);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> nomesDosParametros(Map<String, Object> operacao) throws IOException {
+        Map<String, Object> parametros = (Map<String, Object>) ((Map<String, Object>) documento().get("components"))
+                .get("parameters");
+        return ((List<Map<String, Object>>) operacao.get("parameters")).stream().map(parametro -> {
+            String referencia = (String) parametro.get("$ref");
+            Map<String, Object> real = referencia == null ? parametro
+                    : (Map<String, Object>) parametros.get(referencia.substring(referencia.lastIndexOf('/') + 1));
+            return (String) real.get("name");
+        }).toList();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    @DisplayName("T115: MinhaVisitaResponse e o histórico seguem o formato do contrato e não têm resultado de avaliação")
+    void schemasDasVisitasDoParticipante() throws Exception {
+        Map<String, Object> visita = schema("MinhaVisitaResponse");
+        Map<String, Map<String, Object>> campos = (Map<String, Map<String, Object>>) visita.get("properties");
+
+        // RQ-T115-04: os campos exatos, na ordem da convenção
+        assertThat(campos.keySet()).containsExactly("id", "participacaoId", "estudoId", "estudoTitulo", "visitaNome",
+                "dataHora", "situacao", "dataHoraRealizada", "motivo", "atividades");
+        assertThat((List<String>) visita.get("required")).containsExactly("id", "participacaoId", "estudoId",
+                "estudoTitulo", "visitaNome", "dataHora", "situacao", "atividades");
+        assertThat(campos.get("dataHora").get("format")).isEqualTo("date-time");
+        assertThat(campos.get("dataHoraRealizada")).containsEntry("nullable", true).containsEntry("format", "date-time");
+        assertThat(campos.get("motivo")).containsEntry("nullable", true);
+        assertThat(campos.get("situacao")).containsEntry("$ref", "#/components/schemas/SituacaoVisita");
+        assertThat(campos.get("atividades")).containsEntry("type", "array");
+        // RQ-T115-05: decisão de privacidade e de escopo: nenhum campo de resultado nem de candidato
+        assertThat(campos.keySet()).noneMatch(nome -> nome.toLowerCase().contains("resultado") && !nome.equals("dataHoraRealizada")
+                || nome.toLowerCase().contains("candidato"));
+
+        // RQ-T115-06: o resumo é independente da página
+        Map<String, Object> resumo = schema("ResumoComparecimentoResponse");
+        assertThat(((Map<String, Object>) resumo.get("properties")).keySet())
+                .containsExactly("realizadas", "ausentes", "canceladas");
+        Map<String, Object> historico = schema("HistoricoMinhasVisitasResponse");
+        assertThat(((Map<String, Object>) historico.get("properties")).keySet())
+                .containsExactly("resumo", "conteudo", "pagina", "tamanho", "totalElementos", "totalPaginas");
+        assertThat((List<String>) historico.get("required"))
+                .containsExactly("resumo", "conteudo", "pagina", "tamanho", "totalElementos", "totalPaginas");
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    @DisplayName("T115: os exemplos têm visita agendada, realizada, ausente e cancelada com o motivo 'retirada do estudo'")
+    void exemplosDasVisitasDoParticipante() throws Exception {
+        Map<String, Map<String, Object>> caminhos = (Map<String, Map<String, Object>>) documento().get("paths");
+        List<Map<String, Object>> proximas = exemplo(caminhos, "/api/me/visitas/proximas", false);
+        Map<String, Object> historico = exemplo(caminhos, "/api/me/visitas/historico", true).get(0);
+        List<Map<String, Object>> visitasDoHistorico = (List<Map<String, Object>>) historico.get("conteudo");
+
+        assertThat(proximas).isNotEmpty().allSatisfy(v -> assertThat(v.get("situacao")).isEqualTo("AGENDADA"));
+        assertThat(visitasDoHistorico).extracting(v -> v.get("situacao"))
+                .containsExactlyInAnyOrder("REALIZADA", "AUSENTE", "CANCELADA");
+        assertThat(visitasDoHistorico).filteredOn(v -> "CANCELADA".equals(v.get("situacao")))
+                .singleElement().satisfies(v -> assertThat(v.get("motivo")).isEqualTo("retirada do estudo"));
+        // o resumo do exemplo bate com o conteúdo do exemplo
+        assertThat(historico.get("resumo")).isEqualTo(Map.of("realizadas", 1, "ausentes", 1, "canceladas", 1));
+        // dataHora com o deslocamento do fuso (ISO 8601), como a API devolve
+        assertThat(proximas.get(0).get("dataHora").toString()).matches(".*[+-]\\d{2}:\\d{2}$");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<Map<String, Object>> exemplo(Map<String, Map<String, Object>> caminhos, String caminho,
+            boolean objeto) {
+        Map<String, Object> get = (Map<String, Object>) caminhos.get(caminho).get("get");
+        Map<String, Object> conteudo = (Map<String, Object>) ((Map<String, Object>) ((Map<String, Object>)
+                ((Map<String, Object>) get.get("responses")).get("200")).get("content")).get("application/json");
+        Object exemplo = conteudo.get("example");
+        return objeto ? List.of((Map<String, Object>) exemplo) : (List<Map<String, Object>>) exemplo;
     }
 
     @Test
@@ -146,10 +292,46 @@ class ContratoOpenApiSprint3Test {
     }
 
     @Test
+    @DisplayName("T109: os endpoints /me do contrato existem na API publicada")
+    void meDoContratoExistemNaApi() throws Exception {
+        Set<String> faltandoNaApi = new TreeSet<>(OPERACOES_ME);
+        faltandoNaApi.removeAll(operacoesDaApi());
+
+        assertThat(faltandoNaApi).as("operações /me que a API não tem").isEmpty();
+    }
+
+    @SuppressWarnings("unchecked")
+    @ParameterizedTest(name = "T109: o schema {0} tem os mesmos campos do DTO")
+    @ValueSource(strings = {"MeuEstudoResponse", "MeuEstudoDetalheResponse", "RetiradaDoMeuEstudo"})
+    void schemaMeTemOsCamposDoDto(String nome) throws Exception {
+        Class<?> dto = switch (nome) {
+            case "MeuEstudoResponse" -> UEPB.ESWII.ClinicalStudyPB.controller.dto.MeuEstudoResponse.class;
+            case "MeuEstudoDetalheResponse" -> UEPB.ESWII.ClinicalStudyPB.controller.dto.MeuEstudoDetalheResponse.class;
+            default -> UEPB.ESWII.ClinicalStudyPB.controller.dto.RetiradaDoMeuEstudo.class;
+        };
+        Set<String> camposDoDto = new TreeSet<>();
+        Arrays.stream(dto.getRecordComponents()).forEach(c -> camposDoDto.add(c.getName()));
+        Set<String> camposDoContrato = new TreeSet<>(((Map<String, Object>) schema(nome).get("properties")).keySet());
+
+        assertThat(camposDoContrato).as("campos do schema " + nome).isEqualTo(camposDoDto);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    @DisplayName("T109: o enum SituacaoParticipacao do contrato tem os mesmos valores do enum do backend")
+    void situacaoParticipacaoDoContratoIgualAoDoBackend() throws Exception {
+        List<String> valores = (List<String>) schema("SituacaoParticipacao").get("enum");
+
+        assertThat(valores).containsExactly(Arrays.stream(
+                UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoParticipacao.values()).map(Enum::name)
+                .toArray(String[]::new));
+    }
+
+    @Test
     @DisplayName("O endpoint do histórico do contrato existe na API publicada")
     void historicoDoContratoExisteNaApi() throws Exception {
         Set<String> historico = new TreeSet<>(operacoesDoContrato());
-        historico.removeIf(operacao -> !operacao.endsWith("/historico"));
+        historico.removeIf(operacao -> !operacao.endsWith("/participacoes/{participacaoId}/historico"));
         historico.removeAll(operacoesDaApi());
 
         assertThat(historico).as("operações do histórico que a API não tem").isEmpty();
@@ -188,7 +370,16 @@ class ContratoOpenApiSprint3Test {
             }
             Set<String> respostas = ((Map<Object, Object>) ((Map<String, Object>) definicao).get("responses"))
                     .keySet().stream().map(Object::toString).collect(java.util.stream.Collectors.toSet());
-            assertThat(respostas).as(metodo + " " + caminho).contains("401", "403", "404", "409");
+            assertThat(respostas).as(metodo + " " + caminho).contains("401", "403");
+            // D-T109-01: /api/me/** é só leitura do próprio participante, sem regra de negócio (nada de 409), e a
+            // lista não recebe id (nada de 404). O 404 continua exigido em toda operação com parâmetro de caminho.
+            boolean doMe = caminho.startsWith("/api/me/");
+            if (!doMe || caminho.contains("{")) {
+                assertThat(respostas).as(metodo + " " + caminho).contains("404");
+            }
+            if (!doMe) {
+                assertThat(respostas).as(metodo + " " + caminho).contains("409");
+            }
             if (!metodo.equals("get")) {
                 assertThat(respostas).as(metodo + " " + caminho).contains("400");
             }
