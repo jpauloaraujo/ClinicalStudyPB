@@ -1,7 +1,8 @@
 # Contrato OpenAPI da Sprint 3 (RF12 a RF18). Mantido pela equipe: edite-o diretamente quando houver divergência
 # com o código, no mesmo Pull Request. Este arquivo cresce a cada PBI e cada PBI acrescenta só os seus caminhos, para
 # evitar conflito de merge: a T74 trouxe o agendamento (PBI-19), a T95 o histórico do participante, a T88 os
-# resultados das avaliações (PBI-21) e a T80/T82 o desfecho da visita e sua consulta (PBI-20); a retirada e o app entram
+# resultados das avaliações (PBI-21), a T80/T82 o desfecho da visita e sua consulta (PBI-20), a T109 os estudos do
+# participante e a T115 as consultas de visitas do participante (próximas e histórico); a retirada entra
 # nos PBIs seguintes.
 openapi: 3.0.3
 info:
@@ -18,7 +19,7 @@ info:
     **Erros:** formato único `{"erro", "codigo?"}` (ver o schema `Erro`): 400 validação, 401 sem token, 403 perfil
     sem permissão, 404 recurso inexistente, 409 regra de negócio violada, sempre com `codigo`.
 
-    **Perfis:** a escrita do agendamento e do desfecho das visitas é só do COORDENADOR e a dos resultados das avaliações é só do PESQUISADOR; a
+    **Perfis:** a escrita do agendamento e do desfecho das visitas é só do COORDENADOR e a dos resultados das avaliações é só do PESQUISADOR; as consultas do app (`/api/me/**`) são só do PARTICIPANTE; a
     leitura (visitas, agenda, resultados e histórico) é de COORDENADOR e PESQUISADOR.
 
     **Teste de contrato:** `ContratoOpenApiSprint3Test` confere que o YAML e os DTOs do backend têm os mesmos campos.
@@ -791,6 +792,169 @@ paths:
           $ref: '#/components/responses/Erro403'
         '404':
           $ref: '#/components/responses/Erro404'
+  /api/me/visitas/proximas:
+    get:
+      tags:
+      - Participante (me)
+      summary: Próximas visitas do participante logado
+      operationId: minhasProximasVisitas
+      description: |-
+        Visitas **AGENDADA** das participações da conta logada, com `dataHora` **de agora em diante**, da **mais
+        próxima para a mais distante**. O participante é identificado **pelo token**: o endpoint não recebe id de
+        participante (regra 7).
+
+        Devolve **200 com lista vazia** (nunca erro) quando o participante não tem visita futura, foi retirado (a
+        retirada cancela as visitas futuras, T101 a T103) ou a conta não tem candidato vinculado. O parâmetro opcional
+        `estudoId` restringe a lista a um estudo; um `estudoId` que **não é do participante** também devolve lista
+        vazia, **nunca 404 e nunca dados de outro participante**.
+
+        Cada visita traz só os **nomes das atividades previstas**. **Não traz resultados** das avaliações: eles ficam
+        fora do escopo do RF18 (privacidade).
+
+        Perfis: só PARTICIPANTE; ADMINISTRADOR, PESQUISADOR e COORDENADOR recebem 403.
+      parameters:
+      - $ref: '#/components/parameters/EstudoIdOpcional'
+      responses:
+        '200':
+          description: Próximas visitas do participante, da mais próxima para a mais distante (lista vazia se não houver).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MinhaVisitaResponse'
+              example:
+              - id: d6300000-0000-4000-8000-000000002501
+                participacaoId: d6300000-0000-4000-8000-000000002401
+                estudoId: d6300000-0000-4000-8000-000000001901
+                estudoTitulo: Demo - Acompanhamento de participantes
+                visitaNome: Retorno 30 dias
+                dataHora: '2026-11-24T09:30:00-03:00'
+                situacao: AGENDADA
+                dataHoraRealizada: null
+                motivo: null
+                atividades:
+                - Escala de dor
+                - Exame físico
+              - id: d6300000-0000-4000-8000-000000002502
+                participacaoId: d6300000-0000-4000-8000-000000002401
+                estudoId: d6300000-0000-4000-8000-000000001901
+                estudoTitulo: Demo - Acompanhamento de participantes
+                visitaNome: Retorno 60 dias
+                dataHora: '2026-12-24T10:00:00-03:00'
+                situacao: AGENDADA
+                dataHoraRealizada: null
+                motivo: null
+                atividades:
+                - Avaliação final
+                - Entrega de medicação
+        '400':
+          $ref: '#/components/responses/ErroParametroInvalido'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+  /api/me/visitas/historico:
+    get:
+      tags:
+      - Participante (me)
+      summary: Histórico de comparecimento do participante logado
+      operationId: meuHistoricoDeVisitas
+      description: |-
+        Visitas **REALIZADA**, **AUSENTE** e **CANCELADA** das participações da conta logada, da **mais recente para a
+        mais antiga** (pela data e hora agendadas), **paginadas** (`pagina` base 0, `tamanho` padrão 20 e máximo 100).
+        O participante é identificado **pelo token**: o endpoint não recebe id de participante (regra 7).
+
+        O `resumo` traz os totais de comparecimento do participante (`realizadas`, `ausentes` e `canceladas`) e é
+        **independente da página** pedida. As visitas canceladas trazem o `motivo` (inclusive "retirada do estudo", das
+        visitas futuras canceladas na retirada) e as realizadas, a `dataHoraRealizada`.
+
+        O parâmetro opcional `estudoId` restringe o histórico (e o resumo) a um estudo. Um `estudoId` que **não é do
+        participante**, ou uma conta sem vínculo, devolve **200 com lista vazia e resumo zerado**, **nunca 404 e nunca
+        dados de outro participante**.
+
+        Cada visita traz só os **nomes das atividades previstas**. **Não traz resultados** das avaliações: eles ficam
+        fora do escopo do RF18 (privacidade).
+
+        Perfis: só PARTICIPANTE; ADMINISTRADOR, PESQUISADOR e COORDENADOR recebem 403.
+      parameters:
+      - $ref: '#/components/parameters/EstudoIdOpcional'
+      - name: pagina
+        in: query
+        required: false
+        description: Página, base 0.
+        schema:
+          type: integer
+          default: 0
+          minimum: 0
+      - name: tamanho
+        in: query
+        required: false
+        description: Itens por página (máximo 100).
+        schema:
+          type: integer
+          default: 20
+          minimum: 1
+          maximum: 100
+      responses:
+        '200':
+          description: Página do histórico de comparecimento, com o resumo do participante.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoricoMinhasVisitasResponse'
+              example:
+                resumo:
+                  realizadas: 1
+                  ausentes: 1
+                  canceladas: 1
+                conteudo:
+                - id: d6300000-0000-4000-8000-000000002511
+                  participacaoId: d6300000-0000-4000-8000-000000002401
+                  estudoId: d6300000-0000-4000-8000-000000001901
+                  estudoTitulo: Demo - Acompanhamento de participantes
+                  visitaNome: Retorno 60 dias
+                  dataHora: '2026-11-18T10:00:00-03:00'
+                  situacao: CANCELADA
+                  dataHoraRealizada: null
+                  motivo: retirada do estudo
+                  atividades:
+                  - Avaliação final
+                  - Entrega de medicação
+                - id: d6300000-0000-4000-8000-000000002512
+                  participacaoId: d6300000-0000-4000-8000-000000002401
+                  estudoId: d6300000-0000-4000-8000-000000001901
+                  estudoTitulo: Demo - Acompanhamento de participantes
+                  visitaNome: Retorno 30 dias
+                  dataHora: '2026-11-12T09:30:00-03:00'
+                  situacao: AUSENTE
+                  dataHoraRealizada: null
+                  motivo: null
+                  atividades:
+                  - Escala de dor
+                  - Exame físico
+                - id: d6300000-0000-4000-8000-000000002513
+                  participacaoId: d6300000-0000-4000-8000-000000002401
+                  estudoId: d6300000-0000-4000-8000-000000001901
+                  estudoTitulo: Demo - Acompanhamento de participantes
+                  visitaNome: Triagem
+                  dataHora: '2026-11-09T09:00:00-03:00'
+                  situacao: REALIZADA
+                  dataHoraRealizada: '2026-11-09T09:10:00-03:00'
+                  motivo: null
+                  atividades:
+                  - Aferir pressão arterial
+                  - Coletar sangue
+                pagina: 0
+                tamanho: 20
+                totalElementos: 3
+                totalPaginas: 1
+        '400':
+          $ref: '#/components/responses/ErroParametroInvalido'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
 components:
   securitySchemes:
     bearerAuth:
@@ -814,7 +978,26 @@ components:
       schema:
         type: string
         format: uuid
+    EstudoIdOpcional:
+      name: estudoId
+      in: query
+      required: false
+      description: |-
+        Restringe a consulta a um estudo do participante. Um `estudoId` que **não é do participante** devolve lista
+        vazia (nunca 404 e nunca dados de outro participante). Valor que não é um UUID responde 400.
+      schema:
+        type: string
+        format: uuid
   responses:
+    ErroParametroInvalido:
+      description: Parâmetro de consulta inválido (`estudoId` que não é um UUID, `pagina` negativa ou `tamanho` fora de 1 a 100).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+          example:
+            erro: Valor inválido para o parâmetro estudoId
+            codigo: PARAMETRO_INVALIDO
     Erro400:
       description: Validação falhou (campo obrigatório, formato de data) ou regra de formato.
       content:
@@ -1598,3 +1781,101 @@ components:
       - situacaoParticipacao
       - objetivo
       - responsavelNome
+    MinhaVisitaResponse:
+      type: object
+      description: |-
+        Visita do participante logado, para o app (RF18). Traz só os **nomes** das atividades previstas e **nenhum
+        resultado** das avaliações (decisão de escopo e de privacidade).
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador da visita agendada.
+        participacaoId:
+          type: string
+          format: uuid
+        estudoId:
+          type: string
+          format: uuid
+        estudoTitulo:
+          type: string
+        visitaNome:
+          type: string
+          description: Nome da visita prevista.
+          example: Retorno 30 dias
+        dataHora:
+          type: string
+          format: date-time
+          description: Data e hora agendadas, com o deslocamento do fuso do centro (ISO 8601).
+          example: '2026-11-24T09:30:00-03:00'
+        situacao:
+          $ref: '#/components/schemas/SituacaoVisita'
+        dataHoraRealizada:
+          type: string
+          format: date-time
+          nullable: true
+          description: Preenchida nas visitas REALIZADA.
+        motivo:
+          type: string
+          nullable: true
+          description: Preenchido nas visitas CANCELADA (inclusive "retirada do estudo").
+        atividades:
+          type: array
+          description: Nomes das atividades previstas da visita, em ordem alfabética.
+          items:
+            type: string
+      required:
+      - id
+      - participacaoId
+      - estudoId
+      - estudoTitulo
+      - visitaNome
+      - dataHora
+      - situacao
+      - atividades
+    ResumoComparecimentoResponse:
+      type: object
+      description: |-
+        Totais de comparecimento do participante (e do estudo, quando `estudoId` é informado), calculados no servidor e
+        **independentes da página** pedida.
+      properties:
+        realizadas:
+          type: integer
+          format: int64
+        ausentes:
+          type: integer
+          format: int64
+        canceladas:
+          type: integer
+          format: int64
+      required:
+      - realizadas
+      - ausentes
+      - canceladas
+    HistoricoMinhasVisitasResponse:
+      type: object
+      description: Página do histórico de comparecimento do participante logado, com o resumo.
+      properties:
+        resumo:
+          $ref: '#/components/schemas/ResumoComparecimentoResponse'
+        conteudo:
+          type: array
+          items:
+            $ref: '#/components/schemas/MinhaVisitaResponse'
+        pagina:
+          type: integer
+          description: Base 0.
+        tamanho:
+          type: integer
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+      required:
+      - resumo
+      - conteudo
+      - pagina
+      - tamanho
+      - totalElementos
+      - totalPaginas
