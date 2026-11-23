@@ -5,7 +5,7 @@ import { historicoApi } from '../../../../api/historico'
 import { erroHttp, estudoBase, renderizarAba } from '../../../../test/ambiente'
 import type { PerfilUsuario } from '../../../../types/usuario'
 import { FichaParticipantePage } from './FichaParticipantePage'
-import { historicoBase, participacaoId } from './historicoFixture'
+import { cancelada, historicoBase, participacaoId, retorno30, retorno60, triagem } from './historicoFixture'
 
 vi.mock('../../../../api/historico', () => ({ historicoApi: { buscar: vi.fn() } }))
 
@@ -155,5 +155,50 @@ describe('FichaParticipantePage (T97)', () => {
 
     expect(await screen.findByRole('region', { name: 'Resumo do histórico' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Visitas do participante' })).toBeInTheDocument()
+  })
+
+  describe('corpo completo da API, com as cinco situações (T98)', () => {
+    const ausente = { ...retorno30, visitaPlanejadaId: 'vp-5', nome: 'Retorno 45 dias', ordem: 3, diaPrevisto: 45, situacao: 'AUSENTE' as const }
+    const completo = {
+      ...historicoBase,
+      resumo: { previstas: 5, realizadas: 1, ausentes: 1, canceladas: 1, agendadas: 1, naoAgendadas: 1, pendentes: 2 },
+      visitas: [triagem, retorno30, ausente, { ...retorno60, ordem: 4 }, { ...cancelada, ordem: 5 }],
+    }
+
+    it('mantém a ordem do servidor e mostra a situação de cada visita', async () => {
+      buscar.mockResolvedValue(completo)
+      abrir()
+
+      const visitas = await screen.findByRole('region', { name: 'Visitas do participante' })
+      const titulos = within(visitas).getAllByRole('heading', { level: 4 })
+      expect(titulos.map((t) => t.textContent)).toEqual([
+        expect.stringMatching(/Triagem.*Realizada/),
+        expect.stringMatching(/Retorno 30 dias.*Agendada/),
+        expect.stringMatching(/Retorno 45 dias.*Ausente/),
+        expect.stringMatching(/Retorno 60 dias.*Não agendada/),
+        expect.stringMatching(/Retorno 90 dias.*Cancelada/),
+      ])
+    })
+
+    it('os cartões e a contagem do filtro batem com o resumo do servidor', async () => {
+      buscar.mockResolvedValue(completo)
+      abrir()
+
+      const resumo = await screen.findByRole('region', { name: 'Resumo do histórico' })
+      const cartao = (rotulo: string) => within(resumo).getByText(rotulo).closest('li')
+      expect(cartao('Realizadas')).toHaveTextContent('1')
+      expect(cartao('Ausentes')).toHaveTextContent('1')
+      expect(cartao('Canceladas')).toHaveTextContent('1')
+      expect(cartao('Pendentes')).toHaveTextContent('2')
+      expect(screen.getByRole('status')).toHaveTextContent('Exibindo 5 de 5 visitas')
+    })
+
+    it('a visita cancelada mostra o motivo ao expandir', async () => {
+      buscar.mockResolvedValue(completo)
+      abrir()
+      await userEvent.click(await screen.findByRole('button', { name: /Retorno 90 dias/ }))
+
+      expect(screen.getByText(/Participante em viagem/)).toBeInTheDocument()
+    })
   })
 })

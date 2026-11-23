@@ -6,6 +6,7 @@ import { useUsuarioLogado } from '../../../../contexts/sessao'
 import { useCarregamento } from '../../../../hooks/useCarregamento'
 import { formatarDataHora, formatarJanela } from '../../../../utils/datas'
 import { useEstudoDetalhe } from '../contexto'
+import { AbaAvaliacoesVisita } from './AbaAvaliacoesVisita'
 import { AcoesDaVisita } from './AcoesDaVisita'
 import { abasVisitaDoPerfil } from './abasVisita'
 import { DesfechoRegistrado } from './DesfechoRegistrado'
@@ -15,8 +16,8 @@ import './acompanhamento.css'
 
 type DadosDaVisita = { previsao: VisitaDoParticipanteResponse; visita: VisitaAgendadaResponse }
 
-// Conteúdo de cada aba da tela da visita. Para acrescentar uma aba (T91, `avaliacoes`): declare-a em abasVisita.ts e
-// trate o novo caminho aqui, sem mexer no restante da tela.
+// Conteúdo de cada aba da tela da visita. Para acrescentar uma aba, declare-a em abasVisita.ts e trate o novo caminho
+// aqui, sem mexer no restante da tela.
 function ConteudoDaAba({ caminho, dados }: { caminho: string; dados: DadosDaVisita }) {
   if (caminho === 'dados') {
     return (
@@ -26,6 +27,10 @@ function ConteudoDaAba({ caminho, dados }: { caminho: string; dados: DadosDaVisi
         <DesfechoRegistrado visita={dados.visita} />
       </>
     )
+  }
+  if (caminho === 'avaliacoes') {
+    // RF14 (T91). A chave pela situação recarrega os resultados quando o desfecho muda a visita (ex.: REALIZADA)
+    return <AbaAvaliacoesVisita key={dados.visita.situacao} visitaAgendadaId={dados.visita.id} />
   }
   return null
 }
