@@ -146,6 +146,20 @@ export class ApiE2E {
     return { estudoId, visitaId, acaoId }
   }
 
+  /**
+   * Estudo em recrutamento para o agendamento (T79): critérios, a triagem (dia 0, tolerância 0) e o retorno (dia 5,
+   * tolerância 2). Para um participante incluído hoje, a janela do retorno vai de hoje + 3 a hoje + 7.
+   */
+  async estudoParaAgendamento(titulo: string, limite = 5) {
+    const estudoId = await this.criarEstudo(titulo, limite)
+    await this.criarCriterio(estudoId, 'INCLUSAO', 'Idade adulta', 'Candidato com 18 anos ou mais')
+    await this.criarCriterio(estudoId, 'EXCLUSAO', 'Gestante', 'Candidata em gestação confirmada')
+    const triagemId = await this.criarVisita(estudoId, 'Triagem', 0)
+    const retornoId = await this.criarVisita(estudoId, 'Retorno', 5, 2)
+    await this.avancar(estudoId, 'RECRUTAMENTO')
+    return { estudoId, triagemId, retornoId }
+  }
+
   /** (Como coordenador) candidato pronto e incluído no estudo; devolve o id da participação e o código do candidato. */
   async participanteIncluido(estudoId: string, nomeFicticio: string) {
     const candidatoId = await this.candidatoPronto(estudoId, nomeFicticio)
