@@ -17,15 +17,18 @@ import UEPB.ESWII.ClinicalStudyPB.controller.dto.HistoricoParticipanteResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.HistoricoParticipanteResponse.ParticipanteDoHistorico;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.HistoricoParticipanteResponse.ResultadoDoHistorico;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.HistoricoParticipanteResponse.ResumoDoHistorico;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.HistoricoParticipanteResponse.RetiradaDoHistorico;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.HistoricoParticipanteResponse.VisitaDoHistorico;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoNoHistorico;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Candidato;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Participacao;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.ResultadoAtividade;
+import UEPB.ESWII.ClinicalStudyPB.domain.model.RetiradaParticipacao;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.VisitaAgendada;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.VisitaPlanejada;
 import UEPB.ESWII.ClinicalStudyPB.repository.ParticipacaoRepository;
 import UEPB.ESWII.ClinicalStudyPB.repository.ResultadoAtividadeRepository;
+import UEPB.ESWII.ClinicalStudyPB.repository.RetiradaParticipacaoRepository;
 import UEPB.ESWII.ClinicalStudyPB.repository.VisitaAgendadaRepository;
 import UEPB.ESWII.ClinicalStudyPB.repository.VisitaPlanejadaRepository;
 
@@ -55,15 +58,17 @@ public class HistoricoParticipanteService {
     private final VisitaPlanejadaRepository visitasPlanejadas;
     private final VisitaAgendadaRepository visitasAgendadas;
     private final ResultadoAtividadeRepository resultados;
+    private final RetiradaParticipacaoRepository retiradas;
     private final Clock clock;
 
     public HistoricoParticipanteService(ParticipacaoRepository participacoes,
             VisitaPlanejadaRepository visitasPlanejadas, VisitaAgendadaRepository visitasAgendadas,
-            ResultadoAtividadeRepository resultados, Clock clock) {
+            ResultadoAtividadeRepository resultados, RetiradaParticipacaoRepository retiradas, Clock clock) {
         this.participacoes = participacoes;
         this.visitasPlanejadas = visitasPlanejadas;
         this.visitasAgendadas = visitasAgendadas;
         this.resultados = resultados;
+        this.retiradas = retiradas;
         this.clock = clock;
     }
 
@@ -94,16 +99,24 @@ public class HistoricoParticipanteService {
                         resultadoPorAgendamento))
                 .toList();
 
-        // Ponto de extensão da T104 (RQ-T96-10): a retirada acrescenta aqui a situação da participação e os dados da
-        // retirada ao bloco "participante" (ver HistoricoParticipanteResponse.ParticipanteDoHistorico) e a marca
-        // RETIRADO ao histórico. Esta task não os preenche.
-        return new HistoricoParticipanteResponse(paraParticipante(participacao), ResumoDoHistorico.de(visitas), visitas);
+        // T104 (RQ-T104-09): só consulta a tabela de retiradas quando a participação já está retirada, mantendo o
+        // histórico de participantes ativos em no máximo 4 consultas (sem N+1).
+        RetiradaDoHistorico retirada = participacao.estaRetirada()
+                ? retiradas.findByParticipacaoId(participacaoId).map(HistoricoParticipanteService::paraRetirada)
+                        .orElse(null)
+                : null;
+        return new HistoricoParticipanteResponse(paraParticipante(participacao, retirada),
+                ResumoDoHistorico.de(visitas), visitas);
     }
 
-    private static ParticipanteDoHistorico paraParticipante(Participacao participacao) {
+    private static ParticipanteDoHistorico paraParticipante(Participacao participacao, RetiradaDoHistorico retirada) {
         Candidato candidato = participacao.getCandidato();
         return new ParticipanteDoHistorico(participacao.getId(), candidato.getId(), candidato.getCodigo(),
-                candidato.getNomeFicticio(), participacao.getDataInclusao());
+                candidato.getNomeFicticio(), participacao.getDataInclusao(), participacao.getSituacao(), retirada);
+    }
+
+    private static RetiradaDoHistorico paraRetirada(RetiradaParticipacao retirada) {
+        return new RetiradaDoHistorico(retirada.getDataRetirada(), retirada.getMotivo(), retirada.getSolicitante());
     }
 
     private VisitaDoHistorico paraVisita(VisitaPlanejada prevista, Participacao participacao,

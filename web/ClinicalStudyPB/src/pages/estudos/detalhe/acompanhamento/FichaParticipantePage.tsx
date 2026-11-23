@@ -1,7 +1,8 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { contaParticipanteApi } from '../../../../api/contaParticipante'
 import { historicoApi } from '../../../../api/historico'
+import { rotulosSolicitanteRetirada, type RetiradaResponse } from '../../../../api/tipos'
 import { useUsuarioLogado } from '../../../../contexts/sessao'
 import { useCarregamento } from '../../../../hooks/useCarregamento'
 import { formatarData } from '../../../../utils/datas'
@@ -11,13 +12,22 @@ import './acompanhamento.css'
 import { AreaAcoesParticipante } from './AreaAcoesParticipante'
 import { LinhaDoTempoVisitas } from './LinhaDoTempoVisitas'
 
-// Ficha do participante (RF15, T97): dados, cartões de resumo do histórico, linha do tempo de todas as visitas previstas
-// e a área de ações (ponto de encaixe da retirada e do vínculo de conta). Somente leitura: a tela não grava nada, e os
-// números do resumo vêm prontos do servidor (nunca são recalculados aqui).
+function mensagemConfirmacaoRetirada(retirada: RetiradaResponse): string {
+  if (retirada.visitasCanceladas === 0) {
+    return 'Retirada registrada com sucesso. Nenhuma visita futura agendada precisou ser cancelada.'
+  }
+  return `Retirada registrada com sucesso. ${retirada.visitasCanceladas} ${
+    retirada.visitasCanceladas === 1 ? 'visita futura agendada foi cancelada' : 'visitas futuras agendadas foram canceladas'
+  }.`
+}
+
+// Ficha do participante (RF15, T97; RF16, T104; T111): dados, marca RETIRADO e detalhes da retirada quando houver,
+// conta vinculada, cartões de resumo do histórico, linha do tempo de todas as visitas previstas e a área de ações.
 export function FichaParticipantePage() {
   const { estudo } = useEstudoDetalhe()
   const { perfil } = useUsuarioLogado()
   const { participacaoId = '' } = useParams()
+  const [confirmacaoRetirada, setConfirmacaoRetirada] = useState<string | null>(null)
   const carregar = useCallback(() => historicoApi.buscar(participacaoId), [participacaoId])
   const { dados: historico, erro, statusErro, carregando, recarregar } = useCarregamento(carregar)
   // T111: a conta vinculada vem de outra consulta; 'sem conta' (404) chega como null e nunca derruba a ficha
@@ -62,6 +72,7 @@ export function FichaParticipantePage() {
   }
 
   const { participante, resumo, visitas } = historico
+  const retirado = participante.situacao === 'RETIRADO'
   const cartoes = [
     { rotulo: 'Realizadas', valor: resumo.realizadas },
     { rotulo: 'Ausentes', valor: resumo.ausentes },
@@ -72,9 +83,12 @@ export function FichaParticipantePage() {
   return (
     <div className="pilha">
       <div className="barra-titulo">
-        <h2>
-          {participante.codigo} · {participante.nomeFicticio}
-        </h2>
+        <div className="titulo-com-selo">
+          <h2>
+            {participante.codigo} · {participante.nomeFicticio}
+          </h2>
+          {retirado && <span className="selo selo--retirado">Retirado</span>}
+        </div>
         <Link to={`/estudos/${estudo.id}/participantes`} className="botao botao--secundario botao--pequeno">
           ← Participantes
         </Link>
@@ -90,6 +104,32 @@ export function FichaParticipantePage() {
         <p className="alerta alerta--erro" role="alert">
           Não foi possível consultar a conta vinculada. {erroDaConta}
         </p>
+      )}
+
+      {confirmacaoRetirada && (
+        <p className="alerta alerta--ok" role="status">
+          {confirmacaoRetirada}
+        </p>
+      )}
+
+      {retirado && participante.retirada && (
+        <section className="secao bloco-retirada" aria-label="Dados da retirada">
+          <h3>Participante retirado do estudo</h3>
+          <dl className="detalhes">
+            <div>
+              <dt>Data da retirada</dt>
+              <dd>{formatarData(participante.retirada.dataRetirada)}</dd>
+            </div>
+            <div>
+              <dt>Solicitante</dt>
+              <dd>{rotulosSolicitanteRetirada[participante.retirada.solicitante]}</dd>
+            </div>
+            <div>
+              <dt>Motivo</dt>
+              <dd>{participante.retirada.motivo}</dd>
+            </div>
+          </dl>
+        </section>
       )}
 
       <section className="secao" aria-label="Resumo do histórico">
@@ -109,14 +149,26 @@ export function FichaParticipantePage() {
         </p>
       </section>
 
-      <AreaAcoesParticipante participacao={participante} perfil={perfil} conta={conta} aoAlterar={recarregarTudo} />
+      <AreaAcoesParticipante
+        participacao={participante}
+        perfil={perfil}
+        conta={conta}
+        visitas={visitas}
+        aoAlterar={recarregarTudo}
+        aoRetirar={(resposta) => setConfirmacaoRetirada(mensagemConfirmacaoRetirada(resposta))}
+      />
 
       <section className="secao" aria-label="Visitas do participante">
         <h3>Visitas do participante</h3>
         {visitas.length === 0 ? (
           <p className="texto-suave">Este estudo ainda não tem visitas previstas.</p>
         ) : (
-          <LinhaDoTempoVisitas visitas={visitas} estudoId={estudo.id} participacaoId={participante.participacaoId} />
+          <LinhaDoTempoVisitas
+            visitas={visitas}
+            estudoId={estudo.id}
+            participacaoId={participante.participacaoId}
+            participanteRetirado={retirado}
+          />
         )}
       </section>
     </div>

@@ -23,18 +23,18 @@ const progresso = vi.mocked(agendamentoApi.participantesDaAgenda)
 
 const primeiro: ParticipacaoResponse = {
   id: 'p-1', candidatoId: 'c-1', codigo: 'CAND-001', nomeFicticio: 'J. S.', estudoId: estudoBase.id,
-  dataInclusao: '2026-11-04', incluidoPor: 'Coordenadora Fictícia',
+  dataInclusao: '2026-11-04', incluidoPor: 'Coordenadora Fictícia', situacao: 'ATIVO',
 }
 const segundo: ParticipacaoResponse = { ...primeiro, id: 'p-2', candidatoId: 'c-2', codigo: 'CAND-002', nomeFicticio: 'M. P.' }
 
-describe('AbaParticipantes (T61 e T77)', () => {
+describe('AbaParticipantes (T61, T77 e T104)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     listar.mockResolvedValue([primeiro, segundo])
     vagas.mockResolvedValue({ incluidos: 2, limite: 30, restantes: 28 })
     progresso.mockResolvedValue([
-      { participacaoId: 'p-1', candidatoId: 'c-1', codigo: 'CAND-001', nomeFicticio: 'J. S.', dataInclusao: '2026-11-04', visitasPrevistas: 3, visitasAgendadas: 2 },
-      { participacaoId: 'p-2', candidatoId: 'c-2', codigo: 'CAND-002', nomeFicticio: 'M. P.', dataInclusao: '2026-11-04', visitasPrevistas: 3, visitasAgendadas: 0 },
+      { participacaoId: 'p-1', candidatoId: 'c-1', codigo: 'CAND-001', nomeFicticio: 'J. S.', dataInclusao: '2026-11-04', visitasPrevistas: 3, visitasAgendadas: 2, situacaoParticipacao: 'ATIVO' },
+      { participacaoId: 'p-2', candidatoId: 'c-2', codigo: 'CAND-002', nomeFicticio: 'M. P.', dataInclusao: '2026-11-04', visitasPrevistas: 3, visitasAgendadas: 0, situacaoParticipacao: 'ATIVO' },
     ])
   })
 
@@ -129,5 +129,27 @@ describe('AbaParticipantes (T61 e T77)', () => {
     renderizarAba(<AbaParticipantes />, { perfil: 'COORDENADOR' })
 
     expect(await screen.findByText('Carregando participantes…')).toBeInTheDocument()
+  })
+
+  it('mostra a marca Retirado na lista e substitui Agendamento por Ver histórico (T104)', async () => {
+    const retirado: ParticipacaoResponse = { ...segundo, situacao: 'RETIRADO' }
+    listar.mockResolvedValue([primeiro, retirado])
+    progresso.mockResolvedValue([
+      { participacaoId: 'p-1', candidatoId: 'c-1', codigo: 'CAND-001', nomeFicticio: 'J. S.', dataInclusao: '2026-11-04', visitasPrevistas: 3, visitasAgendadas: 2, situacaoParticipacao: 'ATIVO' },
+      { participacaoId: 'p-2', candidatoId: 'c-2', codigo: 'CAND-002', nomeFicticio: 'M. P.', dataInclusao: '2026-11-04', visitasPrevistas: 3, visitasAgendadas: 1, situacaoParticipacao: 'RETIRADO' },
+    ])
+    renderizarAba(<AbaParticipantes />, { perfil: 'COORDENADOR' })
+
+    const linhaAtivo = await screen.findByRole('row', { name: /CAND-001/ })
+    expect(within(linhaAtivo).getByText('Ativo')).toHaveClass('selo--ativo')
+    expect(within(linhaAtivo).getByRole('link', { name: 'Agendamento de CAND-001' })).toBeInTheDocument()
+
+    const linhaRetirado = screen.getByRole('row', { name: /CAND-002/ })
+    expect(within(linhaRetirado).getByText('Retirado')).toHaveClass('selo--retirado')
+    expect(within(linhaRetirado).queryByRole('link', { name: /Agendamento/ })).not.toBeInTheDocument()
+    expect(within(linhaRetirado).getByRole('link', { name: 'Ver histórico de CAND-002' })).toHaveAttribute(
+      'href',
+      `/estudos/${estudoBase.id}/participantes/p-2`,
+    )
   })
 })

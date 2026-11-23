@@ -93,7 +93,17 @@ export function VisitaAgendadaPage() {
   const [abaAtiva, setAbaAtiva] = useState(abas[0]?.caminho ?? 'dados')
 
   const carregar = useCallback(() => agendamentoApi.visitasDoParticipante(participacaoId), [participacaoId])
+  const carregarParticipantes = useCallback(async () => {
+    try {
+      return (await agendamentoApi.participantesDaAgenda(estudo.id)) ?? []
+    } catch {
+      return []
+    }
+  }, [estudo.id])
   const { dados: visitas, erro, carregando, recarregar } = useCarregamento(carregar)
+  const { dados: participantes } = useCarregamento(carregarParticipantes)
+  const participanteRetirado =
+    participantes?.find((item) => item.participacaoId === participacaoId)?.situacaoParticipacao === 'RETIRADO'
 
   const previsao = visitas?.find((item) => item.agendamento?.id === visitaAgendadaId)
   const visita = previsao?.agendamento ?? null
@@ -102,11 +112,19 @@ export function VisitaAgendadaPage() {
   return (
     <div className="pilha">
       <div className="barra-titulo">
-        <h2>Visita agendada</h2>
+        <div className="titulo-com-selo">
+          <h2>Visita agendada</h2>
+          {participanteRetirado && <span className="selo selo--retirado">Retirado</span>}
+        </div>
         <Link to={rotaDoAgendamento} className="botao botao--secundario botao--pequeno">
           ← Voltar para o agendamento
         </Link>
       </div>
+      {participanteRetirado && (
+        <p className="alerta alerta--info" role="status">
+          Participante retirado do estudo: as ações de edição desta visita estão indisponíveis.
+        </p>
+      )}
 
       {carregando && <p className="carregando">Carregando visita…</p>}
       {erro && (
@@ -143,6 +161,7 @@ export function VisitaAgendadaPage() {
                 participanteNome: visita.participanteNome,
                 janelaInicio: visita.janelaInicio,
                 janelaFim: visita.janelaFim,
+                participanteRetirado,
               }}
               aoAlterar={recarregar}
             />

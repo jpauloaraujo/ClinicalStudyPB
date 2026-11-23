@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { erroHttp } from '../../../../test/ambiente'
-import { interpretarErroDeAgendamento, mensagemDeAgendamento, mensagemDeVinculo } from './mensagensAcompanhamento'
+import {
+  interpretarErroDeAgendamento,
+  mensagemDeAcompanhamento,
+  mensagemDeAgendamento,
+  mensagemDeResultado,
+  mensagemDeRetirada,
+  mensagemDeVinculo,
+} from './mensagensAcompanhamento'
 
 const janela = { inicio: '2026-11-20', fim: '2026-11-30' }
 
@@ -68,5 +75,27 @@ describe('mensagemDeVinculo (T111, RQ-T111-11)', () => {
   it('código desconhecido ou ausente cai na mensagem do servidor', () => {
     expect(mensagemDeVinculo('NOVO_CODIGO', 'Mensagem do servidor')).toBe('Mensagem do servidor')
     expect(mensagemDeVinculo(undefined, 'Mensagem do servidor')).toBe('Mensagem do servidor')
+  })
+})
+
+describe('mensagemDeRetirada e bloqueios por participante retirado (T104)', () => {
+  it.each([
+    ['PARTICIPANTE_JA_RETIRADO', /já foi retirado/],
+    ['ESTUDO_ENCERRADO', /estudo está encerrado/],
+    ['MOTIVO_OBRIGATORIO', /ao menos 5 caracteres/],
+    ['DATA_RETIRADA_FUTURA', /não pode estar no futuro/],
+    ['PARTICIPANTE_RETIRADO', /retirado do estudo/],
+  ])('mensagemDeRetirada traduz %s', (codigo, esperado) => {
+    expect(mensagemDeRetirada(codigo, 'servidor')).toMatch(esperado)
+  })
+
+  it('mensagemDeRetirada cai na mensagem do servidor quando o código é desconhecido ou ausente', () => {
+    expect(mensagemDeRetirada('DESCONHECIDO', 'Mensagem do servidor')).toBe('Mensagem do servidor')
+    expect(mensagemDeRetirada(undefined, 'Mensagem do servidor')).toBe('Mensagem do servidor')
+  })
+
+  it('desfecho e resultados traduzem PARTICIPANTE_RETIRADO', () => {
+    expect(mensagemDeAcompanhamento('PARTICIPANTE_RETIRADO', 'servidor')).toMatch(/retirado do estudo/)
+    expect(mensagemDeResultado('PARTICIPANTE_RETIRADO', 'servidor')).toMatch(/retirado do estudo/)
   })
 })

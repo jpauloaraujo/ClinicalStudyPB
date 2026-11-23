@@ -9,7 +9,7 @@ import { Campo } from '../../../../components/ui/Campo'
 import { useUsuarioLogado } from '../../../../contexts/sessao'
 import { useCarregamento } from '../../../../hooks/useCarregamento'
 import { formatarDataHora } from '../../../../utils/datas'
-import { interpretarErroDeResultado } from './mensagensAcompanhamento'
+import { MENSAGEM_BLOQUEIO_PARTICIPANTE_RETIRADO, interpretarErroDeResultado } from './mensagensAcompanhamento'
 import './acompanhamento.css'
 
 // Limites do contrato (ResultadoRequest), conferidos também no cliente
@@ -24,7 +24,7 @@ const AVISOS_DO_BLOQUEIO: Partial<Record<BloqueioResultados, string>> = {
   VISITA_NAO_REALIZADA: 'Os resultados só podem ser registrados em visitas realizadas.',
   ESTUDO_ENCERRADO:
     'O estudo foi encerrado: os resultados ficam disponíveis somente para consulta e não podem mais ser registrados nem editados.',
-  // PARTICIPANTE_RETIRADO: aviso próprio na T104
+  PARTICIPANTE_RETIRADO: MENSAGEM_BLOQUEIO_PARTICIPANTE_RETIRADO,
 }
 
 function modoDaAba(perfil: string, bloqueio: BloqueioResultados | null): ModoAtividade {
@@ -100,7 +100,19 @@ export function AbaAvaliacoesVisita({ visitaAgendadaId }: { visitaAgendadaId: st
           {usuario.perfil !== 'PESQUISADOR' && (
             <p className="alerta alerta--info">Somente o pesquisador registra resultados.</p>
           )}
-          {avisoDoBloqueio && <p className="alerta alerta--info">{avisoDoBloqueio}</p>}
+          {avisoDoBloqueio && (
+            <p
+              className="alerta alerta--info"
+              role={dados.bloqueio === 'PARTICIPANTE_RETIRADO' ? 'status' : undefined}
+            >
+              {dados.bloqueio === 'PARTICIPANTE_RETIRADO' && (
+                <>
+                  <span className="selo selo--retirado">Retirado</span>{' '}
+                </>
+              )}
+              {avisoDoBloqueio}
+            </p>
+          )}
 
           {atividades.length > 0 && (
             <ul className="avaliacoes">

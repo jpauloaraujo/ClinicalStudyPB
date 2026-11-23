@@ -19,9 +19,12 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.HistoricoParticipanteResponse.ParticipanteDoHistorico;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.HistoricoParticipanteResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.HistoricoParticipanteResponse.ResumoDoHistorico;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.HistoricoParticipanteResponse.RetiradaDoHistorico;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.HistoricoParticipanteResponse.VisitaDoHistorico;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoNoHistorico;
+import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoParticipacao;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoVisita;
+import UEPB.ESWII.ClinicalStudyPB.domain.enums.SolicitanteRetirada;
 
 /** T95: vocabulário de situações e DTOs de leitura do histórico (sem Spring, sem banco). */
 class HistoricoParticipanteDtoTest {
@@ -94,12 +97,18 @@ class HistoricoParticipanteDtoTest {
                 visita(2, SituacaoNoHistorico.NAO_AGENDADA));
         HistoricoParticipanteResponse resposta = new HistoricoParticipanteResponse(
                 new ParticipanteDoHistorico(UUID.randomUUID(), UUID.randomUUID(), "CAND-001",
-                        "Pessoa Teta (Ficticia)", LocalDate.of(2026, 10, 20)),
+                        "Pessoa Teta (Ficticia)", LocalDate.of(2026, 10, 20), SituacaoParticipacao.RETIRADO,
+                        new RetiradaDoHistorico(LocalDate.of(2026, 11, 18), "Mudança de cidade",
+                                SolicitanteRetirada.PARTICIPANTE)),
                 ResumoDoHistorico.de(visitas), visitas);
 
         JsonNode no = json.readTree(json.writeValueAsString(resposta));
 
         assertThat(no.at("/participante/dataInclusao").asText()).isEqualTo("2026-10-20");
+        assertThat(no.at("/participante/situacao").asText()).isEqualTo("RETIRADO");
+        assertThat(no.at("/participante/retirada/dataRetirada").asText()).isEqualTo("2026-11-18");
+        assertThat(no.at("/participante/retirada/motivo").asText()).isEqualTo("Mudança de cidade");
+        assertThat(no.at("/participante/retirada/solicitante").asText()).isEqualTo("PARTICIPANTE");
         assertThat(no.at("/visitas/0/dataHoraAgendada").asText()).isEqualTo("2026-10-20T09:00:00-03:00");
         assertThat(no.at("/visitas/0/situacao").asText()).isEqualTo("AGENDADA");
         assertThat(no.at("/visitas/1/situacao").asText()).isEqualTo("NAO_AGENDADA");

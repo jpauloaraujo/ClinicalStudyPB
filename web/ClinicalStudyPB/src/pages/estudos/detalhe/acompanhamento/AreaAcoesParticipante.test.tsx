@@ -4,19 +4,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { contaParticipanteApi } from '../../../../api/contaParticipante'
 import { estudoBase, renderizarAba } from '../../../../test/ambiente'
 import { AreaAcoesParticipante } from './AreaAcoesParticipante'
-import { historicoBase } from './historicoFixture'
+import { historicoBase, historicoRetirado } from './historicoFixture'
 
 vi.mock('../../../../api/contaParticipante', () => ({
   contaParticipanteApi: { buscar: vi.fn(), vincular: vi.fn(), listarDisponiveis: vi.fn() },
 }))
 
 const participacao = historicoBase.participante
+const participacaoRetirada = historicoRetirado.participante
 const contaVinculada = { participacaoId: participacao.participacaoId, usuarioId: 'u-1', nome: 'Maria', email: 'maria@clinicalstudy.test' }
 
-describe('AreaAcoesParticipante (T97)', () => {
-  it('o coordenador vê o link "Agendar visitas" para a tela de agendamento do participante', () => {
+describe('AreaAcoesParticipante (T97 e T104)', () => {
+  it('o coordenador vê "Agendar visitas" e "Registrar retirada" habilitados para participante ativo em estudo aberto', () => {
     renderizarAba(<AreaAcoesParticipante participacao={participacao} perfil="COORDENADOR" aoAlterar={vi.fn()} />, {
       perfil: 'COORDENADOR',
+      estudo: { ...estudoBase, status: 'EXECUCAO' },
     })
 
     expect(screen.getByRole('region', { name: 'Ações do participante' })).toBeInTheDocument()
@@ -24,6 +26,7 @@ describe('AreaAcoesParticipante (T97)', () => {
       'href',
       `/estudos/${estudoBase.id}/participantes/${participacao.participacaoId}/agendamento`,
     )
+    expect(screen.getByRole('button', { name: 'Registrar retirada' })).toBeEnabled()
   })
 
   it('o pesquisador só lê: a área não aparece e não há botões de escrita', () => {
@@ -36,13 +39,43 @@ describe('AreaAcoesParticipante (T97)', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
-  it('nesta task só existe a ação de agendar: nada de retirada nem de vínculo de conta ainda', () => {
+  it('clicar em "Registrar retirada" abre o diálogo de retirada (T104)', async () => {
+    renderizarAba(
+      <AreaAcoesParticipante
+        participacao={participacao}
+        perfil="COORDENADOR"
+        visitas={historicoBase.visitas}
+        aoAlterar={vi.fn()}
+      />,
+      { perfil: 'COORDENADOR', estudo: { ...estudoBase, status: 'EXECUCAO' } },
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar retirada' }))
+
+    expect(screen.getByRole('dialog', { name: 'Registrar retirada' })).toBeInTheDocument()
+  })
+
+  it('com o estudo encerrado o botão "Registrar retirada" fica desabilitado com explicação acessível (T104)', () => {
     renderizarAba(<AreaAcoesParticipante participacao={participacao} perfil="COORDENADOR" aoAlterar={vi.fn()} />, {
       perfil: 'COORDENADOR',
+      estudo: { ...estudoBase, status: 'ENCERRADO' },
     })
 
-    expect(screen.getAllByRole('link')).toHaveLength(1)
-    expect(screen.queryByRole('button', { name: /retirada|vincular/i })).not.toBeInTheDocument()
+    const botao = screen.getByRole('button', { name: 'Registrar retirada' })
+    expect(botao).toBeDisabled()
+    expect(botao).toHaveAccessibleDescription('O estudo está encerrado: não é possível registrar retirada de participantes.')
+  })
+
+  it('com o participante já retirado esconde Agendar visitas, Vincular conta e Registrar retirada (T104)', () => {
+    renderizarAba(
+      <AreaAcoesParticipante participacao={participacaoRetirada} perfil="COORDENADOR" conta={null} aoAlterar={vi.fn()} />,
+      { perfil: 'COORDENADOR', estudo: { ...estudoBase, status: 'EXECUCAO' } },
+    )
+
+    expect(screen.queryByRole('region', { name: 'Ações do participante' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Agendar visitas' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Vincular conta' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Registrar retirada' })).not.toBeInTheDocument()
   })
 })
 
