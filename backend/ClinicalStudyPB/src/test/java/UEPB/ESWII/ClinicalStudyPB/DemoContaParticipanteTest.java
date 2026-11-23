@@ -18,15 +18,17 @@ import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * T109: o script {@code R__demo_24_conta_participante.sql} vincula a conta de demonstração do participante ao P5 e
- * não faz nada quando o P5 não existe. O candidato é montado aqui, dentro de uma transação desfeita no fim, porque
- * o script que o cria (T84) é de outra task.
+ * T109/T111/T105: o script {@code R__demo_24_conta_participante.sql} vincula {@code participante@clinicalstudy.test}
+ * ao P1 e {@code demo.participante@clinicalstudy.test} ao P6 (retirado), migrando um eventual vínculo anterior no P5,
+ * e não faz nada quando o P6 não existe. Os candidatos são montados dentro de uma transação desfeita no fim.
  */
 @SpringBootTest
 @Transactional
 class DemoContaParticipanteTest {
 
+    private static final String P1 = "d6300000-0000-4000-8000-000000001911";
     private static final String P5 = "d6300000-0000-4000-8000-000000002012";
+    private static final String P6 = "d6300000-0000-4000-8000-000000002311";
     private static final String EMAIL_DEMO = "demo.participante@clinicalstudy.test";
 
     @Autowired
@@ -45,58 +47,31 @@ class DemoContaParticipanteTest {
                 EMAIL_DEMO);
     }
 
-    private void criarP5() {
+    private UUID criarEstudo(String titulo) {
         UUID estudo = UUID.randomUUID();
         jdbc.update("INSERT INTO estudos (id, titulo, objetivo, responsavel_id, data_inicio, data_fim, "
-                + "limite_participantes, status) SELECT CAST(? AS UUID), 'Demo T109', 'Objetivo.', id, "
+                + "limite_participantes, status) SELECT CAST(? AS UUID), ?, 'Objetivo.', id, "
                 + "DATE '2026-11-01', DATE '2027-05-01', 6, 'EXECUCAO' FROM usuarios "
-                + "WHERE email = 'pesquisador@clinicalstudy.test'", estudo.toString());
+                + "WHERE email = 'pesquisador@clinicalstudy.test'", estudo.toString(), titulo);
+        return estudo;
+    }
+
+    private void criarP5() {
+        UUID estudo = criarEstudo("Demo T109 P5");
         jdbc.update("INSERT INTO candidatos (id, estudo_id, codigo, nome_ficticio, data_nascimento, situacao) "
                 + "VALUES (CAST(? AS UUID), CAST(? AS UUID), 'CAND-005', 'Pessoa Mi (Ficticia)', DATE '1990-01-01', "
                 + "'INCLUIDO')", P5, estudo.toString());
     }
 
-    private String contaDoP5() {
-        return jdbc.queryForObject("SELECT CAST(usuario_id AS VARCHAR) FROM candidatos WHERE id = CAST(? AS UUID)",
-                String.class, P5);
+    private void criarP6() {
+        UUID estudo = criarEstudo("Demo T105 P6");
+        jdbc.update("INSERT INTO candidatos (id, estudo_id, codigo, nome_ficticio, data_nascimento, situacao) "
+                + "VALUES (CAST(? AS UUID), CAST(? AS UUID), 'CAND-006', 'Pessoa Ni (Ficticia)', DATE '1990-01-01', "
+                + "'INCLUIDO')", P6, estudo.toString());
     }
 
-    @Test
-    @DisplayName("vincula a conta demo ao P5, e repetir a carga não muda nada")
-    void vinculaEEhIdempotente() throws Exception {
-        criarContaDemo();
-        criarP5();
-
-        executarScript();
-        String vinculada = contaDoP5();
-        executarScript();
-
-        assertThat(vinculada).isNotNull();
-        assertThat(contaDoP5()).isEqualTo(vinculada);
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM candidatos WHERE usuario_id = CAST(? AS UUID)",
-                Integer.class, vinculada)).isEqualTo(1);
-    }
-
-    @Test
-    @DisplayName("sem o P5 (script da T84 não rodou) não faz nada e não falha")
-    void semP5NaoFazNada() throws Exception {
-        criarContaDemo();
-
-        executarScript();
-
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM candidatos WHERE usuario_id IS NOT NULL", Integer.class))
-                .isZero();
-    }
-
-    private static final String P1 = "d6300000-0000-4000-8000-000000001911";
-
-    /** Cria o P1 (CAND-001) num estudo próprio, como o script da T74 faria. */
     private void criarP1() {
-        UUID estudo = UUID.randomUUID();
-        jdbc.update("INSERT INTO estudos (id, titulo, objetivo, responsavel_id, data_inicio, data_fim, "
-                + "limite_participantes, status) SELECT CAST(? AS UUID), 'Demo T111', 'Objetivo.', id, "
-                + "DATE '2026-11-01', DATE '2027-05-01', 6, 'EXECUCAO' FROM usuarios "
-                + "WHERE email = 'pesquisador@clinicalstudy.test'", estudo.toString());
+        UUID estudo = criarEstudo("Demo T111 P1");
         jdbc.update("INSERT INTO candidatos (id, estudo_id, codigo, nome_ficticio, data_nascimento, situacao) "
                 + "VALUES (CAST(? AS UUID), CAST(? AS UUID), 'CAND-001', 'Pessoa Teta (Ficticia)', DATE '1990-02-02', "
                 + "'INCLUIDO')", P1, estudo.toString());
@@ -112,20 +87,63 @@ class DemoContaParticipanteTest {
     }
 
     @Test
-    @DisplayName("T111: vincula participante@ ao P1 e demo.participante@ ao P5; repetir a carga não duplica nem muda")
+    @DisplayName("vincula a conta demo ao P6, e repetir a carga não muda nada")
+    void vinculaEEhIdempotente() throws Exception {
+        criarContaDemo();
+        criarP6();
+
+        executarScript();
+        String vinculada = contaDe(P6);
+        executarScript();
+
+        assertThat(vinculada).isNotNull();
+        assertThat(contaDe(P6)).isEqualTo(vinculada);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM candidatos WHERE usuario_id = CAST(? AS UUID)",
+                Integer.class, vinculada)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("sem o P6 (script da T105 não rodou) não faz nada e não falha")
+    void semP6NaoFazNada() throws Exception {
+        criarContaDemo();
+
+        executarScript();
+
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM candidatos WHERE usuario_id IS NOT NULL", Integer.class))
+                .isZero();
+    }
+
+    @Test
+    @DisplayName("T111/T105: vincula participante@ ao P1 e demo.participante@ ao P6; repetir a carga não duplica nem muda")
     void vinculaAsDuasContasEhIdempotente() throws Exception {
         criarContaDemo();
         criarP1();
-        criarP5();
+        criarP6();
 
         executarScript();
         executarScript();
 
         assertThat(contaDe(P1)).isEqualTo(idDaConta("participante@clinicalstudy.test"));
-        assertThat(contaDe(P5)).isEqualTo(idDaConta(EMAIL_DEMO));
+        assertThat(contaDe(P6)).isEqualTo(idDaConta(EMAIL_DEMO));
         assertThat(jdbc.queryForObject("SELECT COUNT(usuario_id) FROM candidatos", Integer.class))
                 .as("um vínculo por conta").isEqualTo(jdbc.queryForObject(
                         "SELECT COUNT(DISTINCT usuario_id) FROM candidatos", Integer.class));
+    }
+
+    @Test
+    @DisplayName("T105: se demo.participante@ estava no P5 (carga anterior a T105), move o vínculo para o P6 de forma idempotente")
+    void migraVinculoDoP5ParaOP6() throws Exception {
+        criarContaDemo();
+        criarP5();
+        criarP6();
+        jdbc.update("UPDATE candidatos SET usuario_id = CAST(? AS UUID) WHERE id = CAST(? AS UUID)",
+                idDaConta(EMAIL_DEMO), P5);
+
+        executarScript();
+        executarScript();
+
+        assertThat(contaDe(P5)).isNull();
+        assertThat(contaDe(P6)).isEqualTo(idDaConta(EMAIL_DEMO));
     }
 
     @Test
@@ -133,13 +151,9 @@ class DemoContaParticipanteTest {
     void naoMexeEmVinculosExistentes() throws Exception {
         criarContaDemo();
         criarP1();
-        criarP5();
-        // a conta demo já pertence a outro candidato (vinculada pela API): o script não pode movê-la para o P5
-        UUID estudoOutro = UUID.randomUUID();
-        jdbc.update("INSERT INTO estudos (id, titulo, objetivo, responsavel_id, data_inicio, data_fim, "
-                + "limite_participantes, status) SELECT CAST(? AS UUID), 'Outro T111', 'Objetivo.', id, "
-                + "DATE '2026-11-01', DATE '2027-05-01', 6, 'EXECUCAO' FROM usuarios "
-                + "WHERE email = 'pesquisador@clinicalstudy.test'", estudoOutro.toString());
+        criarP6();
+        // a conta demo já pertence a outro candidato (vinculada pela API): o script não pode movê-la para o P6
+        UUID estudoOutro = criarEstudo("Outro T111");
         String candidatoOutro = UUID.randomUUID().toString();
         jdbc.update("INSERT INTO candidatos (id, estudo_id, codigo, nome_ficticio, data_nascimento, usuario_id, "
                 + "situacao) VALUES (CAST(? AS UUID), CAST(? AS UUID), 'CAND-777', 'Pessoa Outra (Ficticia)', "
@@ -149,14 +163,14 @@ class DemoContaParticipanteTest {
         executarScript();
 
         assertThat(contaDe(candidatoOutro)).isEqualTo(idDaConta(EMAIL_DEMO));
-        assertThat(contaDe(P5)).as("P5 continua sem conta").isNull();
+        assertThat(contaDe(P6)).as("P6 continua sem conta").isNull();
     }
 
     @Test
-    @DisplayName("a conta do seed V2 (participante@clinicalstudy.test) continua sem vínculo")
+    @DisplayName("sem o P1, a conta do seed V2 (participante@clinicalstudy.test) continua sem vínculo")
     void contaDoSeedFicaSemVinculo() throws Exception {
         criarContaDemo();
-        criarP5();
+        criarP6();
 
         executarScript();
 
