@@ -12,6 +12,7 @@ import java.util.List;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 /**
  * T38: a migração é segura em um banco já populado. Aplica só as migrations da Sprint 1 (V1 a V3, que
@@ -76,5 +77,52 @@ class MigracaoSeguraTest {
 
         assertThat(resultado.success).isTrue();
         assertThat(resultado.migrationsExecuted).isGreaterThanOrEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("T101 - Em banco já populado pela Sprint 2, participantes existentes recebem situacao = ATIVO")
+    void migracaoT101DeixaParticipantesExistentesAtivos() throws Exception {
+        String urlPopulada = URL.replace("migracao_segura", "migracao_t101_populada");
+        // SingleConnectionDataSource conserva a sessão física usada para criar/avaliar os CHECKs do H2
+        SingleConnectionDataSource dataSource = new SingleConnectionDataSource(urlPopulada, "sa", "", true);
+        try {
+            Flyway.configure().dataSource(dataSource).locations("classpath:db/migration")
+                    .target("5").load().migrate();
+
+            // Insere um participante como na Sprint 2 (antes de existir a coluna situacao)
+            try (Connection conexao = dataSource.getConnection(); Statement st = conexao.createStatement()) {
+                st.execute("""
+                        INSERT INTO candidatos (id, estudo_id, codigo, nome_ficticio, data_nascimento, situacao)
+                        VALUES (CAST('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb01' AS UUID),
+                                CAST('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' AS UUID),
+                                'CAND-S2', 'Participante Sprint 2 (Ficticio)', DATE '1990-01-01', 'INCLUIDO')
+                        """);
+                st.execute("""
+                        INSERT INTO participacoes (id, candidato_id, estudo_id, data_inclusao, incluido_por_id)
+                        VALUES (CAST('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb02' AS UUID),
+                                CAST('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb01' AS UUID),
+                                CAST('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' AS UUID),
+                                CURRENT_DATE,
+                                CAST('22222222-2222-4222-8222-222222222222' AS UUID))
+                        """);
+            }
+
+            var resultado = Flyway.configure().dataSource(dataSource)
+                    .locations("classpath:db/migration").target("latest").load().migrate();
+
+            assertThat(resultado.success).isTrue();
+            try (Connection conexao = dataSource.getConnection()) {
+                assertThat(tabelaExiste(conexao, "retiradas_participacao")).isTrue();
+                assertThat(contar(conexao, "participacoes")).isEqualTo(1);
+                try (Statement st = conexao.createStatement();
+                     ResultSet rs = st.executeQuery(
+                             "SELECT situacao FROM participacoes WHERE id = CAST('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb02' AS UUID)")) {
+                    assertThat(rs.next()).isTrue();
+                    assertThat(rs.getString(1)).isEqualTo("ATIVO");
+                }
+            }
+        } finally {
+            dataSource.destroy();
+        }
     }
 }

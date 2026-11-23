@@ -60,6 +60,7 @@ public class AgendamentoVisitaService {
 
     public VisitaAgendada reagendarVisita(VisitaAgendada visitaAgendada, LocalDateTime novaData, Usuario usuario) {
         validarEstadoDoEstudo(visitaAgendada.getParticipacao());
+        exigirParticipacaoAtiva(visitaAgendada.getParticipacao());
         if (!visitaAgendada.estaAgendada()) {
             throw conflito("VISITA_NAO_ESTA_AGENDADA",
                     "Apenas visitas com situação AGENDADA podem ser reagendadas.");
@@ -91,6 +92,7 @@ public class AgendamentoVisitaService {
         }
 
         validarEstadoDoEstudo(participacao);
+        exigirParticipacaoAtiva(participacao);
 
         if (visitaPlanejada.getEstudo().getId() == null
                 || !visitaPlanejada.getEstudo().getId().equals(participacao.getEstudo().getId())) {
@@ -118,6 +120,14 @@ public class AgendamentoVisitaService {
         if (status != StatusEstudo.RECRUTAMENTO && status != StatusEstudo.EXECUCAO) {
             throw conflito("ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO",
                     "O estudo não está em recrutamento ou execução.");
+        }
+    }
+
+    /** Regra 6 (T102): participante retirado não pode receber novos agendamentos nem reagendamentos. */
+    void exigirParticipacaoAtiva(Participacao participacao) {
+        if (participacao.estaRetirada()) {
+            throw conflito("PARTICIPANTE_RETIRADO",
+                    "O participante foi retirado do estudo; não é possível alterar o acompanhamento.");
         }
     }
 

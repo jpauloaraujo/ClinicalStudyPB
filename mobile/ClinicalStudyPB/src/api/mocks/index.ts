@@ -1,13 +1,5 @@
 import { ErroApi } from '../erro';
-import {
-  EMAIL_PARTICIPANTE_DEMO,
-  estudosMock,
-  historicoVisitasMock,
-  proximasVisitasMock,
-  SENHA_DEMO,
-  TOKEN_MOCK,
-  usuarioMock,
-} from './dados';
+import { CONTAS_MOCK, estudosMock, historicoVisitasMock, proximasVisitasMock, SENHA_DEMO } from './dados';
 
 // EXPO_PUBLIC_USE_MOCKS=true troca a API real por respostas em memória (só desenvolvimento e testes)
 export function usarMocks(): boolean {
@@ -37,25 +29,34 @@ export async function responderMock<T>(
 
   if (metodo === 'POST' && rota === '/api/auth/login') {
     const { email, senha } = (corpo ?? {}) as { email?: string; senha?: string };
-    if (email?.toLowerCase() !== EMAIL_PARTICIPANTE_DEMO || senha !== SENHA_DEMO) {
+    const conta = CONTAS_MOCK.find((item) => item.email === email?.toLowerCase());
+    if (!conta || senha !== SENHA_DEMO) {
       throw erro(401, 'CREDENCIAIS_INVALIDAS', 'E-mail ou senha inválidos.');
     }
-    return { token: TOKEN_MOCK } as T;
+    return { token: conta.token } as T;
   }
 
-  if (token !== TOKEN_MOCK) {
+  const conta = CONTAS_MOCK.find((item) => item.token === token);
+  if (!conta) {
     throw erro(401, 'NAO_AUTENTICADO', 'Sessão expirada. Entre novamente.');
   }
 
   if (rota === '/api/auth/me') {
-    return usuarioMock as T;
+    return conta.usuario as T;
   }
 
   if (rota.startsWith('/api/me/')) {
     if (provocarErro()) {
       throw erro(500, 'ERRO_INTERNO', 'Erro interno simulado pelo modo de mocks.');
     }
+    if (conta.usuario.perfil !== 'PARTICIPANTE') {
+      throw erro(403, 'ACESSO_NEGADO', 'Acesso negado.');
+    }
     if (metodo === 'GET' && rota === '/api/me/estudos') {
+      // Participante sem participação vinculada: lista vazia com 200, não é erro
+      if (conta.semEstudos) {
+        return [] as T;
+      }
       return estudosMock.map(({ objetivo, dataInicio, dataFim, responsavelNome, retirada, ...resumo }) => resumo) as T;
     }
     const detalhe = rota.match(/^\/api\/me\/estudos\/([^/]+)$/);

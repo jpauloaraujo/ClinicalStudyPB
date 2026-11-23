@@ -15,6 +15,41 @@ export const usuarioMock: UsuarioMock = {
   perfil: 'PARTICIPANTE',
 };
 
+// T110: contas extras do modo de mocks, para exercitar sem backend a regra 8 (só o participante entra) e o
+// participante sem participação vinculada (a lista /api/me/estudos vem vazia, como no seed real)
+export type ContaMock = {
+  email: string;
+  token: string;
+  usuario: { id: string; nome: string; email: string; perfil: 'ADMINISTRADOR' | 'PESQUISADOR' | 'COORDENADOR' | 'PARTICIPANTE' };
+  semEstudos: boolean;
+};
+
+export const EMAIL_SEM_ESTUDO = 'sem.vinculo@clinicalstudy.test';
+
+export const CONTAS_MOCK: ContaMock[] = [
+  { email: EMAIL_PARTICIPANTE_DEMO, token: TOKEN_MOCK, usuario: usuarioMock, semEstudos: false },
+  {
+    email: EMAIL_SEM_ESTUDO,
+    token: 'token-de-mock-sem-estudo',
+    usuario: {
+      id: 'd6300000-0000-4000-8000-000000002402',
+      nome: 'Pessoa Sem Estudo (Ficticia)',
+      email: EMAIL_SEM_ESTUDO,
+      perfil: 'PARTICIPANTE',
+    },
+    semEstudos: true,
+  },
+  ...(['ADMINISTRADOR', 'PESQUISADOR', 'COORDENADOR'] as const).map((perfil) => {
+    const email = `${perfil.toLowerCase()}@clinicalstudy.test`;
+    return {
+      email,
+      token: `token-de-mock-${perfil.toLowerCase()}`,
+      usuario: { id: `d6300000-0000-4000-8000-00000000250${perfil.length}`, nome: `${perfil} (Ficticio)`, email, perfil },
+      semEstudos: false,
+    };
+  }),
+];
+
 export type MeuEstudoMock = {
   participacaoId: string;
   estudoId: string;

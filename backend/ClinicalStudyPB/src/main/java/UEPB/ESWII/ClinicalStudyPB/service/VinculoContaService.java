@@ -112,12 +112,11 @@ public class VinculoContaService {
     }
 
     /**
-     * Ponto único da regra "participação ativa" (RQ-T111-03, passo 2). A retirada (T101) ainda não está na
-     * {@code develop}: enquanto isso toda participação é ativa. Quando a T101 entrar, só o corpo deste método muda.
+     * Ponto único da regra "participação ativa" (RQ-T111-03, passo 2): participante retirado (RF16, T101) não recebe
+     * conta e a recusa é 409 {@code PARTICIPANTE_RETIRADO}.
      */
     boolean participacaoAtiva(Participacao participacao) {
-        // TODO(T101): return !participacao.estaRetirada();
-        return true;
+        return !participacao.estaRetirada();
     }
 
     private static ConflitoRegraException contaJaVinculada() {
