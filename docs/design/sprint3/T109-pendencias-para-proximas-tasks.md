@@ -39,15 +39,15 @@
 
 | # | Alterar | Onde | Como conferir |
 |---|---|---|---|
-| P8 | A migration `V6_24_1` cria o `UNIQUE` em `candidatos.usuario_id`. O seed `R__demo_24_conta_participante.sql` já respeita o um para um (não vincula uma conta que já tem candidato); conferir que a carga do perfil `demo` ainda roda sem violar o `UNIQUE` | `db/migration`, `db/demo` | Subir o perfil `demo` em banco limpo |
+| P8 | A migration `V6_24_1` cria o `UNIQUE` em `candidatos.usuario_id`. O seed `R__demo_24_conta_participante.sql` já respeita o um para um (não vincula uma conta que já tem candidato); conferir que a carga do perfil `demo` ainda roda sem violar o `UNIQUE` | `db/migration`, `db/demo` | Subir o perfil `demo` em banco limpo | ✅ **Fechada na T111**: `DemoDataIntegrationTest.demoVinculaAsContasDoParticipanteEEhIdempotente` |
 | P9 | `AcessoParticipante.participacoesDe` hoje devolve **lista** (a restrição de unicidade ainda não existe e o design prevê várias participações por conta). Se a T111 impuser um candidato por conta, uma conta continua tendo uma participação por candidato; não mudar a assinatura sem avisar a T116 | `service/AcessoParticipante.java` | `AcessoParticipanteTest` |
-| P10 | Os testes que ligam a conta usam `INSERT` direto em `candidatos.usuario_id`; ao entrar o `UNIQUE`, `MeEndpointTest.listaSoOsEstudosDaConta` **vai falhar** porque vincula **dois candidatos à mesma conta**. Ajustar o teste (duas contas, ou um candidato com dois estudos não é possível) **documentando a falha antes**, como nesta task | `MeEndpointTest.listaSoOsEstudosDaConta` | Registrar em `registro-de-defeitos.md` antes de corrigir |
+| P10 | Os testes que ligam a conta usam `INSERT` direto em `candidatos.usuario_id`; ao entrar o `UNIQUE`, `MeEndpointTest.listaSoOsEstudosDaConta` **vai falhar** porque vincula **dois candidatos à mesma conta**. Ajustar o teste (duas contas, ou um candidato com dois estudos não é possível) **documentando a falha antes**, como nesta task | `MeEndpointTest.listaSoOsEstudosDaConta` | Registrar em `registro-de-defeitos.md` antes de corrigir | ✅ **Fechada na T111**: registrada como D-T111-02 e o teste reescrito (um candidato por conta), sem ser excluído |
 
 ### T110 · login e logout no app
 
 | # | Alterar | Onde |
 |---|---|---|
-| P11 | Para testar o aviso "Você ainda não está incluído em nenhum estudo.", usar `participante@clinicalstudy.test` (sem vínculo, lista vazia com 200); para o fluxo com estudo, `demo.participante@clinicalstudy.test` (perfil `demo`) |
+| P11 | Para testar o aviso "Você ainda não está incluído em nenhum estudo.", usar `participante@clinicalstudy.test` (sem vínculo, lista vazia com 200); para o fluxo com estudo, `demo.participante@clinicalstudy.test` (perfil `demo`). ⚠️ **Mudou na T111**: no perfil `demo`, `participante@` agora está vinculada ao P1 (veja o `R__demo_24`); para o aviso de lista vazia use uma conta nova criada pelo administrador ou o perfil de teste |
 | P12 | Usar `estudosApi.listar()` sobre `GET /api/me/estudos`; lista vazia não é erro |
 
 ### T112 · telas Meus estudos e detalhe
@@ -83,3 +83,14 @@
 | P30 | **T117:** a aba Visitas ainda ignora o parâmetro `estudoId` que o atalho "Ver visitas deste estudo" envia (`router.push({ pathname: '/visitas', params: { estudoId } })`). Ler o parâmetro com `useLocalSearchParams` e filtrar | `mobile/ClinicalStudyPB/src/app/(tabs)/visitas.tsx` | Teste da T117: abrir com `estudoId` mostra só as visitas daquele estudo |
 | P31 | **T101/T103/T105:** o selo "Retirado" e a data da retirada só aparecem com mocks e testes de componente; com o backend atual a situação vem sempre `ATIVO`. Quando a retirada entrar, repetir o RQ-T112-11 com um participante retirado real | Roteiro manual de `testes-t112-...md` | `demo.participante@` (P6, após a T105) mostra "Retirado" |
 | P32 | **T113/T114:** reaproveitar os 20 testes de componente (`src/telas/__tests__/estudos.test.tsx`) e acrescentar o E2E (Maestro) lista → detalhe → visitas; faltam o teste do desmonte durante a carga e a conferência visual do cabeçalho "Estudo" e do botão "Voltar" | `mobile/ClinicalStudyPB`, `e2e` | Fluxo no emulador |
+
+### Pendências criadas pela T111 (vínculo da conta do participante)
+
+| # | Alterar | Onde | Como conferir |
+|---|---|---|---|
+| P24 | **T101/T104:** trocar o corpo de `VinculoContaService.participacaoAtiva` por `!participacao.estaRetirada()` (hoje devolve `true`, marcado `TODO(T101)`) e o `TODO(T104)` de `AreaAcoesParticipante` (esconder o botão também com a participação retirada). Quando a T101 entrar, o ramo 409 `PARTICIPANTE_RETIRADO` passa a ter um teste de ponta a ponta no `ContaParticipanteEndpointTest` | `service/VinculoContaService.java`, `AreaAcoesParticipante.tsx` | `grep -rn "TODO(T101" backend/` e `grep -rn "TODO(T104" web/` sem resultados |
+| P25 | **T105:** a conta `demo.participante@` está no **P5**, não no P6 (retirado) como pede o RQ-T111-13, porque o P6 só passa a existir na T105. Na T105, anular o vínculo do P5 e ligar a conta ao P6 em `R__demo_24_conta_participante.sql` | `db/demo/R__demo_24_conta_participante.sql`, `DemoContaParticipanteTest` | Carga demo em banco limpo; `participante@` segue no P1 |
+| P26 | **T110:** `participante@clinicalstudy.test` deixa de ser a conta "sem vínculo" no perfil `demo` (agora está no P1). Atualizar o roteiro 6 e o `testes-t110-...md`; o aviso de lista vazia se demonstra com uma conta nova criada pelo administrador (fluxo real do RF01), e nos testes automáticos, no perfil de teste, `participante@` segue sem vínculo | `docs/testes/testes-t110-login-e-logout-no-app.md` | Roteiro manual |
+| P27 | **PO (T94):** confirmar que uma conta de participante serve a **um só candidato** (consequência do `UNIQUE`): quem participa de dois estudos precisa de duas contas. Registrar a resposta no README | README da Sprint 3 | Resposta registrada |
+| P28 | **T113/T114:** nenhum E2E novo cobre o vínculo (a T111 entrega testes de serviço, endpoint, corrida, componente e dados de demonstração). Se o grupo quiser, acrescentar um passo ao E2E da ficha | `web/ClinicalStudyPB/e2e` | Fluxo E2E do vínculo |
+| P29 | **I5 (PBI-25):** avisar, no Pull Request da T111, que `participante@` → P1 (visita realizada com resultado e visita agendada) e `demo.participante@` → P5 estão disponíveis no perfil `demo` (RQ-T111-14). Ação humana | PR | Aviso feito |

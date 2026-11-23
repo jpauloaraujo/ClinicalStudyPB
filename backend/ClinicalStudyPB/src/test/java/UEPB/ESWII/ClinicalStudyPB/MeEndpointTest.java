@@ -92,18 +92,18 @@ class MeEndpointTest {
     // ---- lista ----
 
     @Test
-    @DisplayName("200: lista só os estudos da conta, do mais recente para o mais antigo, sem dados de candidato")
+    @DisplayName("200: lista só o estudo da conta (um candidato por conta, T111), sem dados de candidato")
     void listaSoOsEstudosDaConta() throws Exception {
-        UUID antigo = criarEstudo("Estudo antigo T109", "Objetivo antigo.", "EXECUCAO");
+        // D-T111-02: a versão da T109 ligava dois candidatos à mesma conta; o UNIQUE da T111 (regra 7, um para um)
+        // proíbe isso. Uma conta tem no máximo uma participação, então o isolamento entre contas é o que se prova aqui.
         UUID recente = criarEstudo("Estudo recente T109", "Objetivo recente.", "RECRUTAMENTO");
         UUID deOutro = criarEstudo("Estudo de outro T109", "Objetivo de outro.", "EXECUCAO");
-        UUID participacaoAntiga = incluir(antigo, participanteId, "CAND-901", 30);
         UUID participacaoRecente = incluir(recente, participanteId, "CAND-902", 2);
         incluir(deOutro, criarOutraConta(), "CAND-903", 5);
 
         enviar(mvc, "GET", "/api/me/estudos", participante, null)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].participacaoId").value(participacaoRecente.toString()))
                 .andExpect(jsonPath("$[0].estudoId").value(recente.toString()))
                 .andExpect(jsonPath("$[0].titulo").value("Estudo recente T109"))
@@ -111,8 +111,6 @@ class MeEndpointTest {
                 .andExpect(jsonPath("$[0].statusEstudo").value("RECRUTAMENTO"))
                 .andExpect(jsonPath("$[0].dataInclusao").isNotEmpty())
                 .andExpect(jsonPath("$[0].situacaoParticipacao").value("ATIVO"))
-                .andExpect(jsonPath("$[1].participacaoId").value(participacaoAntiga.toString()))
-                .andExpect(jsonPath("$[1].statusEstudo").value("EXECUCAO"))
                 .andExpect(jsonPath("$[0].codigo").doesNotExist())
                 .andExpect(jsonPath("$[0].nomeFicticio").doesNotExist())
                 .andExpect(jsonPath("$[0].candidatoId").doesNotExist());

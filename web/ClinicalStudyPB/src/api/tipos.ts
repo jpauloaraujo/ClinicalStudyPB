@@ -57,6 +57,11 @@ export type AtividadeComResultado = EsquemasSprint3['AtividadeComResultado']
 export type ResultadoAtividadeResponse = EsquemasSprint3['ResultadoAtividadeResponse']
 export type ResultadoRequest = EsquemasSprint3['ResultadoRequest']
 
+// Vínculo da conta do participante (Sprint 3, T111)
+export type VincularContaRequest = EsquemasSprint3['VincularContaRequest']
+export type ContaVinculadaResponse = EsquemasSprint3['ContaVinculadaResponse']
+export type ContaParticipanteResponse = EsquemasSprint3['ContaParticipanteResponse']
+
 export const categoriasAcao: CategoriaAcao[] = [
   'AVALIACAO_CLINICA',
   'EXAME_LABORATORIAL',
