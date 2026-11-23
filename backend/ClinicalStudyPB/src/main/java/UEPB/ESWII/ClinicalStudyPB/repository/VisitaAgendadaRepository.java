@@ -86,6 +86,22 @@ public interface VisitaAgendadaRepository extends JpaRepository<VisitaAgendada, 
     @Query("select v from VisitaAgendada v where v.id = :id")
     Optional<VisitaAgendada> buscarComBloqueio(@Param("id") UUID id);
 
+    /**
+     * Visitas futuras de uma participação em uma situação específica (usada na retirada de participante, T102,
+     * para cancelar em cascata apenas as visitas {@code AGENDADA} com {@code dataHoraAgendada > agora}).
+     */
+    @Query("""
+            select va from VisitaAgendada va
+            where va.participacao.id = :participacaoId
+              and va.situacao = :situacao
+              and va.dataHoraAgendada > :agora
+            order by va.dataHoraAgendada asc, va.id asc
+            """)
+    List<VisitaAgendada> listarFuturasPorSituacao(@Param("participacaoId") UUID participacaoId,
+            @Param("situacao") SituacaoVisita situacao, @Param("agora") LocalDateTime agora);
+
+    long countByParticipacaoIdAndSituacaoAndMotivo(UUID participacaoId, SituacaoVisita situacao, String motivo);
+
     /** Total de visitas de uma situação (resumo de comparecimento do app, T116). */
     interface ContagemPorSituacao {
         SituacaoVisita getSituacao();

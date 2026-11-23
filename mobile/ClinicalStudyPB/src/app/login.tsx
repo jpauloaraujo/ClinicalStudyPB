@@ -81,6 +81,7 @@ export default function LoginScreen() {
               blurOnSubmit={false}
               onSubmitEditing={() => campoSenha.current?.focus()}
               accessibilityLabel="E-mail"
+              testID="campo-email"
             />
           </View>
           <View style={{ gap: espaco[1] }}>
@@ -101,6 +102,7 @@ export default function LoginScreen() {
               returnKeyType="go"
               onSubmitEditing={enviar}
               accessibilityLabel="Senha"
+              testID="campo-senha"
             />
             <Pressable onPress={() => setMostrarSenha((v) => !v)} accessibilityRole="button" style={{ paddingVertical: espaco[2] }}>
               <Text style={{ color: cores.primaria }}>{mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}</Text>
@@ -112,7 +114,7 @@ export default function LoginScreen() {
               {erro}
             </Text>
           )}
-          <Botao rotulo={enviando ? 'Entrando…' : 'Entrar'} onPress={enviar} desabilitado={enviando} />
+          <Botao rotulo={enviando ? 'Entrando…' : 'Entrar'} onPress={enviar} desabilitado={enviando} testID="botao-entrar" />
           <Text style={[estilos.textoSuave, { fontSize: 13, textAlign: 'center' }]}>
             Sistema acadêmico — utiliza apenas dados fictícios.
           </Text>

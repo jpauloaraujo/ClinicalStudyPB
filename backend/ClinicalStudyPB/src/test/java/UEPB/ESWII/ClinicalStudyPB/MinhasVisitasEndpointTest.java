@@ -184,22 +184,26 @@ class MinhasVisitasEndpointTest {
     }
 
     @Test
-    @DisplayName("Próximas: filtro por estudoId devolve só as visitas daquele estudo")
+    @DisplayName("Próximas: filtro por estudoId devolve as visitas daquele estudo e vazio para estudo de outro participante")
     void proximasFiltraPorEstudo() throws Exception {
+        // T111: a conta é um para um com o candidato (índice único), então o participante tem uma só participação
         UUID estudoA = criarEstudo("Estudo A T116");
         UUID estudoB = criarEstudo("Estudo B T116");
         UUID a = incluir(estudoA, participanteId, "CAND-963");
-        UUID b = incluir(estudoB, participanteId, "CAND-964");
-        UUID visitaB = agendar(b, criarVisitaPlanejada(estudoB, "Retorno B", 1), agora().plusDays(4), "AGENDADA",
+        UUID b = incluir(estudoB, criarOutraConta(), "CAND-964");
+        UUID visitaA = agendar(a, criarVisitaPlanejada(estudoA, "Retorno A", 1), agora().plusDays(2), "AGENDADA",
                 null, null);
-        agendar(a, criarVisitaPlanejada(estudoA, "Retorno A", 1), agora().plusDays(2), "AGENDADA", null, null);
+        agendar(b, criarVisitaPlanejada(estudoB, "Retorno B", 1), agora().plusDays(4), "AGENDADA", null, null);
 
-        enviar(mvc, "GET", "/api/me/visitas/proximas?estudoId=" + estudoB, participante, null)
+        enviar(mvc, "GET", "/api/me/visitas/proximas?estudoId=" + estudoA, participante, null)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].id").value(visitaB.toString()));
+                .andExpect(jsonPath("$[0].id").value(visitaA.toString()));
+        enviar(mvc, "GET", "/api/me/visitas/proximas?estudoId=" + estudoB, participante, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
         enviar(mvc, "GET", "/api/me/visitas/proximas", participante, null)
-                .andExpect(jsonPath("$", hasSize(2)));
+                .andExpect(jsonPath("$", hasSize(1)));
     }
 
     // ---- histórico ----
@@ -315,6 +319,104 @@ class MinhasVisitasEndpointTest {
         enviar(mvc, "GET", "/api/me/visitas/proximas", null, null).andExpect(status().isUnauthorized());
         enviar(mvc, "GET", "/api/me/visitas/historico", null, null).andExpect(status().isUnauthorized());
         enviar(mvc, "POST", "/api/me/visitas/proximas", participante, "{}").andExpect(status().isMethodNotAllowed());
+    }
+
+    // ---- T120: propriedade dos dados, retirado e caminho sem id de participante ----
+
+    @Test
+    @DisplayName("T120: o participante A nunca vê visita do B (próximas, histórico e resumo), e B nunca vê as de A")
+    void participanteANuncaVeVisitaDoB() throws Exception {
+        UUID estudo = criarEstudo("Estudo T120 cruzado");
+        UUID contaB = criarOutraConta();
+        UUID participacaoA = incluir(estudo, participanteId, "CAND-T120A");
+        UUID estudoDeB = criarEstudo("Estudo T120 do B");
+        UUID participacaoB = incluir(estudoDeB, contaB, "CAND-T120B");
+        java.util.Set<UUID> idsDeA = new java.util.HashSet<>();
+        java.util.Set<UUID> idsDeB = new java.util.HashSet<>();
+        for (var par : java.util.List.of(java.util.Map.entry(participacaoA, idsDeA),
+                java.util.Map.entry(participacaoB, idsDeB))) {
+            UUID dono = par.getKey().equals(participacaoA) ? estudo : estudoDeB;
+            UUID futura = criarVisitaPlanejada(dono, "Futura", 1);
+            UUID passada = criarVisitaPlanejada(dono, "Passada", 2);
+            UUID ausenteVisita = criarVisitaPlanejada(dono, "Ausente", 3);
+            UUID canceladaVisita = criarVisitaPlanejada(dono, "Cancelada", 4);
+            par.getValue().add(agendar(par.getKey(), futura, agora().plusDays(3), "AGENDADA", null, null));
+            par.getValue().add(agendar(par.getKey(), passada, agora().minusDays(9), "REALIZADA",
+                    agora().minusDays(9), null));
+            par.getValue().add(agendar(par.getKey(), ausenteVisita, agora().minusDays(6), "AUSENTE", null, null));
+            par.getValue().add(agendar(par.getKey(), canceladaVisita, agora().minusDays(3), "CANCELADA", null,
+                    "motivo ficticio"));
+        }
+
+        String proximasDeA = enviar(mvc, "GET", "/api/me/visitas/proximas", participante, null)
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String historicoDeA = enviar(mvc, "GET", "/api/me/visitas/historico", participante, null)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.resumo.realizadas").value(1))
+                .andExpect(jsonPath("$.resumo.ausentes").value(1)).andExpect(jsonPath("$.resumo.canceladas").value(1))
+                .andExpect(jsonPath("$.totalElementos").value(3)).andReturn().getResponse().getContentAsString();
+
+        for (UUID idDeB : idsDeB) {
+            assertThat(proximasDeA).doesNotContain(idDeB.toString());
+            assertThat(historicoDeA).doesNotContain(idDeB.toString());
+        }
+        assertThat(proximasDeA).contains(idsDeA.stream().map(UUID::toString).filter(proximasDeA::contains)
+                .findFirst().orElseThrow());
+        assertThat(proximasDeA).doesNotContain(participacaoB.toString());
+        assertThat(historicoDeA).doesNotContain(participacaoB.toString());
+
+        var proximasDeB = service.proximas(contaB, null);
+        var historicoDeB = service.historico(contaB, null, 0, 20);
+        assertThat(proximasDeB).extracting(v -> v.id()).allMatch(idsDeB::contains).hasSize(1);
+        assertThat(historicoDeB.conteudo()).extracting(v -> v.id()).allMatch(idsDeB::contains).hasSize(3);
+        assertThat(historicoDeB.resumo().realizadas()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("T120: participante retirado — próximas vazias; histórico com as canceladas \"retirada do estudo\" à parte")
+    void participanteRetirado() throws Exception {
+        UUID estudo = criarEstudo("Estudo T120 retirado");
+        UUID participacao = incluir(estudo, participanteId, "CAND-T120R");
+        jdbc.update("UPDATE participacoes SET situacao = 'RETIRADO' WHERE id = CAST(? AS UUID)",
+                participacao.toString());
+        agendar(participacao, criarVisitaPlanejada(estudo, "Triagem", 1), agora().minusDays(20), "REALIZADA",
+                agora().minusDays(20), null);
+        agendar(participacao, criarVisitaPlanejada(estudo, "Retorno 15", 2), agora().minusDays(10), "AUSENTE", null,
+                null);
+        agendar(participacao, criarVisitaPlanejada(estudo, "Retorno 30", 3), agora().plusDays(5), "CANCELADA", null,
+                "retirada do estudo");
+
+        enviar(mvc, "GET", "/api/me/visitas/proximas", participante, null)
+                .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(0)));
+        enviar(mvc, "GET", "/api/me/visitas/historico", participante, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.conteudo", hasSize(3)))
+                .andExpect(jsonPath("$.conteudo[0].situacao").value("CANCELADA"))
+                .andExpect(jsonPath("$.conteudo[0].motivo").value("retirada do estudo"))
+                .andExpect(jsonPath("$.resumo.realizadas").value(1))
+                .andExpect(jsonPath("$.resumo.ausentes").value(1))
+                .andExpect(jsonPath("$.resumo.canceladas").value(1));
+    }
+
+    @Test
+    @DisplayName("T120: tamanho 100 é aceito e 101 dá 400 PARAMETRO_INVALIDO")
+    void tamanhoMaximoDaPagina() throws Exception {
+        enviar(mvc, "GET", "/api/me/visitas/historico?tamanho=100", participante, null)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.tamanho").value(100));
+        enviar(mvc, "GET", "/api/me/visitas/historico?tamanho=101", participante, null)
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.codigo").value("PARAMETRO_INVALIDO"));
+    }
+
+    @Test
+    @DisplayName("T120: nenhuma das operações aceita id de participante: caminho com participacaoId é 404")
+    void caminhoComParticipacaoIdNaoExiste() throws Exception {
+        UUID qualquer = UUID.randomUUID();
+
+        enviar(mvc, "GET", "/api/me/participacoes/" + qualquer + "/visitas/proximas", participante, null)
+                .andExpect(status().isNotFound());
+        enviar(mvc, "GET", "/api/me/visitas/" + qualquer + "/proximas", participante, null)
+                .andExpect(status().isNotFound());
+        enviar(mvc, "GET", "/api/me/visitas/historico/" + qualquer, participante, null)
+                .andExpect(status().isNotFound());
     }
 
     // ---- sem N+1 ----
