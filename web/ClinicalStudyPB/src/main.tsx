@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router'
-import { SessaoProvider } from './contexts/SessaoProvider'
+import { AuthProvider } from './contexts/AuthContext'
 import { iniciarMocks } from './mocks/iniciar'
 import { router } from './routes/router'
 import './index.css'
@@ -10,9 +10,9 @@ import './index.css'
 void iniciarMocks().finally(() => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      <SessaoProvider>
+      <AuthProvider>
         <RouterProvider router={router} />
-      </SessaoProvider>
+      </AuthProvider>
     </StrictMode>,
   )
 })

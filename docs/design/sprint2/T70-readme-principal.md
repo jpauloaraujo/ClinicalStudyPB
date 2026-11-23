@@ -3,7 +3,7 @@
 > **Sprint 2** · PBI-18 · Documentação e entrega da Release 1  
 > **Responsável:** I2 · **Estimativa:** 2h · **Prazo:** Sex 06/11  
 > **Depende de:** T64, T66, T69  
-> **Situação:** 🟡 Parcialmente implementada (o documento separa o que existe do que falta)
+> **Situação:** 🟡 Implementada no repositório; faltam os nomes dos 7 integrantes e as capturas de cada integrante (as capturas de todas as telas estão em `docs/imagens/`, geradas por `web/ClinicalStudyPB/scripts/capturar-telas.mjs`)
 
 ## 1. Objetivo
 

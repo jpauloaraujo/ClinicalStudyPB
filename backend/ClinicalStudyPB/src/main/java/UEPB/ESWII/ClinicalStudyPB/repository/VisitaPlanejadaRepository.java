@@ -16,6 +16,12 @@ public interface VisitaPlanejadaRepository extends JpaRepository<VisitaPlanejada
     @EntityGraph(attributePaths = "acoes")
     List<VisitaPlanejada> findByEstudoIdOrderByOrdemAsc(UUID estudoId);
 
+    /**
+     * Visitas previstas do estudo no cronograma, do dia previsto mais próximo ao mais distante (e, no empate, pela
+     * ordem). Não carrega as atividades: é a consulta do histórico do participante (T96).
+     */
+    List<VisitaPlanejada> findByEstudoIdOrderByDiaPrevistoAscOrdemAsc(UUID estudoId);
+
     /** Descobre o estudo sem carregar seu estado antes de obter o bloqueio de escrita. */
     @Query("select v.estudo.id from VisitaPlanejada v where v.id = :visitaId")
     Optional<UUID> buscarEstudoId(@Param("visitaId") UUID visitaId);

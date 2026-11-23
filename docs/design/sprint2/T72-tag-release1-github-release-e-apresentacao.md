@@ -3,7 +3,7 @@
 > **Sprint 2** · PBI-18 · Documentação e entrega da Release 1  
 > **Responsável:** I1 · **Estimativa:** 2h · **Prazo:** Seg 09/11 (antes da apresentação)  
 > **Depende de:** T66, T71  
-> **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
+> **Situação:** 🟡 Roteiro pronto em `docs/sprint2/T72 — Roteiro de entrega e demonstração da Release 1.md`; falta criar a tag e a GitHub Release no repositório
 
 ## 1. Objetivo
 

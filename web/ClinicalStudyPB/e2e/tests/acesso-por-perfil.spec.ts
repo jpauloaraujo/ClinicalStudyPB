@@ -8,15 +8,15 @@ import { comoPerfil, expect, test } from '../fixtures'
 test.describe('pesquisador', () => {
   test.use(comoPerfil('PESQUISADOR'))
 
-  test('vê Critérios e Visitas e o botão de avançar, mas não as abas de recrutamento', async ({ page, paginaEstudo }) => {
+  test('vê Critérios, Visitas, Participantes e Agenda (estas duas em leitura) e o botão de avançar, mas não Candidatos', async ({ page, paginaEstudo }) => {
     const api = await ApiE2E.como('PESQUISADOR')
     const estudoId = await api.estudoEmRecrutamento(`Estudo Acesso P ${sufixoUnico()}`)
     await api.encerrar()
 
     await paginaEstudo.goto(estudoId)
 
-    await paginaEstudo.expectAbasVisiveis(['Resumo', 'Critérios', 'Visitas'])
-    await paginaEstudo.expectAbasOcultas(['Candidatos', 'Participantes'])
+    await paginaEstudo.expectAbasVisiveis(['Resumo', 'Critérios', 'Visitas', 'Participantes', 'Agenda'])
+    await paginaEstudo.expectAbasOcultas(['Candidatos'])
     await expect(page.getByRole('button', { name: 'Avançar para Execução' })).toBeVisible()
   })
 
@@ -34,7 +34,7 @@ test.describe('pesquisador', () => {
 test.describe('coordenador', () => {
   test.use(comoPerfil('COORDENADOR'))
 
-  test('vê Candidatos e Participantes, mas não Critérios, Visitas nem o botão de avançar o estado', async ({
+  test('vê Candidatos, Participantes e Agenda, mas não Critérios, Visitas nem o botão de avançar o estado', async ({
     paginaEstudo,
     paginaEstudos,
   }) => {
@@ -46,7 +46,7 @@ test.describe('coordenador', () => {
     await paginaEstudos.expectNaoVeBotaoNovo()
     await paginaEstudo.goto(estudoId)
 
-    await paginaEstudo.expectAbasVisiveis(['Resumo', 'Candidatos', 'Participantes'])
+    await paginaEstudo.expectAbasVisiveis(['Resumo', 'Candidatos', 'Participantes', 'Agenda'])
     await paginaEstudo.expectAbasOcultas(['Critérios', 'Visitas'])
     await paginaEstudo.expectSemBotaoDeAvancar()
   })

@@ -196,12 +196,14 @@ Estas são as escolhas que o arquivo deixava em aberto ou contradizia o plano da
 
 Total do backend: **91 testes, 0 falhas, 93% de cobertura de linhas**. O `ddl-auto=validate` do Hibernate confere as entidades novas contra a `V4`.
 
-**Não coberto:** teste de concorrência com várias threads incluindo ao mesmo tempo (previsto na T62). O bloqueio `PESSIMISTIC_WRITE` está implementado, mas só foi exercitado em sequência.
+**Atualização (Release 1):** o teste de concorrência com várias threads foi feito na T62 (`ParticipacaoConcorrenciaTest`): com 6 inclusões simultâneas para 1 vaga, exatamente 1 é aceita, e sem o bloqueio `PESSIMISTIC_WRITE` o teste falha.
 
 ## 6. O que ficou de fora
 
-- **View (telas React):** nenhuma tela nova. As abas Critérios, Visitas, Candidatos e Participantes do detalhe do estudo continuam provisórias.
-- **Máquina de estados do estudo e histórico de transições** (T41/T42, tabela `study_status_history`).
+> **Atualização (Release 1):** a lista abaixo descreve o estado da implementação do modelo de domínio. Depois dela, as telas, a máquina de estados, o contrato OpenAPI e o teste de concorrência foram entregues (T37, T39 a T43, T46, T49, T52, T55, T58, T61 e T62); só o cálculo da agenda real do participante continua fora da Release 1. Cada item abaixo traz o desfecho.
+
+- **View (telas React):** nenhuma tela nova nesta entrega. *Desfecho:* as abas Critérios, Visitas, Candidatos e Participantes e a ficha do candidato (avaliação, consentimento e inclusão) foram implementadas nas tasks T39, T46, T49, T52, T55, T58 e T61.
+- **Máquina de estados do estudo e histórico de transições** (T41/T42, tabela `study_status_history`). *Desfecho:* implementada (`MaquinaEstadosEstudo`, `POST /api/estudos/{id}/transicoes` e histórico em `GET .../historico-status`).
 - **Cálculo da agenda real do participante** a partir da `dataInclusao`: os métodos de `VisitaPlanejada` existem e estão testados, mas ainda não há endpoint que gere a agenda (previsto para o aplicativo mobile).
-- **Contrato OpenAPI em YAML** (T37): o Swagger é gerado pelas anotações, e os caminhos usam português (`/api/estudos/.../criterios`) em vez de `/studies/.../criteria` do plano.
-- **Teste de concorrência** (seção 5).
+- **Contrato OpenAPI em YAML** (T37): o Swagger é gerado pelas anotações, e os caminhos usam português (`/api/estudos/.../criterios`) em vez de `/studies/.../criteria` do plano. *Desfecho:* o contrato é `docs/api/openapi-sprint2.yaml`, comparado com a API pelo `ContratoOpenApiTest`.
+- **Teste de concorrência** (seção 5). *Desfecho:* implementado na T62.

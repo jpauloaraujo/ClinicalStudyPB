@@ -1,32 +1,28 @@
-import { createContext, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react'
+import { lerToken } from '../services/api'
+import { AuthContext } from './authContexto'
+import { SessaoProvider } from './SessaoProvider'
+import { useSessao } from './sessao'
 
-interface AuthContextType {
-  token: string | null;
-  login: (token: string) => void;
-  logout: () => void;
-  isAuthenticated: boolean;
-}
-
-export const AuthContext = createContext<AuthContextType>({} as AuthContextType);
-
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [token, setToken] = useState<string | null>(
-    localStorage.getItem('@ClinicalStudy:token')
-  );
-
-  const login = (newToken: string) => {
-    localStorage.setItem('@ClinicalStudy:token', newToken);
-    setToken(newToken);
-  };
-
-  const logout = () => {
-    localStorage.removeItem('@ClinicalStudy:token');
-    setToken(null);
-  };
-
+// Lê a sessão e a publica no AuthContext. O token vem do cliente HTTP (services/api.ts), a mesma chave que o
+// interceptor usa para enviar o cabeçalho Authorization.
+function PonteAuth({ children }: { children: ReactNode }) {
+  const { usuario, carregando, entrar, sair } = useSessao()
+  const token = usuario ? lerToken() : null
   return (
-    <AuthContext.Provider value={{ token, login, logout, isAuthenticated: !!token }}>
+    <AuthContext.Provider
+      value={{ usuario, token, isAuthenticated: usuario !== null, carregando, login: entrar, logout: sair }}
+    >
       {children}
     </AuthContext.Provider>
-  );
-};
+  )
+}
+
+// Provedor de autenticação da aplicação: login, sessão restaurada, expiração e logout (RF02).
+export function AuthProvider({ children }: { children: ReactNode }) {
+  return (
+    <SessaoProvider>
+      <PonteAuth>{children}</PonteAuth>
+    </SessaoProvider>
+  )
+}
