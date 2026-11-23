@@ -1,5 +1,6 @@
 package UEPB.ESWII.ClinicalStudyPB.service;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -32,10 +33,13 @@ public class ParticipacaoService {
     private final CandidatoService candidatoService;
     private final EstudoAcesso estudoAcesso;
     private final UsuarioAutenticado usuarioAutenticado;
+    private final Clock clock;
 
     public ParticipacaoService(ParticipacaoRepository participacaoRepository,
             AvaliacaoElegibilidadeRepository avaliacaoRepository, ConsentimentoRepository consentimentoRepository,
-            CandidatoService candidatoService, EstudoAcesso estudoAcesso, UsuarioAutenticado usuarioAutenticado) {
+            CandidatoService candidatoService, EstudoAcesso estudoAcesso, UsuarioAutenticado usuarioAutenticado,
+            Clock clock) {
+        this.clock = clock;
         this.participacaoRepository = participacaoRepository;
         this.avaliacaoRepository = avaliacaoRepository;
         this.consentimentoRepository = consentimentoRepository;
@@ -80,7 +84,7 @@ public class ParticipacaoService {
         Participacao participacao = new Participacao();
         participacao.setCandidato(candidato);
         participacao.setEstudo(estudo);
-        participacao.setDataInclusao(LocalDate.now());
+        participacao.setDataInclusao(LocalDate.now(clock)); // fuso do centro, igual às regras de visita (não o da JVM)
         participacao.setIncluidoPor(usuarioAutenticado.buscar(usuarioId));
         participacaoRepository.save(participacao);
 

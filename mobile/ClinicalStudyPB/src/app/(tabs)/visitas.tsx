@@ -1,308 +1,148 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { Cartao, EmBreve, Tela, estilos } from '@/components/ui';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { mensagemDoErro } from '@/api/cliente';
+import { visitasApi, type MinhaVisita } from '@/api/visitas';
+import { CartaoVisita } from '@/components/CartaoVisita';
+import { Carregando } from '@/components/Carregando';
+import { EstadoErro } from '@/components/EstadoErro';
+import { EstadoVazio } from '@/components/EstadoVazio';
 import { cores, espaco, raio } from '@/components/tema';
-import {
-  buscarHistoricoVisitasApi,
-  buscarProximasVisitasApi,
-} from '@/api/visitasApi';
-import type { SituacaoVisita, VisitaParticipante } from '@/types/visitas';
+import { ListaHistoricoVisitas } from '@/components/ListaHistoricoVisitas';
+import { Botao, estilos } from '@/components/ui';
 
-const SITUACOES_HISTORICO: SituacaoVisita[] = [
-  'REALIZADA',
-  'AUSENTE',
-  'CANCELADA',
-];
+export const TEXTO_SEM_PROXIMAS = 'Nenhuma visita agendada.';
 
-function formatarDataHora(isoString: string): string {
-  const data = new Date(isoString);
-  if (Number.isNaN(data.getTime())) {
-    return isoString;
-  }
+type Parte = 'proximas' | 'historico';
 
-  return data.toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
+// M05 e M06 Visitas: seletor de duas partes. Próximas é a padrão; Histórico traz o resumo de comparecimento (T118).
 export default function VisitasScreen() {
-  const [proximasBrutas, setProximasBrutas] = useState<VisitaParticipante[]>([]);
-  const [historicoBruto, setHistoricoBruto] = useState<VisitaParticipante[]>([]);
-  const [carregando, setCarregando] = useState<boolean>(true);
-  const [erro, setErro] = useState<string | null>(null);
-
-  const carregarVisitas = useCallback(async () => {
-    setCarregando(true);
-    setErro(null);
-
-    try {
-      const [proximasResp, historicoResp] = await Promise.all([
-        buscarProximasVisitasApi(),
-        buscarHistoricoVisitasApi(),
-      ]);
-
-      setProximasBrutas(proximasResp);
-      setHistoricoBruto(historicoResp);
-    } catch (err) {
-      const mensagem =
-        err instanceof Error && err.message
-          ? err.message
-          : 'Não foi possível carregar suas visitas no momento.';
-      setErro(mensagem);
-    } finally {
-      setCarregando(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    carregarVisitas();
-  }, [carregarVisitas]);
-
-  const proximasVisitas = useMemo(() => {
-    const agoraMs = Date.now();
-
-    return proximasBrutas
-      .filter((visita) => {
-        const timestamp = new Date(visita.dataHora).getTime();
-        return (
-          visita.situacao === 'AGENDADA' &&
-          !Number.isNaN(timestamp) &&
-          timestamp >= agoraMs
-        );
-      })
-      .sort(
-        (a, b) => new Date(a.dataHora).getTime() - new Date(b.dataHora).getTime()
-      );
-  }, [proximasBrutas]);
-
-  const historicoVisitas = useMemo(() => {
-    return historicoBruto
-      .filter((visita) => SITUACOES_HISTORICO.includes(visita.situacao))
-      .sort(
-        (a, b) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime()
-      );
-  }, [historicoBruto]);
+  const { estudoId } = useLocalSearchParams<{ estudoId?: string }>();
+  const [parte, setParte] = useState<Parte>('proximas');
+  const filtro = estudoId ? estudoId : undefined;
 
   return (
-    <Tela titulo="Visitas">
-      {carregando ? (
-        <Cartao>
-          <View style={locais.carregandoBox}>
-            <ActivityIndicator size="small" color={cores.primaria} />
-            <Text style={estilos.textoSuave}>Carregando visitas...</Text>
-          </View>
-        </Cartao>
-      ) : erro ? (
-        <Cartao>
-          <Text style={locais.erroTexto}>{erro}</Text>
-          <Pressable style={locais.botaoTentar} onPress={carregarVisitas}>
-            <Text style={locais.botaoTentarTexto}>Tentar novamente</Text>
-          </Pressable>
-        </Cartao>
+    <View style={estilos.tela}>
+      <View style={local.seletor} accessibilityRole="tablist">
+        <Segmento id="proximas" rotulo="Próximas" ativo={parte === 'proximas'} aoTocar={() => setParte('proximas')} />
+        <Segmento id="historico" rotulo="Histórico" ativo={parte === 'historico'} aoTocar={() => setParte('historico')} />
+      </View>
+      {parte === 'proximas' ? (
+        <ListaProximas key={`proximas-${filtro ?? 'todas'}`} estudoId={filtro} />
       ) : (
-        <>
-          <Text style={locais.secaoTitulo}>Próximas visitas</Text>
-
-          {proximasVisitas.length === 0 ? (
-            <Cartao>
-              <Text style={estilos.textoSuave}>
-                Nenhuma visita agendada a partir de hoje.
-              </Text>
-            </Cartao>
-          ) : (
-            proximasVisitas.map((visita) => (
-              <Cartao key={visita.id}>
-                <View style={locais.cabecalho}>
-                  <View style={locais.badge}>
-                    <Text style={estilos.etiqueta}>{visita.situacao}</Text>
-                  </View>
-                  <Text style={estilos.textoSuave}>
-                    {formatarDataHora(visita.dataHora)}
-                  </Text>
-                </View>
-
-                <Text style={locais.nomeVisita}>{visita.nomeVisita}</Text>
-                <Text style={estilos.textoSuave}>{visita.estudo}</Text>
-
-                <View style={locais.atividadesBox}>
-                  <Text style={locais.atividadesTitulo}>
-                    Atividades previstas
-                  </Text>
-                  {visita.atividadesPrevistas.map((atividade, indice) => (
-                    <Text
-                      key={`${visita.id}-atv-${indice}`}
-                      style={estilos.texto}
-                    >
-                      • {atividade}
-                    </Text>
-                  ))}
-                </View>
-              </Cartao>
-            ))
-          )}
-
-          <Text style={locais.secaoTitulo}>Histórico de comparecimento</Text>
-
-          {historicoVisitas.length === 0 ? (
-            <Cartao>
-              <Text style={estilos.textoSuave}>
-                Nenhuma visita registrada no histórico até o momento.
-              </Text>
-            </Cartao>
-          ) : (
-            historicoVisitas.map((visita) => {
-              const isCancelada = visita.situacao === 'CANCELADA';
-
-              return (
-                <Cartao key={visita.id}>
-                  <View style={locais.cabecalho}>
-                    <View
-                      style={[
-                        locais.badge,
-                        isCancelada && locais.badgeCancelada,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          estilos.etiqueta,
-                          isCancelada && locais.etiquetaCancelada,
-                        ]}
-                      >
-                        {visita.situacao}
-                      </Text>
-                    </View>
-                    <Text style={estilos.textoSuave}>
-                      {formatarDataHora(visita.dataHora)}
-                    </Text>
-                  </View>
-
-                  <Text style={locais.nomeVisita}>{visita.nomeVisita}</Text>
-                  <Text style={estilos.textoSuave}>{visita.estudo}</Text>
-
-                  {visita.motivoCancelamento ? (
-                    <View style={locais.motivoBox}>
-                      <Text style={locais.motivoTitulo}>
-                        Motivo do cancelamento
-                      </Text>
-                      <Text style={estilos.texto}>
-                        {visita.motivoCancelamento}
-                      </Text>
-                    </View>
-                  ) : null}
-
-                  <View style={locais.atividadesBox}>
-                    <Text style={locais.atividadesTitulo}>
-                      Atividades previstas
-                    </Text>
-                    {visita.atividadesPrevistas.map((atividade, indice) => (
-                      <Text
-                        key={`${visita.id}-hist-atv-${indice}`}
-                        style={estilos.texto}
-                      >
-                        • {atividade}
-                      </Text>
-                    ))}
-                  </View>
-                </Cartao>
-              );
-            })
-          )}
-        </>
+        <ListaHistoricoVisitas key={`historico-${filtro ?? 'todas'}`} estudoId={filtro} />
       )}
-
-      <EmBreve
-        requisito="RF19"
-        texto="Você poderá confirmar presença ou pedir reagendamento de cada visita."
-      />
-    </Tela>
+    </View>
   );
 }
 
-const locais = StyleSheet.create({
-  carregandoBox: {
+function Segmento({ id, rotulo, ativo, aoTocar }: { id: string; rotulo: string; ativo: boolean; aoTocar: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="tab"
+      accessibilityState={{ selected: ativo }}
+      testID={`segmento-${id}`}
+      onPress={aoTocar}
+      style={[local.segmento, ativo && local.segmentoAtivo]}
+    >
+      <Text style={[local.segmentoTexto, ativo && local.segmentoTextoAtivo]}>{rotulo}</Text>
+    </Pressable>
+  );
+}
+
+// Próximas visitas do participante logado, na ordem da API (da mais próxima para a mais distante)
+export function ListaProximas({ estudoId }: { estudoId?: string }) {
+  const router = useRouter();
+  const [visitas, setVisitas] = useState<MinhaVisita[] | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [atualizando, setAtualizando] = useState(false);
+  const ativo = useRef(true);
+
+  const carregar = useCallback(() => {
+    return visitasApi
+      .proximas(estudoId)
+      .then((lista) => {
+        if (!ativo.current) return;
+        setVisitas(lista);
+        setErro(null);
+      })
+      .catch((falha) => {
+        if (ativo.current) setErro(mensagemDoErro(falha));
+      });
+  }, [estudoId]);
+
+  useEffect(() => {
+    ativo.current = true;
+    carregar();
+    return () => {
+      ativo.current = false;
+    };
+  }, [carregar]);
+
+  const atualizar = useCallback(() => {
+    setAtualizando(true);
+    carregar().finally(() => {
+      if (ativo.current) setAtualizando(false);
+    });
+  }, [carregar]);
+
+  const tentarDeNovo = useCallback(() => {
+    carregar();
+  }, [carregar]);
+
+  const abrir = (visita: MinhaVisita) =>
+    router.push({ pathname: '/visitas/[visitaId]', params: { visitaId: visita.id, visita: JSON.stringify(visita) } });
+
+  const estadoSemLista =
+    visitas === null && erro === null ? (
+      <Carregando />
+    ) : visitas === null && erro !== null ? (
+      <EstadoErro mensagem={erro} aoTentarDeNovo={tentarDeNovo} />
+    ) : erro === null ? (
+      <EstadoVazio titulo={TEXTO_SEM_PROXIMAS} />
+    ) : undefined;
+
+  return (
+    <FlatList
+      testID="lista-proximas"
+      data={visitas ?? []}
+      keyExtractor={(visita) => visita.id}
+      contentContainerStyle={estilos.conteudo}
+      refreshControl={<RefreshControl refreshing={atualizando} onRefresh={atualizar} />}
+      ListHeaderComponent={
+        <View style={local.cabecalho}>
+          {estudoId ? (
+            <View style={local.filtro}>
+              <Text style={estilos.texto}>
+                {visitas && visitas.length > 0 ? `Estudo: ${visitas[0].estudoTitulo}` : 'Filtrado por um estudo'}
+              </Text>
+              <Botao rotulo="Ver todas" variante="secundario" onPress={() => router.setParams({ estudoId: '' })} />
+            </View>
+          ) : null}
+          {erro && visitas !== null ? <EstadoErro mensagem={erro} aoTentarDeNovo={tentarDeNovo} /> : null}
+        </View>
+      }
+      renderItem={({ item }) => <CartaoVisita visita={item} aoAbrir={() => abrir(item)} />}
+      ListEmptyComponent={estadoSemLista}
+    />
+  );
+}
+
+const local = StyleSheet.create({
+  seletor: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: espaco[2],
-  },
-  erroTexto: {
-    fontSize: 14,
-    color: cores.perigo,
-    fontWeight: '600',
-  },
-  botaoTentar: {
-    alignSelf: 'flex-start',
-    marginTop: espaco[2],
-    backgroundColor: cores.primaria,
-    paddingHorizontal: espaco[3],
-    paddingVertical: espaco[2],
-    borderRadius: raio,
-  },
-  botaoTentarTexto: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  secaoTitulo: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: cores.texto,
-  },
-  cabecalho: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: espaco[2],
-  },
-  badge: {
-    backgroundColor: cores.primariaFundo,
-    paddingHorizontal: espaco[2],
-    paddingVertical: espaco[1],
-    borderRadius: raio,
-  },
-  badgeCancelada: {
-    backgroundColor: cores.perigoFundo,
-  },
-  etiquetaCancelada: {
-    color: cores.perigo,
-  },
-  nomeVisita: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: cores.texto,
-  },
-  motivoBox: {
-    backgroundColor: cores.perigoFundo,
-    borderColor: cores.perigo,
+    margin: espaco[4],
+    marginBottom: 0,
     borderWidth: 1,
+    borderColor: cores.borda,
     borderRadius: raio,
-    padding: espaco[3],
-    gap: espaco[1],
+    overflow: 'hidden',
+    backgroundColor: cores.superficie,
   },
-  motivoTitulo: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: cores.perigo,
-  },
-  atividadesBox: {
-    marginTop: espaco[1],
-    paddingTop: espaco[2],
-    borderTopWidth: 1,
-    borderTopColor: cores.borda,
-    gap: espaco[1],
-  },
-  atividadesTitulo: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: cores.texto,
-  },
+  segmento: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  segmentoAtivo: { backgroundColor: cores.primariaFundo },
+  segmentoTexto: { fontSize: 16, color: cores.textoSuave, fontWeight: '600' },
+  segmentoTextoAtivo: { color: cores.primaria },
+  cabecalho: { gap: espaco[3] },
+  filtro: { gap: espaco[2] },
 });

@@ -1,16 +1,17 @@
 # Rastreabilidade de erros e alterações — Sprints 1 a 3
 
-> Documento geral, **independente de qualquer branch de task**. Consolida todos os erros, defeitos e não conformidades das Sprints 1, 2 e 3: causa, resolução e **o que funciona e o que não funciona** depois de cada alteração.
-> Atualizado em: 15/11/2026.
+> Documento geral, **independente de qualquer branch de task**. Consolida todos os erros, defeitos e não conformidades das Sprints 1, 2 e 3: causa, resolução e **o que funciona e o que não funciona** depois de cada alteração. O resumo também aparece no [README](../../README.md#6-testes-e-cobertura) e a lista oficial de defeitos está no [registro de defeitos](../testes/registro-de-defeitos.md).
+> Atualizado em: 16/11/2026, sobre o ramo `develop` no commit `3257595` (PR #25).
 
 ## 0. Como usar
 
 | Tema | Regra |
 |---|---|
 | IDs | Reaproveita os do [registro de defeitos](../testes/registro-de-defeitos.md) (`B-T67-01`, `B-T68-01`…, `D-S3-01`, `OBS-12-01`…) e continua a numeração dali (`D-S3-02` em diante). Use o ID na mensagem do commit e no PR que corrige o item |
-| Fontes | `docs/testes/registro-de-defeitos.md`, `relatorio-de-testes-release1.md`, `relatorio-de-testes-sprints-1-a-3.md`, `docs/sprint1/status-sprint1.md`, `docs/sprint2/T67*.md` e `T68*.md`, histórico do Git (`git log origin/develop`) e as execuções de teste e do CI de 13 a 15/11/2026 |
-| Divergência com o registro oficial | O `registro-de-defeitos.md` da `develop` está desatualizado (ver seção 6). Aqui está o estado real |
-| Registrar algo novo | Acrescente uma linha na seção 4 (erros) e/ou 5 (alterações) e atualize os resumos das seções 1 a 3 |
+| Fontes | `docs/testes/registro-de-defeitos.md`, `relatorio-de-testes-release1.md`, `relatorio-de-testes-sprints-1-a-3.md`, `docs/sprint1/status-sprint1.md`, `docs/sprint2/T67*.md` e `T68*.md`, histórico do Git (`git log origin/develop`) e as execuções de teste de 13 a 16/11/2026 |
+| Onde atualizar | Este arquivo (histórico completo), `docs/testes/registro-de-defeitos.md` (lista oficial) e a seção 6 do `README.md` (resumo). Os três usam os mesmos IDs e estados |
+| Registrar algo novo | Acrescente uma linha na seção 4 (erros) e/ou 5 (alterações) e atualize os resumos das seções 1 a 3, o registro de defeitos e o README |
+| Branch | Este documento **nunca** vai junto com a branch de uma task: ele tem sempre uma branch própria de documentação |
 
 ### Legenda
 
@@ -35,24 +36,34 @@
 |---|---|---|---|
 | Sprint 1 | 1 defeito (B-T67-01) + 4 dívidas técnicas (DT-S1-01 a 04) | B-T67-01, DT-S1-01, DT-S1-04 | DT-S1-02, DT-S1-03 |
 | Sprint 2 | 9 (B-T68-01 a 04, B-AUD-01, D-S2-01 a 04) | 9 | nenhum |
-| Sprint 3 | D-S3-00 a D-S3-13 e OBS-12-01 a 04 | D-S3-00, 01, 02, 07, 08, 12, 13 e OBS-12-01 a 03 | ver seção 3 |
+| Sprint 3 | D-S3-00 a D-S3-14 e OBS-12-01 a 04 | D-S3-00, 01, 02, 04, 05, 07, 08, 12, 13 e OBS-12-01 a 04 | D-S3-03, 06, 09, 10, 11, 14 (ver seção 3) |
 
-| Referência de testes | Resultado |
+| Execução de 16/11/2026 na `develop` (`3257595`) | Resultado |
 |---|---|
-| `develop` no último relatório (13/11) | 478 testes de backend, 133 de web, 29 de E2E; cobertura de linhas 99,2%; sem falha |
-| `task/t76/endpoint` em 15/11 | Testes da T76 passam no H2; o PostgreSQL depende do CI |
+| Backend (`./mvnw verify`) | **672 testes, 0 falhas, 0 erros, 0 ignorados**; BUILD SUCCESS |
+| Cobertura de linhas do código de negócio (`domain` + `service`) | **99,0%** (967 de 977 linhas); meta 80% |
+| Web (`npm test`, `tsc -b`, `eslint`) | **257 testes, 0 falhas**; `tsc` e `eslint` limpos |
+| E2E (Playwright) | 29 testes listados em 9 arquivos; **não executados** nesta rodada |
+| CI do GitHub (jobs H2, PostgreSQL e Docker) | Não consultado a partir desta máquina; o resultado é do time |
 
 ## 2. Situação por task e branch (Sprint 3)
 
-| Task / branch | Dono | Situação | Pendência principal |
+| Task / PR | Dono | Situação em 16/11 | Pendência principal |
 |---|---|---|---|
 | T73, T74/T95, T87 (modelo, contratos, resultados) | outros | ✅ na `develop` | nenhuma |
-| T75 (`task/t75/domain`, PR #12 e #17) | zePadd / João Victor | ✅ mesclada na `develop` | alinhar os códigos de erro ao contrato (OBS-12-04, resolvido na T76) |
-| T88, T89, T90 (resultados) | outros | ✅ na `develop` | nenhuma |
+| T75 (PR #12 e #17) | zePadd / João Victor | ✅ na `develop` | nenhuma |
+| T88, T89, T90 (resultados das avaliações, PRs #16, #18, #19) | outros | ✅ na `develop` | telas dos resultados (T91 a T93) |
 | T96 (histórico, backend) | I7 | 🟡 na `develop` por push direto (`eb37e3a`, D-S3-03) | review do commit por link |
-| T97 (tela do histórico, web) | I7 | 🟡 implementada e testada (166 testes web, tsc e lint ok); **não commitada** (`stash@{0}`) | commit/PR do dono; conflito com T83 |
-| T76 (`task/t76/endpoint`) | zePadd + ajustes de I7 | 🟡 commitada e enviada; H2 ✅, **PostgreSQL só no CI** | confirmar CI do PostgreSQL; RQ-T76-13 (avisar I3) |
-| T80-T86 (`feature/task80-85/desfecho-visita`) | José Agra Neto | ❌ 32 testes de endpoint falham | aplicar o `flush`, atualizar com a `develop`, concluir T83/T84/T86 |
+| T76 (endpoints do agendamento, PR #21) | zePadd + ajustes de I7 | ✅ na `develop` | confirmar o job PostgreSQL do CI (D-S3-09); RQ-T76-13 (avisar o I3) |
+| T77 (telas de agendamento, PR #23) | I7 | ✅ na `develop` | E2E `acesso-por-perfil` não executado |
+| Correção do Docker (PR #24) | I7 | 🟡 na `develop` | confirmar o job "Ambiente Docker (T67)" (D-S3-14) |
+| T80, T81, T82 (desfecho: regras e endpoints, PR #20) | José Agra Neto | ✅ na `develop` | nenhuma |
+| T83 (telas do desfecho, PR #20) | José Agra Neto | ✅ na `develop`, encaixada nas telas da T77 | nenhuma |
+| T84 (demonstração dos desfechos, PR #20) | José Agra Neto | 🟡 script de demonstração na `develop` | RQ-T84-07 a 10 |
+| T85 (testes do desfecho, PR #20) | José Agra Neto | ✅ 33 testes de endpoint, sem ignorados | nenhuma |
+| T86 (E2E e documentação do RF13) | — | ❌ não iniciada | depende da infraestrutura E2E da T79 |
+| T97 (ficha e histórico do participante, PR #25) | I7 | ✅ na `develop` | E2E não executado |
+| T78, T79 (testes de backend e E2E do agendamento) | I1 | ⏳ não verificadas | confirmar com o dono |
 
 ---
 
@@ -60,14 +71,12 @@
 
 | ID | O que está aberto | Quem |
 |---|---|---|
-| D-S3-04 | `DesfechoEndpointTest`: 32 erros por falta de `flush` (correção comprovada, **não aplicada**) | José (task80-85) |
-| D-S3-05 | Conflito da `task80-85` com a `develop` (T90) | José |
-| D-S3-06 | T83 e T84 incompletas e T86 não iniciada, bloqueadas por T77 | I1 / José |
-| D-S3-09 | T76: consulta da agenda no **PostgreSQL** corrigida, mas **só o CI confirma** | T76 |
-| D-S3-10 | `DemoDataIntegrationTest`: 2 falhas na rodada local que **não se reproduziram no CI** (causa não esclarecida) | investigar se reaparecer |
-| D-S3-11 | T76 removeu o `@PreUpdate` de `VisitaAgendada` (volta o ponto da OBS-12-02) | revisão da T76 |
 | D-S3-03 | T96 entrou na `develop` sem PR (review pendente) | I7 |
-| OBS-12-04 | Códigos de erro do serviço divergem do contrato na `develop` (corrigido só na T76, ainda não mesclada) | T76 |
+| D-S3-06 | T84 (RQ-T84-07 a 10), T86 e T78/T79 por fazer | José / I1 |
+| D-S3-09 | T76: a consulta da agenda no **PostgreSQL** foi corrigida e mesclada, mas só o job do CI confirma | time |
+| D-S3-10 | `DemoDataIntegrationTest` falhou 2 testes numa rodada local e **não se reproduziu** (passou em 16/11); causa não esclarecida | acompanhar |
+| D-S3-11 | O `@PreUpdate` de `VisitaAgendada` não existe na `develop` (volta o ponto da OBS-12-02) | revisão da T76 |
+| D-S3-14 | Docker: Maven Central respondeu 429; o retry foi mesclado (#24), falta um job verde | time |
 | DT-S1-02, DT-S1-03 | Vulnerabilidades de dev do Expo CLI; logout só no cliente | acompanhar |
 
 ---
@@ -79,7 +88,7 @@
 | ID | Origem | Descrição do erro | Sev. | Causa | Resolução | Funciona | Não funciona / pendente | Estado |
 |---|---|---|---|---|---|---|---|---|
 | B-T67-01 | `SecurityConfig` (login JWT e segurança da API; Azure 3060/3063; Bug #3706) | CORS com origens fixas: servir a web em outra porta ou host bloqueava a chamada (preflight 403) | Média | Só `localhost:5173` e `localhost:8082` estavam fixos no código | `app.cors.allowed-origins` / `CORS_ALLOWED_ORIGINS`, com os mesmos padrões. Commits `11a3dcd`, `508171f`, `f8a10a4` (08/11) | ✅ `CorsIntegrationTest`, `CorsOrigensConfiguradasIntegrationTest` | — | ✅ Fechado |
-| DT-S1-01 | `status-sprint1.md` | Sem testes de componentes web/mobile nem E2E | — | Dívida técnica da Sprint 1 | Sprint 2 criou 133 testes de web e 29 de E2E (Playwright) | ✅ web e E2E | O **mobile** segue sem testes automatizados (limitação 3 da Release 1) | ✅ Fechado (parcial no mobile) |
+| DT-S1-01 | `status-sprint1.md` | Sem testes de componentes web/mobile nem E2E | — | Dívida técnica da Sprint 1 | Sprint 2 criou testes de web e 29 de E2E (Playwright) | ✅ web (257) e E2E (29 listados) | O **mobile** segue sem testes automatizados (limitação 3 da Release 1) | ✅ Fechado (parcial no mobile) |
 | DT-S1-02 | `status-sprint1.md` | `npm audit` do mobile aponta vulnerabilidades em dependências de desenvolvimento do Expo CLI (`node-forge`, `zod`) | — | A correção forçada quebraria o SDK | Nenhuma; acompanhar as atualizações do Expo | — | Sem registro de resolução | ⏳ Aberto |
 | DT-S1-03 | `status-sprint1.md` | Logout só no cliente (JWT stateless): o token vale por até 30 min mesmo se a conta for desativada | — | Risco aceito pelo time | Nenhuma mudança registrada | — | Token continua válido até expirar | ⏳ Aberto (risco aceito) |
 | DT-S1-04 | `status-sprint1.md` | Testes locais usam H2; o PostgreSQL só era exercitado pelo CI | — | Sem banco PostgreSQL nos testes locais | CI ganhou o job **Backend (testes no PostgreSQL)** (PostgreSQL 16) | ✅ job do CI | Continua dependendo do CI, não da máquina local | ✅ Fechado |
@@ -118,60 +127,75 @@
 | ID | Origem | Descrição do erro | Sev. | Causa | Resolução | Funciona | Não funciona / pendente | Estado |
 |---|---|---|---|---|---|---|---|---|
 | D-S3-00 | T73, PR #10 (`057090e`, 12/11) | A T73 divergia do documento de design | Média | Migration e entidade fora do design (sem versão, motivo/observação juntos, sem auditoria, com cascata) | Migration `V6_19_1` reescrita (versão, motivo/observação separados, `criado_por_id`/`alterado_por_id`, CHECKs, índices, `ON DELETE RESTRICT`); `SituacaoVisitaAgendada` → `SituacaoVisita`; `@Version`; repositório com os 4 métodos | ✅ na época, 444 testes, 0 falhas | — | ✅ Fechado |
-| D-S3-01 | T75, PR #12 (zePadd) | `AgendamentoVisitaServiceTest.validaLimitesInclusivosDaJanela` falha | Média | O teste agendava `HOJE - 2` como limite da janela, mas o serviço verifica a data passada **antes** da janela (RQ-T75-04); o erro estava no teste | `961952f` (zePadd, 14/11); PR #12 mesclado em `8d54754` | ✅ passa nas execuções posteriores | O registro oficial ainda o mostra como Aberto | ✅ Fechado |
+| D-S3-01 | T75, PR #12 (zePadd) | `AgendamentoVisitaServiceTest.validaLimitesInclusivosDaJanela` falha | Média | O teste agendava `HOJE - 2` como limite da janela, mas o serviço verifica a data passada **antes** da janela (RQ-T75-04); o erro estava no teste | `961952f` (zePadd, 14/11); PR #12 mesclado em `8d54754` | ✅ passa nas execuções posteriores (672 em 16/11) | — | ✅ Fechado |
 | OBS-12-01 | T75, PR #12 | `VisitaAgendada` sem o `@UniqueConstraint` de `(participacao_id, visita_planejada_id)` | — | Removido no PR #12 | Restaurado no PR #17 (`b2944f6`, 15/11) | ✅ lido na `develop` | — | ✅ Fechado |
-| OBS-12-02 | T75, PR #12 | Sem `@PreUpdate`, `alteradoEm` deixava de ser atualizado sozinho | — | Removido no PR #12 | Restaurado no PR #17 | ✅ lido na `develop` | A T76 o removeu de novo (D-S3-11) | ✅ Fechado na `develop` |
+| OBS-12-02 | T75, PR #12 | Sem `@PreUpdate`, `alteradoEm` deixava de ser atualizado sozinho | — | Removido no PR #12 | Restaurado no PR #17 | ✅ funcionou até o PR #21 | A T76 o removeu de novo (D-S3-11) | ✅ Fechado no PR #17; reaberto como D-S3-11 |
 | OBS-12-03 | T75, PR #12 | `criado_por_id` e `criado_em` sem `updatable = false` | Baixa | Removido no PR #12 | Restaurado no PR #17 | ✅ lido na `develop` | — | ✅ Fechado |
-| OBS-12-04 | T75, PR #12 | Códigos e tipo de erro do serviço diferem do contrato: a `develop` usa `AGENDAMENTO_DUPLICADO`, `DATA_PASSADA`, `ESTUDO_INVALIDO`, `VISITA_INCOMPATIVEL`, `REAGENDAMENTO_INVALIDO`; o contrato define `VISITA_JA_AGENDADA`, `DATA_NO_PASSADO` (400), `ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO`, `VISITA_NAO_ESTA_AGENDADA` | Média | Serviço escrito sem seguir o contrato | Corrigido na T76 (`afc9bc6`, zePadd) | ✅ na branch da T76 (`ContratoOpenApiSprint3Test`, 30 testes) | ❌ **Continua aberto na `develop`**; só vale quando a T76 for mesclada | ❌ Aberto |
-| D-S3-02 | T75 | `AgendamentoVisitaServiceTest` com 3 falhas (H2 e PostgreSQL) | Média | `HOJE` e `AGORA` vinham do relógio real, enquanto o serviço recebia `Clock` fixo em 12/11/2026 | `HOJE`/`AGORA` derivados do mesmo `Clock` fixo: `759377b` (`task/t75/domain`), consolidada no PR #17 (`b2944f6`) | ✅ `AgendamentoVisitaServiceTest` (10 testes); a `develop` já tem a correção | — | ✅ Fechado |
+| OBS-12-04 | T75, PR #12 | Códigos e tipo de erro do serviço diferiam do contrato (`AGENDAMENTO_DUPLICADO`, `DATA_PASSADA`, `ESTUDO_INVALIDO`, `VISITA_INCOMPATIVEL`, `REAGENDAMENTO_INVALIDO` contra `VISITA_JA_AGENDADA`, `DATA_NO_PASSADO` (400), `ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO`, `VISITA_NAO_ESTA_AGENDADA`) | Média | Serviço escrito sem seguir o contrato | Corrigido na T76 (`afc9bc6`, zePadd), mesclada no PR #21 | ✅ `ContratoOpenApiSprint3Test` (34 casos) e leitura da `develop`: os códigos antigos não existem mais | — | ✅ Fechado |
+| D-S3-02 | T75 | `AgendamentoVisitaServiceTest` com 3 falhas (H2 e PostgreSQL) | Média | `HOJE` e `AGORA` vinham do relógio real, enquanto o serviço recebia `Clock` fixo em 12/11/2026 | `HOJE`/`AGORA` derivados do mesmo `Clock` fixo: `759377b` (`task/t75/domain`), consolidada no PR #17 (`b2944f6`) | ✅ `AgendamentoVisitaServiceTest` (10 testes) | — | ✅ Fechado |
 | D-S3-03 | T96 (processo) | Push direto na `develop`, sem Pull Request (`eb37e3a`, 15/11) | Média | Branch criada com `checkout -b x origin/develop`, que define o upstream como a `develop` | `git branch --unset-upstream`; próximas branches com `--no-track` | ✅ o risco foi eliminado para as próximas branches | O código da T96 está na `develop` **sem PR**; ⏳ pedir o review pelo link do commit | 🟡 Contornado |
-| D-S3-04 | `task80-85` (José Agra Neto) | 32 erros em `DesfechoEndpointTest` | Média | O teste cria a participação pela API (JPA ainda não gravou) e insere a visita por SQL puro; o banco recusa pela FK `fk_visitas_agendadas_participacao`. O código dos endpoints está correto | Correção comprovada em worktree temporário (já removido): `entityManager.flush()` antes do `agendada(...)` | ✅ comprovada: 33 testes passam, 1 ignorado. Web: tsc, lint e 172 testes ok | ❌ **Não aplicada** à branch. Backend: 647 testes, 0 falhas, 32 erros | ❌ Aberto |
-| D-S3-05 | `task80-85` | Conflito com a `develop` | Média | Branch 1 commit atrás (T90, `6d3b6a3`). Conflitos em `ContratoOpenApiSprint3Test.java` (branch: 10 operações e `@Disabled` T76/T90; `develop`: 8 e sem o T90) e `DemoDataIntegrationTest.java` | Sugerida: manter a remoção do `@Disabled("T90")` da `develop` e a contagem 10 da branch | — | ❌ Não resolvido | ❌ Aberto |
-| D-S3-06 | `task80-85` | Tasks incompletas e bloqueadas | Média | T77, T78 e T79 (PBI-19, I1) não estão na `develop`; faltam `AbaAgenda`, `AcoesDaVisita`, `VisitaAgendadaPage` e `api/agendamento.ts` | A T76 destrava os `@Disabled("T76")` quando for mesclada | ✅ T80, T81, T82 concluídas | T85 escrita, mas falha (D-S3-04). T83 e T84 parciais (T84: faltam RQ-T84-07 a 10). T86 não iniciada. Os documentos de design citam `task80-86`; o nome real é `task80-85` | ❌ Aberto |
+| D-S3-04 | `task80-85` (José Agra Neto) | 32 erros em `DesfechoEndpointTest` | Média | O teste cria a participação pela API (o JPA ainda não gravou) e insere a visita por SQL puro; o banco recusa pela FK `fk_visitas_agendadas_participacao`. O código dos endpoints estava correto | `CenarioDesfecho.visitaAgendada` ganhou um overload com `EntityManager` que faz `flush()` antes do INSERT; o `DesfechoEndpointTest` (`@Transactional`) o usa. O teste de reagendamento, antes `@Disabled("T76")`, foi ligado. Mesclada no PR #20 | ✅ `DesfechoEndpointTest` 33 testes, 0 ignorados; backend completo: 672 testes, 0 falhas; nenhum `@Disabled` na `develop` | — | ✅ Fechado |
+| D-S3-05 | `task80-85` | Conflito com a `develop` (T76, T77, T90 e outros) | Média | Branch atrás da `develop`. 5 conflitos: `VisitaAgendadaResponse` (T76 e T82 criaram o mesmo DTO), `ContratoOpenApiSprint3Test`, `DemoDataIntegrationTest`, `acompanhamento.css` e `mensagensAcompanhamento.ts` (T77 e T83 criaram o mesmo arquivo) | Merge da `develop` na branch: DTO da T76 (assinatura com `Clock`) e `VisitaAgendadaService` adaptado; contrato e demo: união dos testes dos dois lados; CSS: união; mensagens: dois mapas (`mensagemDeAgendamento` e `mensagemDeAcompanhamento`), porque o código `ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO` tem texto diferente em cada tela. Mesclada no PR #20 | ✅ Sem marcadores de conflito; backend e web passam | — | ✅ Fechado |
+| D-S3-06 | `task80-85` | Tasks incompletas e bloqueadas | Média | T77, T78 e T79 (PBI-19, I1) não estavam na `develop` | T77 (PR #23) e T83 encaixada (PR #20): `AcoesDaVisita` renderiza `BotaoRegistrarDesfecho`; selo nas telas; `DesfechoRegistrado` na tela da visita; confirmação do desfecho preservada | ✅ T80, T81, T82, T83 e T85 na `develop`; T77 na `develop` | T84 (RQ-T84-07 a 10) por fazer. T86 não iniciada. T78 e T79 não verificadas. Os documentos de design citam `task80-86`; o nome real era `task80-85` | 🟡 Parcial |
 | D-S3-07 | T76 | `AgendamentoVisitaServiceTest.rejeitaParticipacaoInativaAntesDasDemaisRegras` falhava | Média | `validarEstadoDoEstudo` rodava antes da checagem do participante e trocava o código devolvido | `validarRegrasDeAgendamento` checa primeiro o participante (`PARTICIPANTE_RETIRADO`) e depois o estado do estudo. Commit `c298605` | ✅ `AgendamentoVisitaServiceTest` (10 testes) | — | ✅ Fechado |
-| D-S3-08 | T76 (CI H2) | `AgendamentoEndpointTest.filtraEPaginaAgenda` voltava lista vazia | Média | Fuso horário: o filtro usava o "hoje" do relógio da aplicação (America/Recife, 15/11); a visita de demonstração usa `current_date` do banco, que no runner (UTC, 00:20) já era 16/11 | O teste lê a data real da visita no banco e filtra por ela. Commit `17a4030` | ✅ passa em fuso local e com `-Duser.timezone=UTC` (44 testes, 0 falhas) | — | ✅ Fechado |
-| D-S3-09 | T76 (CI PostgreSQL) | `could not determine data type of parameter $2` em `buscarAgenda` | Média | A consulta usava `(:de is null or ...)`; com valor nulo o PostgreSQL não infere o tipo (o H2 aceita) | Consulta sem parâmetro nulo (`>= :de`, `<= :ate`, `situacao in :situacoes`); `AgendaService` passa 1900-01-01 a 2999-12-31 e todas as situações quando não há filtro; teste novo sem filtros. Commit `d594e19` | ✅ H2: 49 testes, 0 falhas | ❌ **PostgreSQL não executado localmente** (Docker Desktop desligado); só o CI confirma | 🟡 Corrigido, aguarda o CI |
-| D-S3-10 | T76 (rodada local) | `DemoDataIntegrationTest`: `demoCarregaEstudoDeAcompanhamento` e `cargaDoAcompanhamentoEIdempotente` esperavam 3 participantes / 3 visitas e encontraram 5 / 8 | Baixa | Não esclarecida (dados de T90/T95 no mesmo estudo; suspeita de `target/` ou dados locais desatualizados) | Nenhuma alteração por causa dele | ✅ No CI (H2 e PostgreSQL): 7 testes, 0 falhas | Não se reproduziu no CI; causa não confirmada | 🟡 Não esclarecido |
+| D-S3-08 | T76 (CI H2) | `AgendamentoEndpointTest.filtraEPaginaAgenda` voltava lista vazia | Média | Fuso horário: o filtro usava o "hoje" do relógio da aplicação (America/Recife, 15/11); a visita de demonstração usa `current_date` do banco, que no runner (UTC, 00:20) já era 16/11 | O teste lê a data real da visita no banco e filtra por ela. Commit `17a4030` | ✅ passa em fuso local e com `-Duser.timezone=UTC` | — | ✅ Fechado |
+| D-S3-09 | T76 (CI PostgreSQL) | `could not determine data type of parameter $2` em `buscarAgenda` | Média | A consulta usava `(:de is null or ...)`; com valor nulo o PostgreSQL não infere o tipo (o H2 aceita) | Consulta sem parâmetro nulo (`>= :de`, `<= :ate`, `situacao in :situacoes`); `AgendaService` passa 1900-01-01 a 2999-12-31 e todas as situações quando não há filtro; teste novo sem filtros. Commit `d594e19`; mesclada no PR #21 | ✅ H2: backend completo, 672 testes | ❌ **PostgreSQL não executado nesta máquina** (Docker Desktop desligado); só o job do CI confirma | 🟡 Corrigido e mesclado, aguarda confirmação do CI |
+| D-S3-10 | T76 (rodada local) | `DemoDataIntegrationTest`: `demoCarregaEstudoDeAcompanhamento` e `cargaDoAcompanhamentoEIdempotente` esperavam 3 participantes / 3 visitas e encontraram 5 / 8 | Baixa | Não esclarecida (dados de T90/T95 no mesmo estudo; suspeita de `target/` ou dados locais desatualizados) | Nenhuma alteração por causa dele | ✅ Passa no CI (H2 e PostgreSQL) e na execução de 16/11 (9 testes, 0 falhas) | Não se reproduziu; causa não confirmada | 🟡 Não esclarecido |
 | D-S3-11 | T76 (`afc9bc6`) | A T76 removeu o `@PreUpdate` de `VisitaAgendada`, voltando ao ponto da OBS-12-02 | Baixa | Auditoria passou a ser feita só pelo serviço | A decidir pelo revisor: restaurar o `@PreUpdate` ou aceitar a auditoria só pelo serviço | ✅ Sem efeito hoje: reagendamento e desfecho (T81) definem `alteradoPor`/`alteradoEm` explicitamente | Uma alteração futura fora desses serviços deixaria `alteradoEm` desatualizado | 🟡 A decidir |
 | D-S3-12 | Verificação local (processo) | `cmd //c mvnw.cmd ...` não rodava (comando não reconhecido) e com `-q` parecia sucesso | Baixa | Comando inválido no shell, sem mensagem de erro com `-q` | Refeitas com `./mvnw.cmd`, sem `-q`; qualquer "passou" feito de outro modo é desconsiderado | ✅ rodadas com `./mvnw.cmd` | — | ✅ Resolvido |
-| D-S3-13 | Ferramentas (T97 e worktree) | Heredoc grande no Bash falhou ao criar os testes da T97; Python indisponível para um patch no worktree temporário | Baixa | Limitação do ambiente | Usadas as ferramentas Write e Edit | ✅ | Sem impacto no código | ✅ Contornado |
+| D-S3-13 | Ferramentas (T97 e worktree) | Heredoc grande no Bash falhou ao criar arquivos de teste; Python indisponível para um patch no worktree temporário | Baixa | Limitação do ambiente | Usadas as ferramentas de escrita e edição de arquivos | ✅ | Sem impacto no código | ✅ Contornado |
+| D-S3-14 | T77 (CI, job "Ambiente Docker (T67)", passo `docker compose up --build -d --wait`) | O build da imagem do backend falha em `RUN mvn -B -q dependency:go-offline` (Dockerfile, linha 9) com `Non-resolvable parent POM ... spring-boot-starter-parent:pom:4.1.1 ... status code: 429, Too Many Requests` em `repo.maven.apache.org` | Média | **Limite de requisições do Maven Central** (HTTP 429) no runner do CI, que baixava o POM pai e as dependências sem tentar de novo. É falha de infraestrutura externa e intermitente, não do código: a imagem do `web` e a do PostgreSQL foram construídas sem erro, e o `pom.xml` não mudou. **Não é erro do banco**, apesar de aparecer no job que sobe o Docker Compose | Cada passo do `mvn` no Dockerfile do backend repete até 5 vezes, esperando 20, 40, 60 e 80 s. Mesclada no PR #24 (`25d4c7e`) | ✅ Lógica do laço simulada (sucesso direto, após 2 e 4 falhas, e falha final depois de 5 tentativas) | ❌ A imagem **não foi construída nesta máquina** (Docker desligado); só o job do CI confirma. Não resolve um bloqueio longo do Maven Central | 🟡 Corrigido e mesclado, aguarda confirmação do CI |
 
 ---
 
 ## 5. Registro de alterações (o que foi mudado e como está)
 
-| # | Alteração | Resolve | Commit / local | Funciona | Não funciona / não verificado |
+| # | Alteração | Resolve | Commit / PR | Funciona | Não funciona / não verificado |
 |---|---|---|---|---|---|
-| A-01 | `HOJE`/`AGORA` do teste da T75 derivados do `Clock` fixo | D-S3-02 | `759377b` (`task/t75/domain`) → PR #17 `b2944f6` | ✅ `AgendamentoVisitaServiceTest` | — |
+| A-01 | `HOJE`/`AGORA` do teste da T75 derivados do `Clock` fixo | D-S3-02 | `759377b` → PR #17 `b2944f6` | ✅ `AgendamentoVisitaServiceTest` | — |
 | A-02 | Restaurar `@UniqueConstraint`, `@PreUpdate`, `updatable = false` na entidade | OBS-12-01/02/03 | PR #17 `b2944f6` | ✅ lido na `develop` | A T76 removeu o `@PreUpdate` (D-S3-11) |
 | A-03 | Backend da T96 (serviço, controller, repositórios, testes, YAML/DTO/`schema-sprint3.d.ts`) | RF15 | `eb37e3a` (direto na `develop`) | ✅ `HistoricoParticipanteServiceTest`, `HistoricoParticipanteEndpointTest`, `ContratoOpenApiSprint3Test` | 🟡 sem PR (D-S3-03) |
-| A-04 | Web da T97 (ficha do participante, linha do tempo, rota, `formatarDataHora`, links em `AbaParticipantes`) | RF15 | `stash@{0}` | ✅ tsc, lint e 166 testes | ⏳ não commitada; conflito previsto com `SeloSituacaoVisita`/`acompanhamento.css` da T83 |
+| A-04 | Web da T97 (ficha do participante, linha do tempo, rota, `formatarDataHora`, links em `AbaParticipantes`), atualizada com a `develop` antes do PR: 8 conflitos resolvidos (`datas.ts`, `SeloSituacaoVisita`, `acompanhamento.css`, `AbaParticipantes`, `router.tsx` e testes); `situacoesVisita.ts` removido e a lista do filtro movida para `situacaoVisita.ts` | RF15 | PR #25 (`3257595`) | ✅ 257 testes de web; no navegador com o backend real: ficha, resumo 1/1/1/0, linha do tempo, resultado 130/85 mmHg e link para a tela da visita | ❌ E2E não executado; ❌ PostgreSQL só no CI |
 | A-05 | `git branch --unset-upstream` na branch da T96 | D-S3-03 | configuração local | ✅ | — |
-| A-06 | Correção sugerida (`flush`) em `DesfechoEndpointTest` | D-S3-04 | worktree temporário (removido) | ✅ comprovada (33 ok, 1 ignorado) | ❌ **Não aplicada** à branch do José |
-| A-07 | Reordenar regras: participante antes do estado do estudo | D-S3-07 | `c298605` (T76) | ✅ `AgendamentoVisitaServiceTest` (10) | — |
-| A-08 | Teste lê a data da visita no banco em vez do "hoje" do relógio | D-S3-08 | `17a4030` (T76) | ✅ passa em fuso local e `UTC` | — |
-| A-09 | Consulta da agenda sem parâmetros nulos; chamada sem filtros no teste | D-S3-09 | `d594e19` (T76) | ✅ H2: `AgendamentoEndpointTest` (4), `AgendamentoVisitaServiceTest` (10), `ContratoOpenApiSprint3Test` (30), `VisitaAgendadaRepositoryTest` (5) | ❌ PostgreSQL só no CI |
+| A-06 | `flush` em `DesfechoEndpointTest` (overload de `CenarioDesfecho.visitaAgendada` com `EntityManager`) e teste de reagendamento ligado | D-S3-04 | PR #20 (`77287c9`) | ✅ 33 testes do desfecho e backend completo (672) | — |
+| A-07 | Reordenar regras: participante antes do estado do estudo | D-S3-07 | `c298605` → PR #21 | ✅ `AgendamentoVisitaServiceTest` (10) | — |
+| A-08 | Teste lê a data da visita no banco em vez do "hoje" do relógio | D-S3-08 | `17a4030` → PR #21 | ✅ passa em fuso local e `UTC` | — |
+| A-09 | Consulta da agenda sem parâmetros nulos; chamada sem filtros no teste | D-S3-09 | `d594e19` → PR #21 | ✅ H2 | ❌ PostgreSQL só no CI |
+| A-10 | Telas de agendamento da T77: `api/agendamento.ts`, `AbaAgenda`, `AgendamentoParticipantePage`, `VisitaAgendadaPage`, `AcoesDaVisita`, `FormularioDataHora`, `abasVisita.ts`, `mensagensAcompanhamento.ts`; aba Participantes com progresso e botão Agendamento; abas Participantes e Agenda para o pesquisador; rotas novas; E2E `acesso-por-perfil` atualizado | RF12 (T77) | PR #23 (`163b5b7`) | ✅ 189 testes de web na época, `tsc` e `eslint` limpos; no navegador com o backend real: progresso, agendamento com a data sugerida, erro `DATA_FORA_DA_JANELA` com a janela junto do campo e foco, agenda, tela da visita e pesquisador sem botões de escrita | ❌ E2E `acesso-por-perfil.spec.ts` não executado |
+| A-11 | Dockerfile do backend: cada passo do `mvn` que baixa dependências repete até 5 vezes, esperando 20, 40, 60 e 80 s | D-S3-14 | PR #24 (`25d4c7e`) | ✅ Lógica do laço simulada | ❌ Imagem não construída aqui; só o CI confirma |
+| A-12 | Merge da `develop` na `task80-85` (5 conflitos) e encaixe da T83 nas telas da T77: `AcoesDaVisita` com `BotaoRegistrarDesfecho`, `SeloSituacaoVisita` na agenda, na ficha e na tela da visita, `DesfechoRegistrado` na tela da visita, confirmação do desfecho preservada e formatador de data comum | D-S3-05, D-S3-06 | PR #20 (`77287c9`) | ✅ Web: 231 testes na época; no navegador: selo, botão Registrar desfecho e desfecho registrado pelo diálogo | ❌ E2E não executado; ⏳ T84 (RQ-T84-07 a 10) e T86 por fazer |
+| A-13 | Atualização desta rastreabilidade, do registro de defeitos, do relatório de testes e do README, tudo em tabelas, com a execução de 16/11 | todos | branch de documentação própria | ✅ Números medidos na `develop`: 672 testes de backend, 257 de web, cobertura 99,0% | ⏳ Falta o PR; o CI do GitHub não foi consultado daqui |
 
-## 6. Divergências entre este levantamento e o registro oficial
+## 6. PRs integrados na `develop` desde o início da Sprint 3
 
-O `docs/testes/registro-de-defeitos.md` e o `relatorio-de-testes-sprints-1-a-3.md`, escritos em 13/11, estão **atrás** do que foi mesclado depois. A atualização deles é decisão do time; **não foi alterada aqui**.
-
-| Item | No registro oficial | Estado real |
-|---|---|---|
-| D-S3-01 | Aberto | Fechado: PR #12 mesclado (`8d54754`) após `961952f` |
-| OBS-12-01, 02, 03 | Abertos | Fechados: PR #17 (`b2944f6`), confirmados no código da `develop` |
-| OBS-12-04 | Aberto | Continua aberto na `develop`; corrigido só na T76 (não mesclada) |
-| "5 abertos, nenhum na `develop`" | Resumo | Hoje há itens abertos fora da `develop` (T76 e `task80-85`) |
-| Contagem de testes | 478 backend (13/11) | Cresceu com T88-T90 e T96; reexecutar para atualizar |
-| D-S3-02 a D-S3-13 | Não existem | Acrescentados neste documento |
+| PR | Conteúdo | Data | Itens de rastreabilidade ligados |
+|---|---|---|---|
+| #8 | Modelo de domínio da visita agendada (T73) | 12/11 | D-S3-00 |
+| #10 | T73 alinhada ao documento de design | 12/11 | D-S3-00 |
+| #11 | Contratos e dados de demonstração (T74 e T95) | 12/11 | — |
+| #12 | Regras de agendamento (T75) | 14/11 | D-S3-01, OBS-12-01 a 04 |
+| #13 | Modelo e migration dos resultados (T87) | 13/11 | — |
+| #14 | Proteção da branch `main` (regras, fluxo de PR e evidências) | 13/11 | — |
+| #15 | Relatório de testes das Sprints 1 a 3 e registro de defeitos | 13/11 | todos os IDs de defeitos |
+| #16 | Contrato OpenAPI dos resultados (T88) | 14/11 | — |
+| #17 | Sugestões de mudanças da T75 | 15/11 | D-S3-02, OBS-12-01 a 03 |
+| #18 | Regras de registro dos resultados (T89) | 14/11 | — |
+| #19 | Endpoints, autorização, Swagger e demonstração dos resultados (T90) | 15/11 | — |
+| (direto) `eb37e3a` | Consulta agregada do histórico do participante (T96) | 15/11 | D-S3-03 |
+| #21 | Endpoints do agendamento (T76) | 15/11 | OBS-12-04, D-S3-07, 08, 09, 11 |
+| #22 | Rastreabilidade de erros e alterações | 15/11 | — |
+| #24 | Retry do Maven no Dockerfile | 16/11 | D-S3-14 |
+| #23 | Telas de agendamento (T77) | 16/11 | A-10 |
+| #20 | Desfecho da visita (T80 a T85, parcial) | 16/11 | D-S3-04, 05, 06 |
+| #25 | Tela do histórico do participante (T97) | 16/11 | A-04 |
 
 ## 7. Pendências por responsável (ordem sugerida)
 
 | # | Responsável | Ação | Refs |
 |---|---|---|---|
-| 1 | T76 | Conferir o CI do PostgreSQL com `c298605`, `17a4030` e `d594e19`; decidir o `@PreUpdate`; avisar o I3 ao mesclar (RQ-T76-13) | D-S3-09, D-S3-11 |
-| 2 | `task80-85` (José) | Aplicar o `flush`, atualizar com a `develop` e concluir T83/T84/T86 depois da T77; combinar com a T97 qual `SeloSituacaoVisita` fica | D-S3-04, 05, 06 |
-| 3 | T96 (I7) | Pedir o review do commit `eb37e3a` | D-S3-03 |
-| 4 | T97 (I7) | Recuperar o `stash@{0}`, commitar na branch própria e abrir PR | A-04 |
-| 5 | Time | Atualizar o `registro-de-defeitos.md` e o relatório de testes com a seção 6; registrar os defeitos novos no Azure Boards (padrão da T67: Task "Bug" filha do PBI e ligada à task de origem) | seção 6 |
+| 1 | Time | Conferir no GitHub os jobs "Backend (PostgreSQL)" e "Ambiente Docker (T67)" da `develop`; se o Docker voltar a falhar por 429, decidir um cache ou espelho do Maven no CI | D-S3-09, D-S3-14 |
+| 2 | José / I1 | T84 (RQ-T84-07 a 10), T86 (E2E e documentação do RF13), T78 e T79 | D-S3-06 |
+| 3 | I7 | Pedir o review do commit `eb37e3a` (T96); decidir com o revisor da T76 sobre o `@PreUpdate`; avisar o I3 (RQ-T76-13) | D-S3-03, D-S3-11 |
+| 4 | Time | Executar os E2E (Playwright) com backend e web no ar: `acesso-por-perfil` foi alterado na T77 e nenhum E2E novo foi escrito desde a Sprint 2 | A-04, A-10, A-12 |
+| 5 | Time | Registrar os defeitos novos no Azure Boards (padrão da T67: Task "Bug" filha do PBI e ligada à task de origem) | seção 4.3 |
 | 6 | Acompanhamento | DT-S1-02 e DT-S1-03; investigar D-S3-10 só se voltar a falhar | — |
