@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { mensagemDoErro } from '@/api/cliente';
+import { mensagemDaConsulta } from '@/utils/erros';
 import { TAMANHO_PAGINA_HISTORICO, visitasApi, type HistoricoMinhasVisitas, type MinhaVisita } from '@/api/visitas';
 import { Botao, estilos } from './ui';
 import { CartaoVisita } from './CartaoVisita';
@@ -44,7 +44,7 @@ export function ListaHistoricoVisitas({ estudoId }: { estudoId?: string }) {
         setErro(null);
       })
       .catch((falha) => {
-        if (ativo.current) setErro(mensagemDoErro(falha));
+        if (ativo.current) setErro(mensagemDaConsulta(falha));
       });
   }, [estudoId]);
 
@@ -82,7 +82,7 @@ export function ListaHistoricoVisitas({ estudoId }: { estudoId?: string }) {
         setErro(null);
       })
       .catch((falha) => {
-        if (ativo.current) setErro(mensagemDoErro(falha));
+        if (ativo.current) setErro(mensagemDaConsulta(falha));
       })
       .finally(() => {
         if (ativo.current) setCarregandoMais(false);

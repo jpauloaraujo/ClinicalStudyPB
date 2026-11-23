@@ -380,3 +380,100 @@ describe('Aba Visitas: histórico de comparecimento (T118, RQ-T118-01 a 06 e 10)
     expect(juntarPaginas([realizada, ausente], [ausente, cancelada]).map((v) => v.id)).toEqual(['h-1', 'h-2', 'h-3']);
   });
 });
+
+describe('Estados de carregamento e de erro das visitas (T119, RQ-T119-03 a 07)', () => {
+  const SEM_CONEXAO = new ErroApi('Não foi possível conectar à API em http://10.0.2.2:8081.', { codigo: 'SEM_CONEXAO' });
+
+  it('próximas: sem conexão mostra o texto próprio e "Tentar de novo" recupera (RQ-05)', async () => {
+    const proximas = jest
+      .spyOn(visitasApi, 'proximas')
+      .mockRejectedValueOnce(SEM_CONEXAO)
+      .mockResolvedValue([proxima]);
+
+    await render(<VisitasScreen />);
+
+    expect(await screen.findByText('Não foi possível conectar. Verifique sua conexão e tente de novo.')).toBeTruthy();
+    expect(screen.queryByText(/10\.0\.2\.2/)).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: 'Tentar de novo' }));
+
+    expect(await screen.findByText('Retorno 30 dias')).toBeTruthy();
+    expect(proximas).toHaveBeenCalledTimes(2);
+  });
+
+  it('próximas: se a atualização falha com a lista já na tela, a lista é mantida com o aviso (RQ-05)', async () => {
+    const proximas = jest.spyOn(visitasApi, 'proximas').mockResolvedValue([proxima]);
+
+    await render(<VisitasScreen />);
+    await screen.findByText('Retorno 30 dias');
+    proximas.mockRejectedValue(SEM_CONEXAO);
+
+    await act(async () => {
+      screen.getByTestId('lista-proximas').props.refreshControl.props.onRefresh();
+    });
+
+    expect(await screen.findByText('Não foi possível conectar. Verifique sua conexão e tente de novo.')).toBeTruthy();
+    expect(screen.getByText('Retorno 30 dias')).toBeTruthy();
+  });
+
+  it('próximas: erro 5xx sem mensagem do servidor mostra texto genérico, nunca JSON cru (RQ-04)', async () => {
+    jest.spyOn(visitasApi, 'proximas').mockRejectedValue(new ErroApi('Erro 500 na API.', { status: 500 }));
+
+    await render(<VisitasScreen />);
+
+    expect(await screen.findByText('Não foi possível carregar agora. Tente de novo.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeTruthy();
+  });
+
+  it('próximas: participante retirado ou sem estudo recebe lista vazia (200) e não vê erro (RQ-07)', async () => {
+    jest.spyOn(visitasApi, 'proximas').mockResolvedValue([]);
+
+    await render(<VisitasScreen />);
+
+    expect(await screen.findByText('Nenhuma visita agendada.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Tentar de novo' })).toBeNull();
+  });
+
+  it('histórico: sem conexão na primeira carga mostra o texto próprio e "Tentar de novo" recupera (RQ-05)', async () => {
+    jest.spyOn(visitasApi, 'proximas').mockResolvedValue([]);
+    const historico = jest
+      .spyOn(visitasApi, 'historico')
+      .mockRejectedValueOnce(SEM_CONEXAO)
+      .mockResolvedValue(pagina([realizada]));
+
+    await abrirHistorico();
+    expect(await screen.findByText('Não foi possível conectar. Verifique sua conexão e tente de novo.')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Tentar de novo' }));
+
+    expect(await screen.findByText('Triagem')).toBeTruthy();
+    expect(historico).toHaveBeenCalledTimes(2);
+  });
+
+  it('histórico: falha ao carregar mais mantém a lista e o aviso repete só a página que falhou (RQ-05)', async () => {
+    jest.spyOn(visitasApi, 'proximas').mockResolvedValue([]);
+    const historico = jest
+      .spyOn(visitasApi, 'historico')
+      .mockResolvedValueOnce(pagina([realizada], 0, 2))
+      .mockRejectedValueOnce(SEM_CONEXAO)
+      .mockResolvedValueOnce(pagina([ausente], 1, 2));
+
+    await abrirHistorico();
+    await screen.findByText('Triagem');
+    await fireEvent.press(screen.getByRole('button', { name: 'Carregar mais' }));
+
+    expect(await screen.findByText('Não foi possível conectar. Verifique sua conexão e tente de novo.')).toBeTruthy();
+    expect(screen.getByText('Triagem')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Tentar de novo' }));
+
+    expect(await screen.findByText('Retorno 15 dias')).toBeTruthy();
+    expect(historico).toHaveBeenLastCalledWith({ estudoId: undefined, pagina: 1, tamanho: 20 });
+  });
+
+  it('histórico: o carregamento da primeira carga tem texto acessível (RQ-03)', async () => {
+    jest.spyOn(visitasApi, 'proximas').mockResolvedValue([]);
+    jest.spyOn(visitasApi, 'historico').mockReturnValue(new Promise(() => {}));
+
+    await abrirHistorico();
+
+    expect(screen.getByRole('progressbar', { name: 'Carregando…' })).toBeTruthy();
+  });
+});

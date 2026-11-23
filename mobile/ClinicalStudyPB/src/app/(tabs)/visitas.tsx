@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { mensagemDoErro } from '@/api/cliente';
+import { mensagemDaConsulta } from '@/utils/erros';
 import { visitasApi, type MinhaVisita } from '@/api/visitas';
 import { CartaoVisita } from '@/components/CartaoVisita';
 import { Carregando } from '@/components/Carregando';
@@ -67,7 +67,7 @@ export function ListaProximas({ estudoId }: { estudoId?: string }) {
         setErro(null);
       })
       .catch((falha) => {
-        if (ativo.current) setErro(mensagemDoErro(falha));
+        if (ativo.current) setErro(mensagemDaConsulta(falha));
       });
   }, [estudoId]);
 
