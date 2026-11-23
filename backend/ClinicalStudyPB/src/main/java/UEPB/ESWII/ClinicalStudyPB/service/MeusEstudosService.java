@@ -12,6 +12,7 @@ import UEPB.ESWII.ClinicalStudyPB.controller.dto.RetiradaDoMeuEstudo;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoParticipacao;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Estudo;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Participacao;
+import UEPB.ESWII.ClinicalStudyPB.repository.RetiradaParticipacaoRepository;
 
 /**
  * Lista e detalhe dos estudos do participante logado (T109, RF17). Somente leitura; o isolamento entre participantes
@@ -22,9 +23,11 @@ import UEPB.ESWII.ClinicalStudyPB.domain.model.Participacao;
 public class MeusEstudosService {
 
     private final AcessoParticipante acesso;
+    private final RetiradaParticipacaoRepository retiradas;
 
-    public MeusEstudosService(AcessoParticipante acesso) {
+    public MeusEstudosService(AcessoParticipante acesso, RetiradaParticipacaoRepository retiradas) {
         this.acesso = acesso;
+        this.retiradas = retiradas;
     }
 
     /** Um item por participação da conta; lista vazia se a conta não tem candidato vinculado. */
@@ -49,16 +52,21 @@ public class MeusEstudosService {
                 situacaoDe(participacao));
     }
 
-    /**
-     * Único ponto que decide a situação da participação. TODO(T101): a retirada ainda não existe, então toda
-     * participação é ATIVO; trocar pela leitura da coluna {@code situacao} quando a T101 entrar.
-     */
+    /** Único ponto que decide a situação da participação: lê a coluna {@code situacao} (RF16, T101). */
     private static SituacaoParticipacao situacaoDe(Participacao participacao) {
-        return SituacaoParticipacao.ATIVO;
+        return participacao.getSituacao();
     }
 
-    /** TODO(T101/T103): devolver só a data da retirada (nunca o motivo); sem retirada, nulo. */
-    private static RetiradaDoMeuEstudo retiradaDe(Participacao participacao) {
-        return null;
+    /**
+     * Só a data da retirada (nunca o motivo nem quem solicitou, T109 RQ-02). Participação ativa, ou retirada sem
+     * registro de retirada, devolve nulo.
+     */
+    private RetiradaDoMeuEstudo retiradaDe(Participacao participacao) {
+        if (!participacao.estaRetirada()) {
+            return null;
+        }
+        return retiradas.findByParticipacaoId(participacao.getId())
+                .map(retirada -> new RetiradaDoMeuEstudo(retirada.getDataRetirada()))
+                .orElse(null);
     }
 }

@@ -41,7 +41,9 @@ import UEPB.ESWII.ClinicalStudyPB.controller.dto.VisitaAgendadaResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.VisitaDoParticipanteResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.VisitaReagendamentoRequest;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoNoHistorico;
+import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoParticipacao;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoVisita;
+import UEPB.ESWII.ClinicalStudyPB.domain.enums.SolicitanteRetirada;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.TipoDesfecho;
 
 /**
@@ -59,10 +61,11 @@ class ContratoOpenApiSprint3Test {
 
     /**
      * Quantas operações o YAML tem agora: 5 do agendamento (T74), 1 do histórico (T95), 2 dos resultados (T88), 2
-     * do desfecho (T80 e T82: o POST do desfecho e o GET da visita), 2 dos estudos do participante (T109) e 2 das
-     * visitas do participante (T115) e 3 do vínculo da conta do participante (T111). Cada PBI só atualiza este número.
+     * do desfecho (T80 e T82: o POST do desfecho e o GET da visita), 2 da retirada (T101: POST e GET), 2 dos estudos do
+     * participante (T109), 2 das visitas do participante (T115) e 3 do vínculo da conta do participante (T111). Cada PBI
+     * só atualiza este número.
      */
-    private static final int OPERACOES_ESPERADAS = 17;
+    private static final int OPERACOES_ESPERADAS = 19;
 
     /** Operações do vínculo da conta do participante (T111), implementadas no {@code ContaParticipanteController}. */
     private static final Set<String> OPERACOES_CONTA = Set.of(
@@ -77,8 +80,7 @@ class ContratoOpenApiSprint3Test {
 
     /**
      * Operações do app do participante descritas na T115 (próximas visitas e histórico de comparecimento): o contrato
-     * vem antes; a implementação é da T116, que liga os casos {@code @Disabled("T116")} e tira estas operações da
-     * lista de pendentes de {@link #contratoNaoPrometeEndpointInexistente()}.
+     * vem antes; a T116 as implementou, e {@link #meVisitasDoContratoExistemNaApi()} confere que existem na API.
      */
     private static final Set<String> OPERACOES_ME_VISITAS = Set.of(
             "GET /api/me/visitas/proximas",
@@ -95,6 +97,11 @@ class ContratoOpenApiSprint3Test {
     private static final Set<String> OPERACOES_RESULTADOS = Set.of(
             "GET /api/visitas-agendadas/{visitaAgendadaId}/resultados",
             "PUT /api/visitas-agendadas/{visitaAgendadaId}/resultados/{acaoId}");
+
+    /** Operações da retirada de participante (T101), implementadas na T103 ({@code RetiradaController}). */
+    private static final Set<String> OPERACOES_RETIRADA = Set.of(
+            "POST /api/participacoes/{participacaoId}/retirada",
+            "GET /api/participacoes/{participacaoId}/retirada");
 
     // Caminhos da Sprint 3 (nenhum colide com o regex do ContratoOpenApiTest da Sprint 2)
     private static final Pattern SPRINT3 = Pattern.compile(
@@ -136,10 +143,11 @@ class ContratoOpenApiSprint3Test {
     }
 
     @Test
-    @DisplayName("O contrato da Sprint 3 tem as operações previstas até aqui (agendamento da T74, histórico da T95, resultados da T88 e desfecho da T80/T82)")
+    @DisplayName("O contrato da Sprint 3 tem as operações previstas até aqui (agendamento da T74, histórico da T95, resultados da T88, desfecho da T80/T82 e retirada da T101)")
     void contratoTemAsOperacoesEsperadas() throws Exception {
         assertThat(operacoesDoContrato()).hasSize(OPERACOES_ESPERADAS).containsAll(OPERACOES_RESULTADOS)
-                .containsAll(OPERACOES_DESFECHO).containsAll(OPERACOES_ME).containsAll(OPERACOES_ME_VISITAS).containsAll(OPERACOES_CONTA).contains(
+                .containsAll(OPERACOES_DESFECHO).containsAll(OPERACOES_RETIRADA).containsAll(OPERACOES_ME)
+                .containsAll(OPERACOES_ME_VISITAS).containsAll(OPERACOES_CONTA).contains(
                 "GET /api/participacoes/{participacaoId}/visitas",
                 "POST /api/participacoes/{participacaoId}/visitas-agendadas",
                 "PUT /api/visitas-agendadas/{visitaAgendadaId}",
@@ -155,15 +163,13 @@ class ContratoOpenApiSprint3Test {
         faltandoNaApi.removeIf(operacao -> operacao.endsWith("/participacoes/{participacaoId}/historico"));
         faltandoNaApi.removeAll(OPERACOES_RESULTADOS);
         faltandoNaApi.removeAll(OPERACOES_DESFECHO);
-        // T115: as visitas do participante estão no contrato, mas só a T116 as implementa (apague esta linha lá)
-        faltandoNaApi.removeAll(OPERACOES_ME_VISITAS);
+        faltandoNaApi.removeAll(OPERACOES_RETIRADA);
         faltandoNaApi.removeAll(operacoesDaApi());
 
         assertThat(faltandoNaApi).as("operações do contrato que a API não tem").isEmpty();
     }
 
     @Test
-    @Disabled("T116: ligar quando as consultas de visitas do participante existirem no backend")
     @DisplayName("T115: as consultas de visitas do participante do contrato existem na API publicada")
     void meVisitasDoContratoExistemNaApi() throws Exception {
         Set<String> faltandoNaApi = new TreeSet<>(OPERACOES_ME_VISITAS);
@@ -173,7 +179,6 @@ class ContratoOpenApiSprint3Test {
     }
 
     @SuppressWarnings("unchecked")
-    @Disabled("T116: ligar quando os DTOs das consultas de visitas do participante existirem no backend")
     @ParameterizedTest(name = "T115: o schema {0} tem os mesmos campos do DTO")
     @ValueSource(strings = {"MinhaVisitaResponse", "ResumoComparecimentoResponse", "HistoricoMinhasVisitasResponse"})
     void schemaMeVisitasTemOsCamposDoDto(String nome) throws Exception {
@@ -652,5 +657,46 @@ class ContratoOpenApiSprint3Test {
         assertThat(registro.get("tags").get(0).asText()).isEqualTo("Resultados das avaliações");
         assertThat(registro.get("responses").has("200")).isTrue();
         assertThat(registro.get("responses").has("201")).isTrue();
+    }
+
+    @Test
+    @Disabled("T103")
+    @DisplayName("T103: os endpoints da retirada do contrato existem na API publicada")
+    void retiradaDoContratoExisteNaApi() throws Exception {
+        Set<String> faltandoNaApi = new TreeSet<>(OPERACOES_RETIRADA);
+        faltandoNaApi.removeAll(operacoesDaApi());
+
+        assertThat(faltandoNaApi).as("operações da retirada que a API não tem").isEmpty();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    @DisplayName("T101: os enums SituacaoParticipacao e SolicitanteRetirada do contrato têm os mesmos valores do backend")
+    void enumsDaRetiradaNoContratoIguaisAosDoBackend() throws Exception {
+        List<String> situacoes = (List<String>) schema("SituacaoParticipacao").get("enum");
+        List<String> solicitantes = (List<String>) schema("SolicitanteRetirada").get("enum");
+
+        assertThat(situacoes).containsExactly(
+                Arrays.stream(SituacaoParticipacao.values()).map(Enum::name).toArray(String[]::new));
+        assertThat(solicitantes).containsExactly(
+                Arrays.stream(SolicitanteRetirada.values()).map(Enum::name).toArray(String[]::new));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    @DisplayName("T101: o contrato declara os schemas RetiradaRequest e RetiradaResponse com limites e campos obrigatórios")
+    void contratoDeclaraSchemasDaRetirada() throws Exception {
+        Map<String, Object> request = schema("RetiradaRequest");
+        Map<String, Map<String, Object>> camposRequest = (Map<String, Map<String, Object>>) request.get("properties");
+        assertThat((List<String>) request.get("required"))
+                .containsExactlyInAnyOrder("motivo", "solicitante", "dataRetirada");
+        assertThat(camposRequest.get("motivo")).containsEntry("minLength", 5).containsEntry("maxLength", 500);
+
+        Map<String, Object> response = schema("RetiradaResponse");
+        Map<String, Object> camposResponse = (Map<String, Object>) response.get("properties");
+        assertThat(camposResponse.keySet()).containsExactlyInAnyOrder(
+                "id", "participacaoId", "motivo", "solicitante", "dataRetirada",
+                "registradoPor", "registradoEm", "visitasCanceladas");
+        assertThat((List<String>) response.get("required")).containsExactlyInAnyOrderElementsOf(camposResponse.keySet());
     }
 }
