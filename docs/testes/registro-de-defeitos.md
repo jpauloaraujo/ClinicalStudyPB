@@ -201,3 +201,16 @@ Resumo em 16/11/2026: **29 itens** registrados; **23 fechados**, **4 em verifica
 | **Determinístico?** | Sim |
 | **Correção prevista** | Gravar o e-mail em minúsculas no helper (`toLowerCase(Locale.ROOT)`); asserções inalteradas. Nenhum teste excluído |
 | **Estado** | **Fechado** em 22/11/2026: com o e-mail em minúsculas, os 4 testes passam (`MeIsolamentoEndpointTest` 4/4, `MeusEstudosServiceTest` 4/4, `MeEndpointTest` 11/11) |
+
+### D-T113-02 · `ParticipacaoEndpointTest.incluiEDevolveAParticipacao` falha no CI entre 00h e 03h UTC (data esperada no fuso errado)
+
+| Campo | Valor |
+|---|---|
+| **Data e rodada** | 22/11/2026 (23/11 01:26 UTC) · CI do PR #45, jobs "Backend (Java 21 + Maven)" e "Backend (testes no PostgreSQL)" (o resto passou; localmente, às 22h no fuso de Recife, o teste passou porque a JVM local está no mesmo fuso) |
+| **Task e requisito** | Sprint 2 (T62, teste antigo) exposto pela correção #41 (data de inclusão pelo relógio da aplicação); sem relação com os testes da T113 |
+| **Teste** | `ParticipacaoEndpointTest.incluiEDevolveAParticipacao:82` |
+| **Mensagem** | `JSON path "$.dataInclusao" expected:<2026-11-23> but was:<2026-11-22>` |
+| **Causa (confirmada no código)** | Erro do **teste**: espera `LocalDate.now()` (fuso da JVM, UTC no CI), enquanto o `ParticipacaoService`, desde o #41, grava a data com o `Clock` da aplicação (`app.fuso-horario`, padrão `America/Recife`). Entre 21h e 24h em Recife (00h a 03h UTC) os dois dias diferem. O código de produção está certo; o #41 corrigiu o serviço e o `ParticipacaoServiceTest`, mas não este teste de endpoint |
+| **Determinístico?** | Sim, dependente do horário da execução (janela de 3 h por dia) |
+| **Correção prevista** | Injetar o `Clock` da aplicação no teste e usar `LocalDate.now(clock)`; asserção e demais testes intactos. Outros `LocalDate.now()` dos testes (`CandidatoIntegrationTest:110`, `CandidatoServiceTest:131`, `VisitaAgendadaRepositoryTest:72`) não falharam e ficam fora desta correção, anotados como risco |
+| **Estado** | **Fechado** em 22/11/2026: com `LocalDate.now(clock)` o teste passa com a JVM em UTC (`-Duser.timezone=UTC`, 15 de 15) na janela em que falhava (agora, 01h UTC) |
