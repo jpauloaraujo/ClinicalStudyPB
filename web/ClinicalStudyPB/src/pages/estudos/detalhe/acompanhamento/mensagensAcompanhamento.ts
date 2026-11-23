@@ -112,3 +112,20 @@ export function interpretarErroDeResultado(falha: unknown): { geral: string | nu
   }
   return { geral: mensagem, campos: {} }
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Vínculo da conta do participante (T111, diálogo DialogoVincularConta)
+// ---------------------------------------------------------------------------------------------------------------
+
+const MENSAGENS_VINCULO: Record<string, string> = {
+  CONTA_JA_VINCULADA: 'Esta conta já está vinculada a outro participante. Escolha outra conta.',
+  CONTA_INATIVA: 'Esta conta está desativada. Escolha outra conta ou peça ao administrador para reativá-la.',
+  CONTA_NAO_E_PARTICIPANTE: 'Esta conta não é de um participante. Escolha uma conta de perfil participante.',
+  PARTICIPACAO_JA_TEM_CONTA: 'Este participante já tem uma conta vinculada.',
+  PARTICIPANTE_RETIRADO: 'O participante foi retirado do estudo e não pode receber uma conta.',
+}
+
+/** Mensagem para o código da regra do vínculo; sem código conhecido, cai na mensagem que o servidor enviou. */
+export function mensagemDeVinculo(codigo: string | undefined, mensagemDoServidor: string): string {
+  return (codigo && MENSAGENS_VINCULO[codigo]) || mensagemDoServidor
+}

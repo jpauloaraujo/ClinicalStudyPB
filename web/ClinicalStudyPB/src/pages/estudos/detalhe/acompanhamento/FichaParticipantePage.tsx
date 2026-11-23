@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { Link, useParams } from 'react-router'
+import { contaParticipanteApi } from '../../../../api/contaParticipante'
 import { historicoApi } from '../../../../api/historico'
 import { useUsuarioLogado } from '../../../../contexts/sessao'
 import { useCarregamento } from '../../../../hooks/useCarregamento'
@@ -19,6 +20,20 @@ export function FichaParticipantePage() {
   const { participacaoId = '' } = useParams()
   const carregar = useCallback(() => historicoApi.buscar(participacaoId), [participacaoId])
   const { dados: historico, erro, statusErro, carregando, recarregar } = useCarregamento(carregar)
+  // T111: a conta vinculada vem de outra consulta; 'sem conta' (404) chega como null e nunca derruba a ficha
+  const carregarConta = useCallback(() => contaParticipanteApi.buscar(participacaoId), [participacaoId])
+  const {
+    dados: contaVinculada,
+    erro: erroDaConta,
+    carregando: carregandoConta,
+    recarregar: recarregarConta,
+  } = useCarregamento(carregarConta)
+  // undefined = ainda não se sabe (carregando ou falha ao consultar): a área não oferece o vínculo nesse caso
+  const conta = carregandoConta || erroDaConta ? undefined : (contaVinculada ?? null)
+  const recarregarTudo = useCallback(() => {
+    recarregar()
+    recarregarConta()
+  }, [recarregar, recarregarConta])
 
   if (carregando) {
     return <p className="carregando">Carregando histórico do participante…</p>
@@ -65,6 +80,17 @@ export function FichaParticipantePage() {
         </Link>
       </div>
       <p className="texto-suave">Incluído em {formatarData(participante.dataInclusao)}</p>
+      {conta && (
+        <p className="texto-suave">
+          Conta vinculada: {conta.nome} ({conta.email})
+        </p>
+      )}
+      {conta === null && <p className="texto-suave">Nenhuma conta vinculada ao participante.</p>}
+      {erroDaConta && !carregandoConta && (
+        <p className="alerta alerta--erro" role="alert">
+          Não foi possível consultar a conta vinculada. {erroDaConta}
+        </p>
+      )}
 
       <section className="secao" aria-label="Resumo do histórico">
         <h3>Resumo do histórico</h3>
@@ -83,7 +109,7 @@ export function FichaParticipantePage() {
         </p>
       </section>
 
-      <AreaAcoesParticipante participacao={participante} perfil={perfil} aoAlterar={recarregar} />
+      <AreaAcoesParticipante participacao={participante} perfil={perfil} conta={conta} aoAlterar={recarregarTudo} />
 
       <section className="secao" aria-label="Visitas do participante">
         <h3>Visitas do participante</h3>
