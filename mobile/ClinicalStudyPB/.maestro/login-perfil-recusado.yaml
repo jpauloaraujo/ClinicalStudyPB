@@ -1,0 +1,35 @@
+# T114 · RQ-T114-03: o app é exclusivo do participante; outro perfil é recusado com mensagem clara (RF03 no mobile).
+# Usa o coordenador do seed V2 (existe em todos os perfis do backend).
+#
+# Executar:   maestro test .maestro/login-perfil-recusado.yaml
+# Mesmos pré-requisitos do fluxo-participante.yaml.
+appId: host.exp.exponent
+env:
+  EXPO_URL: exp://10.0.2.2:8082
+  EMAIL: coordenador@clinicalstudy.test
+  SENHA: senha-de-teste
+---
+- launchApp:
+    clearState: true
+- openLink: ${EXPO_URL}
+
+- extendedWaitUntil:
+    visible: "Aplicativo do participante"
+    timeout: 120000
+- tapOn:
+    id: campo-email
+- inputText: ${EMAIL}
+- tapOn:
+    id: campo-senha
+- inputText: ${SENHA}
+- hideKeyboard
+- tapOn:
+    id: botao-entrar
+
+# Recusado: continua no login, com a mensagem e sem abrir as abas
+- extendedWaitUntil:
+    visible: ".*exclusivo para participantes.*"
+    timeout: 20000
+- assertVisible: "Entrar"
+- assertNotVisible: "Meus estudos"
+- takeScreenshot: rf17-login-perfil-recusado

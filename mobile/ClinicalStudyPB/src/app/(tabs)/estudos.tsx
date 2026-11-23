@@ -108,6 +108,7 @@ function CartaoDoEstudo({ estudo, aoAbrir }: { estudo: MeuEstudo; aoAbrir: () =>
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={descricaoDoEstudo(estudo)}
+      testID="cartao-estudo"
       onPress={aoAbrir}
       style={({ pressed }) => [local.cartao, pressed && { opacity: 0.7 }]}
     >

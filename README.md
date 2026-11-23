@@ -151,6 +151,7 @@ Diagramas de arquitetura (Mermaid) — T01 / T03 (ver [docs/sprint1/arquitetura.
 | RF10 | Consentimento simulado | Web | ✅ Concluído (Sprint 2) |
 | RF11 | Inclusão de participantes e limite de vagas | Web | ✅ Concluído (Sprint 2) |
 | RF15 | Histórico do participante (ficha com resumo e visitas) e fluxo de acompanhamento | Web | ✅ Concluído (Sprint 3; E2E do fluxo na T99) |
+| RF17 | App do participante: login, vínculo da conta pelo coordenador e **Meus estudos** (lista e detalhe) | Mobile (e web para o vínculo) | 🟡 Sprint 3: código e testes prontos; falta rodar o E2E Maestro em emulador (T114) |
 | RF12 – RF14, RF16 – RF22 | Acompanhamento, app do participante e monitoramento | Web/Mobile | ⏳ Release 2 e 3 (RF12 a RF14 em andamento na Sprint 3) |
 
 | RF | Comportamento | Casos de erro e validação |
@@ -167,6 +168,7 @@ Diagramas de arquitetura (Mermaid) — T01 / T03 (ver [docs/sprint1/arquitetura.
 | RF10 | Na ficha, o coordenador lê o termo simulado (TCLE-SIMULADO), confirma e registra; depois só o comprovante (data, responsável e versão do termo) é exibido | Botão desabilitado até confirmar; segundo registro → `CONSENTIMENTO_DUPLICADO`; data futura recusada; fora do recrutamento ou para candidato incluído o formulário não aparece |
 | RF11 | A seção **Inclusão** mostra as quatro pré-condições (estudo em recrutamento, elegível, consentido e vaga disponível) e inclui com confirmação; a aba **Participantes** lista os incluídos e o contador "X de N vagas" | Cada pré-condição pendente explica o motivo e mantém o botão desabilitado; o servidor ainda valida: `CANDIDATO_NAO_ELEGIVEL`, `CONSENTIMENTO_AUSENTE`, `VAGAS_ESGOTADAS` (inclusive sob requisições simultâneas, pelo bloqueio do estudo) |
 | RF15 | Na ficha do participante (aba **Participantes**), o pesquisador e o coordenador veem o resumo (realizadas, ausentes, canceladas e pendentes) e todas as visitas previstas na ordem do dia previsto, com situação, datas, motivo e os resultados das avaliações; só o coordenador tem o atalho para o agendamento | Participante inexistente → 404 com o caminho de volta; estudo sem visitas previstas mostra a lista vazia e o resumo zerado; administrador e participante recebem `403` na API |
+| RF17 | O participante entra no app com a conta que o coordenador vinculou a ele na ficha do participante (web), vê **Meus estudos** (título, status e data de inclusão de cada estudo, com atualização por arrastar) e abre o detalhe (objetivo, responsável, período, situação); "Sair" no Perfil encerra a sessão. **Só o perfil participante entra no app** (RF02 e RF03 no mobile) e ele só vê as próprias participações (`/api/me/**`; estudo de outro participante responde 404) | Credencial inválida; perfil administrador, pesquisador ou coordenador → "Este aplicativo é exclusivo para participantes. Use a aplicação web."; sem conexão; lista vazia ("Você ainda não está incluído em nenhum estudo."); estudo inexistente ou de outro ("Estudo não encontrado."); vínculo: conta de outro perfil, inativa, já vinculada ou participação que já tem conta → 409 com o código da regra. Capturas (`rf17-*`) entram em `docs/imagens/sprint3/` quando o E2E rodar em emulador |
 
 Todas as telas dos perfis web só mostram o que o perfil pode fazer, e a API responde `403` quando o perfil não tem permissão.
 
@@ -508,7 +510,8 @@ Comando para rodar exclusivamente os testes de autenticação e segurança:
 
 - **Web, componentes:** Vitest + Testing Library (`npm test` em `web/ClinicalStudyPB`, 133 testes): detalhe do estudo com abas (T39), indicador e avanço de estado (T43), critérios (T46), visitas (T49), candidatos e ficha com a avaliação (T52 e T55), consentimento (T58), inclusão e participantes (T61), o `AuthContext` (login, sessão e logout), o conversor de erros e as telas rodando sobre o Mock Service Worker (T40). Os testes E2E ficam em `e2e/` e **não** rodam no Vitest.
 - **Web, E2E:** Playwright, descrito na próxima seção.
-- **Mobile:** ainda sem testes automatizados; na CI passa por lint e verificação de tipos. O E2E do app mobile está previsto para a Sprint 3.
+- **Mobile, componentes:** Jest + Testing Library (`npm test` em `mobile/ClinicalStudyPB`, 132 testes na Sprint 3: login, sessão, cliente HTTP, Meus estudos e detalhe); na CI roda com lint e verificação de tipos.
+- **Mobile, E2E:** fluxos Maestro em `mobile/ClinicalStudyPB/.maestro/` (login, Meus estudos, detalhe e sair; recusa de outro perfil), executados **localmente em emulador** (sem CI com emulador). Como rodar: [README do app](mobile/ClinicalStudyPB/README.md#e2e-com-maestro) e [evidência](docs/sprint3/e2e-mobile-evidencia.md).
 
 ### Testes E2E (Playwright, T65)
 
