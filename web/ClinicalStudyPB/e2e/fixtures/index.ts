@@ -9,6 +9,7 @@ import { InicioPage } from '../pages/InicioPage'
 import { LoginPage } from '../pages/LoginPage'
 import { ParticipantesPage } from '../pages/ParticipantesPage'
 import { UsuariosPage } from '../pages/UsuariosPage'
+import { VisitaAgendadaPage } from '../pages/VisitaAgendadaPage'
 import { VisitasPage } from '../pages/VisitasPage'
 import type { PerfilE2E } from '../support/env'
 import { caminhoSessao } from '../support/sessao'
@@ -28,6 +29,7 @@ type Fixtures = {
   paginaCandidatos: CandidatosPage
   paginaFicha: FichaCandidatoPage
   paginaParticipantes: ParticipantesPage
+  paginaVisitaAgendada: VisitaAgendadaPage
 }
 
 // `test` da aplicação: acrescenta os page objects. Novos page objects entram aqui.
@@ -64,6 +66,9 @@ export const test = base.extend<Fixtures>({
   },
   paginaParticipantes: async ({ page }, usar) => {
     await usar(new ParticipantesPage(page))
+  },
+  paginaVisitaAgendada: async ({ page }, usar) => {
+    await usar(new VisitaAgendadaPage(page))
   },
 })
 
