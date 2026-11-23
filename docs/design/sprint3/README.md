@@ -181,3 +181,4 @@ Cada dia pertence a um único PBI; ao fim do segundo dia de cada janela, o PBI e
 3. Escreva os testes **junto com o código**; cada PBI traz a sua task de testes de backend (e de componente) e a de E2E.
 4. Ao terminar a janela, faça a passagem de bastão (tabela acima), zere o Remaining Work no Azure Boards e avise o dono do PBI seguinte.
 5. Se o Planning (T94) ou a implementação mudar algo, corrija a seção 1 das convenções e o documento da task afetada **no mesmo dia**.
+ 
