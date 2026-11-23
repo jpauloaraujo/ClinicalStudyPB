@@ -64,7 +64,8 @@ Fluxos de ponta a ponta do app, com o [Maestro](https://maestro.mobile.dev), em 
 
 | Fluxo | O que faz |
 |---|---|
-| `.maestro/fluxo-participante.yaml` | Login com `participante@clinicalstudy.test`, aba **Estudos**, detalhe do estudo "Demo - Acompanhamento de participantes" e **Sair** pelo Perfil (volta ao login) |
+| `.maestro/fluxo-participante.yaml` | Login com `participante@clinicalstudy.test`, aba **Estudos**, detalhe do estudo "Demo - Acompanhamento de participantes", aba **Visitas** (próximas, detalhe da visita e histórico com o resumo "comparecimento: 1 de 1 visitas") e **Sair** pelo Perfil (volta ao login) |
+| `.maestro/fluxo-visitas.yaml` | (T121, opcional) só as visitas: próximas, detalhe e histórico com o resumo |
 | `.maestro/login-perfil-recusado.yaml` | Login com `coordenador@clinicalstudy.test`: mensagem "exclusivo para participantes", sem abrir as abas |
 
 Os dois começam com `launchApp: clearState` (repetíveis) e usam texto visível e `testID` (`campo-email`, `campo-senha`, `botao-entrar`, `cartao-estudo`, `botao-sair`), nunca coordenadas.
