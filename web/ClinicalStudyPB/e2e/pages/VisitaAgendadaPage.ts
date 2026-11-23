@@ -36,6 +36,19 @@ export class VisitaAgendadaPage {
     await this.expectTelaDaVisita()
   }
 
+  /**
+   * Volta a página (e qualquer área rolada) ao topo. Usado antes das capturas de página inteira: com a página rolada,
+   * o cabeçalho fixo aparece no meio da imagem.
+   */
+  async rolarParaOTopo() {
+    await this.page.evaluate(() => {
+      window.scrollTo(0, 0)
+      document.querySelectorAll<HTMLElement>('*').forEach((elemento) => {
+        if (elemento.scrollTop > 0) elemento.scrollTop = 0
+      })
+    })
+  }
+
   async abrirAbaAvaliacoes() {
     await this.page.getByRole('navigation', { name: 'Seções da visita' }).getByRole('button', { name: 'Avaliações' }).click()
     await expect(this.regiaoAvaliacoes()).toBeVisible()

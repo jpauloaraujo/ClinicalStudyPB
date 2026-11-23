@@ -97,12 +97,14 @@ test.describe('resultados das avaliações da visita (RF14)', () => {
       await pesquisador.visita.expectSelo(DOR, 'pendente')
       await pesquisador.visita.expectContador(1, 2)
       await pesquisador.visita.expectUltimaAlteracao(PRESSAO)
+      await pesquisador.visita.rolarParaOTopo()
       await capturar(pesquisador.pagina, 'rf14-resultado-registrado')
     })
 
     await test.step('Pesquisador: edita o valor e a alteração fica gravada', async () => {
       await pesquisador.visita.salvarResultado(PRESSAO, '130/85')
       await pesquisador.visita.expectContador(1, 2)
+      await pesquisador.visita.rolarParaOTopo()
       await capturar(pesquisador.pagina, 'rf14-resultado-editado')
 
       // Recarregada a tela, o valor editado continua lá, e o servidor confirma: um resultado, com o valor novo
@@ -127,6 +129,7 @@ test.describe('resultados das avaliações da visita (RF14)', () => {
       await coordenador.visita.expectContador(1, 2)
       await coordenador.visita.expectResultadoSomenteLeitura(PRESSAO, '130/85', 'mmHg')
       await coordenador.visita.expectSemResultadoSomenteLeitura(DOR)
+      await coordenador.visita.rolarParaOTopo()
       await capturar(coordenador.pagina, 'rf14-resultado-leitura-coordenador')
     })
 
@@ -159,6 +162,7 @@ test.describe('resultados das avaliações da visita (RF14)', () => {
       await pesquisador.visita.tentarSalvarComValorVazio(PRESSAO)
       await pesquisador.visita.expectErroDeValorObrigatorio(PRESSAO)
       await pesquisador.visita.expectContador(1, 2)
+      await pesquisador.visita.rolarParaOTopo()
       await capturar(pesquisador.pagina, 'rf14-resultado-erro-valor')
     })
 
