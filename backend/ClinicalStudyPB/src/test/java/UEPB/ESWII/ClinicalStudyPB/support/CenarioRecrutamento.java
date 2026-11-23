@@ -175,4 +175,46 @@ public final class CenarioRecrutamento {
                 .andExpect(status().isOk());
         return visitaAgendada;
     }
+
+    // ---- T78 (RF12): apoio aos testes do agendamento; só acrescenta, não altera nenhuma assinatura anterior ----
+
+    /** Visita prevista com a tolerância pedida (a janela de agendamento é o dia previsto mais ou menos a tolerância). */
+    public static String visitaPrevista(MockMvc mvc, String token, String estudoId, String nome, int dia,
+            int tolerancia) throws Exception {
+        return id(enviar(mvc, "POST", "/api/estudos/" + estudoId + "/visitas", token,
+                "{\"nome\":\"" + nome + "\",\"diaPrevisto\":" + dia + ",\"tolerancia\":" + tolerancia + "}")
+                .andExpect(status().isCreated()));
+    }
+
+    /** Estudo em recrutamento e suas duas visitas previstas: a triagem (dia 0, tolerância 0) e o retorno (dia 5 ± 2). */
+    public record EstudoParaAgendamento(String estudoId, String triagemId, String retornoId) {
+    }
+
+    /**
+     * Estudo em recrutamento com a triagem (dia 0, tolerância 0) e o retorno (dia 5, tolerância 2). Para um participante
+     * incluído hoje, a janela do retorno vai de hoje + 3 a hoje + 7 e a data sugerida é hoje + 5, sempre futura.
+     */
+    public static EstudoParaAgendamento estudoParaAgendamento(MockMvc mvc, String tokenPesquisador, int limite)
+            throws Exception {
+        String estudo = criarEstudo(mvc, tokenPesquisador, limite);
+        criarCriterio(mvc, tokenPesquisador, estudo, "INCLUSAO", "Idade adulta", "Maior de 18 anos");
+        criarCriterio(mvc, tokenPesquisador, estudo, "EXCLUSAO", "Gestante", "Em gestação");
+        String triagem = visitaPrevista(mvc, tokenPesquisador, estudo, "Triagem", 0, 0);
+        String retorno = visitaPrevista(mvc, tokenPesquisador, estudo, "Retorno", 5, 2);
+        avancar(mvc, tokenPesquisador, estudo, "RECRUTAMENTO").andExpect(status().isOk());
+        return new EstudoParaAgendamento(estudo, triagem, retorno);
+    }
+
+    /** Mesmo que {@link #incluirParticipante}: candidato aprovado, com consentimento, incluído hoje. */
+    public static String participanteIncluido(MockMvc mvc, String tokenCoordenador, String estudoId, String nome)
+            throws Exception {
+        return incluirParticipante(mvc, tokenCoordenador, estudoId, nome);
+    }
+
+    /** Agenda com data e hora completas (sem exigir o 201), para testar também os erros. */
+    public static ResultActions agendar(MockMvc mvc, String tokenCoordenador, String participacaoId,
+            String visitaPlanejadaId, String dataHora) throws Exception {
+        return enviar(mvc, "POST", "/api/participacoes/" + participacaoId + "/visitas-agendadas", tokenCoordenador,
+                "{\"visitaPlanejadaId\":\"" + visitaPlanejadaId + "\",\"dataHora\":\"" + dataHora + "\"}");
+    }
 }
