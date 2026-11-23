@@ -14,7 +14,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -36,6 +35,8 @@ import UEPB.ESWII.ClinicalStudyPB.controller.dto.HistoricoParticipanteResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.ResultadoAtividadeResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.ResultadoRequest;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.ResultadosDaVisitaResponse;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.RetiradaRequest;
+import UEPB.ESWII.ClinicalStudyPB.controller.dto.RetiradaResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.VisitaAgendadaRequest;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.VisitaAgendadaResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.VisitaDoParticipanteResponse;
@@ -660,13 +661,47 @@ class ContratoOpenApiSprint3Test {
     }
 
     @Test
-    @Disabled("T103")
     @DisplayName("T103: os endpoints da retirada do contrato existem na API publicada")
     void retiradaDoContratoExisteNaApi() throws Exception {
         Set<String> faltandoNaApi = new TreeSet<>(OPERACOES_RETIRADA);
         faltandoNaApi.removeAll(operacoesDaApi());
 
         assertThat(faltandoNaApi).as("operações da retirada que a API não tem").isEmpty();
+    }
+
+    @SuppressWarnings("unchecked")
+    @ParameterizedTest(name = "T103: o schema {0} tem os mesmos campos do DTO do backend")
+    @ValueSource(strings = {"RetiradaRequest", "RetiradaResponse"})
+    void schemaDaRetiradaTemOsCamposDoDto(String nome) throws Exception {
+        Class<?> dto = nome.equals("RetiradaRequest") ? RetiradaRequest.class : RetiradaResponse.class;
+        Set<String> camposDoDto = new TreeSet<>();
+        Arrays.stream(dto.getRecordComponents()).forEach(c -> camposDoDto.add(c.getName()));
+
+        Set<String> camposDoContrato = new TreeSet<>(((Map<String, Object>) schema(nome).get("properties")).keySet());
+
+        assertThat(camposDoContrato).as("campos do schema " + nome).isEqualTo(camposDoDto);
+    }
+
+    @Test
+    @DisplayName("T103: o Swagger publica POST e GET da retirada com a tag e respostas do contrato")
+    void swaggerPublicaARetiradaComATagDoContrato() throws Exception {
+        String json = mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode retirada = new ObjectMapper().readTree(json).get("paths")
+                .get("/api/participacoes/{participacaoId}/retirada");
+
+        JsonNode post = retirada.get("post");
+        JsonNode get = retirada.get("get");
+        assertThat(post.get("tags").get(0).asText()).isEqualTo("Retirada");
+        assertThat(get.get("tags").get(0).asText()).isEqualTo("Retirada");
+        assertThat(post.get("responses").has("201")).isTrue();
+        assertThat(post.get("responses").has("400")).isTrue();
+        assertThat(post.get("responses").has("403")).isTrue();
+        assertThat(post.get("responses").has("404")).isTrue();
+        assertThat(post.get("responses").has("409")).isTrue();
+        assertThat(get.get("responses").has("200")).isTrue();
+        assertThat(get.get("responses").has("403")).isTrue();
+        assertThat(get.get("responses").has("404")).isTrue();
     }
 
     @SuppressWarnings("unchecked")
