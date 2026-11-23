@@ -1,0 +1,73 @@
+# T114 · Fluxo E2E base do app do participante (RF17, RF02 e RF03 no mobile).
+# Login com o participante de demonstração -> aba Estudos -> detalhe de um estudo -> sair pelo Perfil.
+#
+# Pré-requisitos (README do app, seção "E2E com Maestro"):
+#   - backend no ar com o perfil `demo` (participante@clinicalstudy.test vinculado ao P1, T111);
+#   - Expo rodando (`npm start`, porta 8082) com EXPO_PUBLIC_API_URL=http://10.0.2.2:8081 e um emulador Android com o Expo Go.
+#
+# Executar:   maestro test .maestro/fluxo-participante.yaml
+# Outro endereço do Expo (ex.: celular): maestro test -e EXPO_URL=exp://192.168.0.10:8082 .maestro/fluxo-participante.yaml
+#
+# Sem coordenadas de tela: só texto visível e identificadores (testID). Sempre começa do zero (clearState).
+appId: host.exp.exponent
+env:
+  EXPO_URL: exp://10.0.2.2:8082
+  EMAIL: participante@clinicalstudy.test
+  SENHA: senha-de-teste
+  ESTUDO: Demo - Acompanhamento de participantes
+---
+- launchApp:
+    clearState: true
+- openLink: ${EXPO_URL}
+
+# 1. Login (a primeira abertura do Expo Go carrega o pacote JS: espera longa)
+- extendedWaitUntil:
+    visible: "Aplicativo do participante"
+    timeout: 120000
+- takeScreenshot: rf17-login-mobile
+- tapOn:
+    id: campo-email
+- inputText: ${EMAIL}
+- tapOn:
+    id: campo-senha
+- inputText: ${SENHA}
+- hideKeyboard
+- tapOn:
+    id: botao-entrar
+
+# 2. Entrou: abas visíveis; abrir Meus estudos
+- extendedWaitUntil:
+    visible: "Estudos"
+    timeout: 30000
+- tapOn: "Estudos"
+- assertVisible: "Meus estudos"
+- extendedWaitUntil:
+    visible: ${ESTUDO}
+    timeout: 20000
+- assertVisible: "Em execução"
+- takeScreenshot: rf17-meus-estudos
+
+# 3. Detalhe do estudo
+- tapOn:
+    id: cartao-estudo
+    index: 0
+- extendedWaitUntil:
+    visible: "Objetivo"
+    timeout: 20000
+- assertVisible: ${ESTUDO}
+- assertVisible: "Ativo"
+- takeScreenshot: rf17-detalhe-estudo
+
+# 4. Voltar para a lista e sair pelo Perfil
+- back
+- assertVisible: "Meus estudos"
+- tapOn: "Perfil"
+- assertVisible: ${EMAIL}
+- tapOn:
+    id: botao-sair
+
+# 5. Voltou ao login (sessão encerrada)
+- extendedWaitUntil:
+    visible: "Aplicativo do participante"
+    timeout: 20000
+- assertVisible: "Entrar"

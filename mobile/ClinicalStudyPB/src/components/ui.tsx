@@ -20,11 +20,14 @@ type BotaoProps = {
   onPress: () => void;
   variante?: 'primario' | 'secundario' | 'perigo';
   desabilitado?: boolean;
+  /** Identificador estável para os fluxos E2E (Maestro); não muda o comportamento. */
+  testID?: string;
 };
 
-export function Botao({ rotulo, onPress, variante = 'primario', desabilitado }: BotaoProps) {
+export function Botao({ rotulo, onPress, variante = 'primario', desabilitado, testID }: BotaoProps) {
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       onPress={onPress}
       disabled={desabilitado}

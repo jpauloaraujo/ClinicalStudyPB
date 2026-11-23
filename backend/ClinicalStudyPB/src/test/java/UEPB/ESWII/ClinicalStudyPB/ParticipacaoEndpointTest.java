@@ -12,6 +12,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -37,6 +38,10 @@ import UEPB.ESWII.ClinicalStudyPB.support.TokenDeTeste;
 @AutoConfigureMockMvc
 @Transactional
 class ParticipacaoEndpointTest {
+
+    /** Relógio da aplicação (fuso do centro): o serviço grava a data de inclusão com ele, não com o fuso da JVM (D-T113-02). */
+    @Autowired
+    private Clock clock;
 
     @Autowired
     private MockMvc mvc;
@@ -79,14 +84,16 @@ class ParticipacaoEndpointTest {
                 .andExpect(jsonPath("$.codigo").value("CAND-001"))
                 .andExpect(jsonPath("$.nomeFicticio").value("Candidata Inclusao"))
                 .andExpect(jsonPath("$.estudoId").value(estudo))
-                .andExpect(jsonPath("$.dataInclusao").value(LocalDate.now().toString()))
-                .andExpect(jsonPath("$.incluidoPor").isNotEmpty());
+                .andExpect(jsonPath("$.dataInclusao").value(LocalDate.now(clock).toString()))
+                .andExpect(jsonPath("$.incluidoPor").isNotEmpty())
+                .andExpect(jsonPath("$.situacao").value("ATIVO"));
 
         enviar(mvc, "GET", "/api/candidatos/" + candidato, coordenador, null)
                 .andExpect(jsonPath("$.situacao").value("INCLUIDO"));
         enviar(mvc, "GET", url(), pesquisador, null).andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].candidatoId").value(candidato));
+                .andExpect(jsonPath("$[0].candidatoId").value(candidato))
+                .andExpect(jsonPath("$[0].situacao").value("ATIVO"));
     }
 
     @Test

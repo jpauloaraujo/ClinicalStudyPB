@@ -1,121 +1,149 @@
-import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Cartao, EmBreve, Tela, estilos } from '@/components/ui';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { mensagemDoErro } from '@/api/cliente';
+import { visitasApi, type MinhaVisita } from '@/api/visitas';
+import { CartaoVisita } from '@/components/CartaoVisita';
+import { Carregando } from '@/components/Carregando';
+import { EstadoErro } from '@/components/EstadoErro';
+import { EstadoVazio } from '@/components/EstadoVazio';
 import { cores, espaco, raio } from '@/components/tema';
-import { proximasVisitasMock } from '@/mocks/visitasMock';
-import type { VisitaParticipante } from '@/types/visitas';
+import { Botao, estilos } from '@/components/ui';
 
-function formatarDataHora(isoString: string): string {
-  const data = new Date(isoString);
-  if (Number.isNaN(data.getTime())) {
-    return isoString;
-  }
+export const TEXTO_SEM_PROXIMAS = 'Nenhuma visita agendada.';
 
-  return data.toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+type Parte = 'proximas' | 'historico';
 
+// M05 Visitas: seletor de duas partes. Próximas é a padrão; o histórico de comparecimento é a T118.
 export default function VisitasScreen() {
-  const proximasVisitas = useMemo(() => {
-    const agoraMs = Date.now();
-
-    return proximasVisitasMock
-      .filter((visita: VisitaParticipante) => {
-        const timestamp = new Date(visita.dataHora).getTime();
-        return (
-          visita.situacao === 'AGENDADA' &&
-          !Number.isNaN(timestamp) &&
-          timestamp >= agoraMs
-        );
-      })
-      .sort(
-        (a, b) => new Date(a.dataHora).getTime() - new Date(b.dataHora).getTime()
-      );
-  }, []);
+  const { estudoId } = useLocalSearchParams<{ estudoId?: string }>();
+  const [parte, setParte] = useState<Parte>('proximas');
+  const filtro = estudoId ? estudoId : undefined;
 
   return (
-    <Tela titulo="Visitas">
-      <Text style={locais.secaoTitulo}>Próximas visitas</Text>
-
-      {proximasVisitas.length === 0 ? (
-        <Cartao>
-          <Text style={estilos.textoSuave}>
-            Nenhuma visita agendada a partir de hoje.
-          </Text>
-        </Cartao>
+    <View style={estilos.tela}>
+      <View style={local.seletor} accessibilityRole="tablist">
+        <Segmento id="proximas" rotulo="Próximas" ativo={parte === 'proximas'} aoTocar={() => setParte('proximas')} />
+        <Segmento id="historico" rotulo="Histórico" ativo={parte === 'historico'} aoTocar={() => setParte('historico')} />
+      </View>
+      {parte === 'proximas' ? (
+        <ListaProximas key={filtro ?? "todas"} estudoId={filtro} />
       ) : (
-        proximasVisitas.map((visita) => (
-          <Cartao key={visita.id}>
-            <View style={locais.cabecalho}>
-              <View style={locais.badge}>
-                <Text style={estilos.etiqueta}>{visita.situacao}</Text>
-              </View>
-              <Text style={estilos.textoSuave}>
-                {formatarDataHora(visita.dataHora)}
-              </Text>
-            </View>
-
-            <Text style={locais.nomeVisita}>{visita.nomeVisita}</Text>
-            <Text style={estilos.textoSuave}>{visita.estudo}</Text>
-
-            <View style={locais.atividadesBox}>
-              <Text style={locais.atividadesTitulo}>Atividades previstas</Text>
-              {visita.atividadesPrevistas.map((atividade, indice) => (
-                <Text key={`${visita.id}-atv-${indice}`} style={estilos.texto}>
-                  • {atividade}
-                </Text>
-              ))}
-            </View>
-          </Cartao>
-        ))
+        <View style={estilos.conteudo}>
+          <EstadoVazio titulo="O histórico de comparecimento chega na T118." />
+        </View>
       )}
-
-      <EmBreve
-        requisito="RF19"
-        texto="Você poderá confirmar presença ou pedir reagendamento de cada visita."
-      />
-    </Tela>
+    </View>
   );
 }
 
-const locais = StyleSheet.create({
-  secaoTitulo: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: cores.texto,
-  },
-  cabecalho: {
+function Segmento({ id, rotulo, ativo, aoTocar }: { id: string; rotulo: string; ativo: boolean; aoTocar: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="tab"
+      accessibilityState={{ selected: ativo }}
+      testID={`segmento-${id}`}
+      onPress={aoTocar}
+      style={[local.segmento, ativo && local.segmentoAtivo]}
+    >
+      <Text style={[local.segmentoTexto, ativo && local.segmentoTextoAtivo]}>{rotulo}</Text>
+    </Pressable>
+  );
+}
+
+// Próximas visitas do participante logado, na ordem da API (da mais próxima para a mais distante)
+export function ListaProximas({ estudoId }: { estudoId?: string }) {
+  const router = useRouter();
+  const [visitas, setVisitas] = useState<MinhaVisita[] | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [atualizando, setAtualizando] = useState(false);
+  const ativo = useRef(true);
+
+  const carregar = useCallback(() => {
+    return visitasApi
+      .proximas(estudoId)
+      .then((lista) => {
+        if (!ativo.current) return;
+        setVisitas(lista);
+        setErro(null);
+      })
+      .catch((falha) => {
+        if (ativo.current) setErro(mensagemDoErro(falha));
+      });
+  }, [estudoId]);
+
+  useEffect(() => {
+    ativo.current = true;
+    carregar();
+    return () => {
+      ativo.current = false;
+    };
+  }, [carregar]);
+
+  const atualizar = useCallback(() => {
+    setAtualizando(true);
+    carregar().finally(() => {
+      if (ativo.current) setAtualizando(false);
+    });
+  }, [carregar]);
+
+  const tentarDeNovo = useCallback(() => {
+    carregar();
+  }, [carregar]);
+
+  const abrir = (visita: MinhaVisita) =>
+    router.push({ pathname: '/visitas/[visitaId]', params: { visitaId: visita.id, visita: JSON.stringify(visita) } });
+
+  const estadoSemLista =
+    visitas === null && erro === null ? (
+      <Carregando />
+    ) : visitas === null && erro !== null ? (
+      <EstadoErro mensagem={erro} aoTentarDeNovo={tentarDeNovo} />
+    ) : erro === null ? (
+      <EstadoVazio titulo={TEXTO_SEM_PROXIMAS} />
+    ) : undefined;
+
+  return (
+    <FlatList
+      testID="lista-proximas"
+      data={visitas ?? []}
+      keyExtractor={(visita) => visita.id}
+      contentContainerStyle={estilos.conteudo}
+      refreshControl={<RefreshControl refreshing={atualizando} onRefresh={atualizar} />}
+      ListHeaderComponent={
+        <View style={local.cabecalho}>
+          {estudoId ? (
+            <View style={local.filtro}>
+              <Text style={estilos.texto}>
+                {visitas && visitas.length > 0 ? `Estudo: ${visitas[0].estudoTitulo}` : 'Filtrado por um estudo'}
+              </Text>
+              <Botao rotulo="Ver todas" variante="secundario" onPress={() => router.setParams({ estudoId: '' })} />
+            </View>
+          ) : null}
+          {erro && visitas !== null ? <EstadoErro mensagem={erro} aoTentarDeNovo={tentarDeNovo} /> : null}
+        </View>
+      }
+      renderItem={({ item }) => <CartaoVisita visita={item} aoAbrir={() => abrir(item)} />}
+      ListEmptyComponent={estadoSemLista}
+    />
+  );
+}
+
+const local = StyleSheet.create({
+  seletor: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: espaco[2],
-  },
-  badge: {
-    backgroundColor: cores.primariaFundo,
-    paddingHorizontal: espaco[2],
-    paddingVertical: espaco[1],
+    margin: espaco[4],
+    marginBottom: 0,
+    borderWidth: 1,
+    borderColor: cores.borda,
     borderRadius: raio,
+    overflow: 'hidden',
+    backgroundColor: cores.superficie,
   },
-  nomeVisita: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: cores.texto,
-  },
-  atividadesBox: {
-    marginTop: espaco[1],
-    paddingTop: espaco[2],
-    borderTopWidth: 1,
-    borderTopColor: cores.borda,
-    gap: espaco[1],
-  },
-  atividadesTitulo: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: cores.texto,
-  },
+  segmento: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  segmentoAtivo: { backgroundColor: cores.primariaFundo },
+  segmentoTexto: { fontSize: 16, color: cores.textoSuave, fontWeight: '600' },
+  segmentoTextoAtivo: { color: cores.primaria },
+  cabecalho: { gap: espaco[3] },
+  filtro: { gap: espaco[2] },
 });
