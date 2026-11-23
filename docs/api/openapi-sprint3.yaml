@@ -3,7 +3,7 @@
 # evitar conflito de merge: a T74 trouxe o agendamento (PBI-19), a T95 o histórico do participante, a T88 os
 # resultados das avaliações (PBI-21), a T80/T82 o desfecho da visita e sua consulta (PBI-20), a T101 a retirada de
 # participante (PBI-23), a T109 os estudos do participante e a T115 as consultas de visitas do participante
-# (próximas e histórico).
+# (próximas e histórico) e a T111 o vínculo da conta do participante.
 openapi: 3.0.3
 info:
   title: ClinicalStudyPB — contrato da Sprint 3 (RF12 a RF18)
@@ -32,6 +32,7 @@ security:
 tags:
 - name: Agendamento
 - name: Agenda
+- name: Conta do participante
 - name: Histórico do participante
 - name: Participante (me)
 - name: Resultados das avaliações
@@ -1106,6 +1107,137 @@ paths:
                 codigo: RECURSO_NAO_ENCONTRADO
         '409':
           $ref: '#/components/responses/Erro409'
+  /api/participacoes/{participacaoId}/conta:
+    put:
+      tags:
+      - Conta do participante
+      summary: Vincular uma conta de participante a um participante do estudo
+      operationId: vincularContaDoParticipante
+      description: |-
+        Liga uma conta de perfil `PARTICIPANTE` ao participante (candidato incluído) para que ele entre no app e veja os
+        estudos dele. A relação é **um para um** e **não há desvincular nem trocar a conta** nesta Sprint.
+
+        Verificações, **nesta ordem** (a primeira que falhar responde):
+        1. a participação e a conta existem: senão **404** `RECURSO_NAO_ENCONTRADO`;
+        2. a participação está ativa: senão **409** `PARTICIPANTE_RETIRADO`;
+        3. a conta tem perfil `PARTICIPANTE`: senão **409** `CONTA_NAO_E_PARTICIPANTE`;
+        4. a conta está ativa: senão **409** `CONTA_INATIVA`;
+        5. a participação ainda não tem conta: senão **409** `PARTICIPACAO_JA_TEM_CONTA` (inclusive reenviar a mesma conta);
+        6. a conta não está vinculada a outro participante: senão **409** `CONTA_JA_VINCULADA`.
+
+        Dois vínculos simultâneos da mesma conta resolvem em um sucesso e um 409 `CONTA_JA_VINCULADA`, nunca em 500.
+        Enquanto a retirada de participante (T101) não existir, toda participação é ativa e o passo 2 não falha.
+
+        Perfis: só COORDENADOR; PESQUISADOR, ADMINISTRADOR e PARTICIPANTE recebem 403.
+      parameters:
+      - name: participacaoId
+        in: path
+        required: true
+        description: UUID da participação (o participante incluído no estudo).
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VincularContaRequest'
+            example:
+              usuarioId: d6300000-0000-4000-8000-000000002401
+      responses:
+        '200':
+          description: Conta vinculada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContaVinculadaResponse'
+              example:
+                participacaoId: d6300000-0000-4000-8000-000000001921
+                usuarioId: d6300000-0000-4000-8000-000000002401
+                nome: Participante de Demonstração
+                email: participante@clinicalstudy.test
+        '400':
+          $ref: '#/components/responses/Erro400'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
+    get:
+      tags:
+      - Conta do participante
+      summary: Conta vinculada a um participante
+      operationId: contaDoParticipante
+      description: |-
+        Devolve a conta vinculada ao participante (`participacaoId`, `usuarioId`, `nome` e `email`). **404**
+        (`RECURSO_NAO_ENCONTRADO`) quando a participação não existe **ou** ainda não tem conta vinculada. Nunca devolve
+        senha, hash, perfil nem situação da conta.
+
+        Perfis: PESQUISADOR e COORDENADOR leem; ADMINISTRADOR e PARTICIPANTE recebem 403.
+      parameters:
+      - name: participacaoId
+        in: path
+        required: true
+        description: UUID da participação.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Conta vinculada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContaVinculadaResponse'
+              example:
+                participacaoId: d6300000-0000-4000-8000-000000001921
+                usuarioId: d6300000-0000-4000-8000-000000002401
+                nome: Participante de Demonstração
+                email: participante@clinicalstudy.test
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
+  /api/contas-participante/disponiveis:
+    get:
+      tags:
+      - Conta do participante
+      summary: Contas de participante disponíveis para vínculo
+      operationId: contasDeParticipanteDisponiveis
+      description: |-
+        Lista as contas **ativas**, de perfil `PARTICIPANTE`, que **ainda não estão vinculadas** a nenhum participante,
+        ordenadas por nome. Cada item traz só `usuarioId`, `nome` e `email`. Lista vazia é 200, não erro.
+
+        Perfis: só COORDENADOR; PESQUISADOR, ADMINISTRADOR e PARTICIPANTE recebem 403.
+      responses:
+        '200':
+          description: Contas disponíveis (pode ser vazia).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ContaParticipanteResponse'
+              example:
+              - usuarioId: d6300000-0000-4000-8000-000000002402
+                nome: Outra Participante (Ficticia)
+                email: outra.participante@clinicalstudy.test
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
 components:
   securitySchemes:
     bearerAuth:
@@ -2098,3 +2230,47 @@ components:
       - registradoPor
       - registradoEm
       - visitasCanceladas
+    VincularContaRequest:
+      type: object
+      description: Conta de participante a vincular ao participante do estudo.
+      properties:
+        usuarioId:
+          type: string
+          format: uuid
+          description: Conta de perfil PARTICIPANTE, ativa e ainda sem vínculo.
+      required:
+      - usuarioId
+    ContaVinculadaResponse:
+      type: object
+      description: Conta vinculada a uma participação. Só identificação; nunca senha, hash, perfil nem situação da conta.
+      properties:
+        participacaoId:
+          type: string
+          format: uuid
+        usuarioId:
+          type: string
+          format: uuid
+        nome:
+          type: string
+        email:
+          type: string
+      required:
+      - participacaoId
+      - usuarioId
+      - nome
+      - email
+    ContaParticipanteResponse:
+      type: object
+      description: Conta de perfil PARTICIPANTE, ativa e ainda não vinculada, disponível para vínculo.
+      properties:
+        usuarioId:
+          type: string
+          format: uuid
+        nome:
+          type: string
+        email:
+          type: string
+      required:
+      - usuarioId
+      - nome
+      - email

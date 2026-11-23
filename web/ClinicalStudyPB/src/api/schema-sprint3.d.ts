@@ -399,6 +399,71 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/participacoes/{participacaoId}/conta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Conta vinculada a um participante
+         * @description Devolve a conta vinculada ao participante (`participacaoId`, `usuarioId`, `nome` e `email`). **404**
+         *     (`RECURSO_NAO_ENCONTRADO`) quando a participação não existe **ou** ainda não tem conta vinculada. Nunca devolve
+         *     senha, hash, perfil nem situação da conta.
+         *
+         *     Perfis: PESQUISADOR e COORDENADOR leem; ADMINISTRADOR e PARTICIPANTE recebem 403.
+         */
+        get: operations["contaDoParticipante"];
+        /**
+         * Vincular uma conta de participante a um participante do estudo
+         * @description Liga uma conta de perfil `PARTICIPANTE` ao participante (candidato incluído) para que ele entre no app e veja os
+         *     estudos dele. A relação é **um para um** e **não há desvincular nem trocar a conta** nesta Sprint.
+         *
+         *     Verificações, **nesta ordem** (a primeira que falhar responde):
+         *     1. a participação e a conta existem: senão **404** `RECURSO_NAO_ENCONTRADO`;
+         *     2. a participação está ativa: senão **409** `PARTICIPANTE_RETIRADO`;
+         *     3. a conta tem perfil `PARTICIPANTE`: senão **409** `CONTA_NAO_E_PARTICIPANTE`;
+         *     4. a conta está ativa: senão **409** `CONTA_INATIVA`;
+         *     5. a participação ainda não tem conta: senão **409** `PARTICIPACAO_JA_TEM_CONTA` (inclusive reenviar a mesma conta);
+         *     6. a conta não está vinculada a outro participante: senão **409** `CONTA_JA_VINCULADA`.
+         *
+         *     Dois vínculos simultâneos da mesma conta resolvem em um sucesso e um 409 `CONTA_JA_VINCULADA`, nunca em 500.
+         *     Enquanto a retirada de participante (T101) não existir, toda participação é ativa e o passo 2 não falha.
+         *
+         *     Perfis: só COORDENADOR; PESQUISADOR, ADMINISTRADOR e PARTICIPANTE recebem 403.
+         */
+        put: operations["vincularContaDoParticipante"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/contas-participante/disponiveis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Contas de participante disponíveis para vínculo
+         * @description Lista as contas **ativas**, de perfil `PARTICIPANTE`, que **ainda não estão vinculadas** a nenhum participante,
+         *     ordenadas por nome. Cada item traz só `usuarioId`, `nome` e `email`. Lista vazia é 200, não erro.
+         *
+         *     Perfis: só COORDENADOR; PESQUISADOR, ADMINISTRADOR e PARTICIPANTE recebem 403.
+         */
+        get: operations["contasDeParticipanteDisponiveis"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -599,6 +664,30 @@ export interface components {
             visitasPrevistas: number;
             /** @description Visitas previstas que já têm agendamento, em qualquer situação. */
             visitasAgendadas: number;
+        };
+        /** @description Conta de participante a vincular ao participante do estudo. */
+        VincularContaRequest: {
+            /**
+             * Format: uuid
+             * @description Conta de perfil PARTICIPANTE, ativa e ainda sem vínculo.
+             */
+            usuarioId: string;
+        };
+        /** @description Conta vinculada a uma participação. Só identificação; nunca senha, hash, perfil nem situação da conta. */
+        ContaVinculadaResponse: {
+            /** Format: uuid */
+            participacaoId: string;
+            /** Format: uuid */
+            usuarioId: string;
+            nome: string;
+            email: string;
+        };
+        /** @description Conta de perfil PARTICIPANTE, ativa e ainda não vinculada, disponível para vínculo. */
+        ContaParticipanteResponse: {
+            /** Format: uuid */
+            usuarioId: string;
+            nome: string;
+            email: string;
         };
         /** @description Formato único de erro da API. O status HTTP identifica a classe do erro: 400 validação ou regra de formato, 401 sem token, 403 perfil sem permissão, 404 recurso inexistente, 409 regra de negócio violada (sempre com "codigo"). */
         Erro: {
@@ -1745,6 +1834,119 @@ export interface operations {
             400: components["responses"]["ErroParametroInvalido"];
             401: components["responses"]["Erro401"];
             403: components["responses"]["Erro403"];
+        };
+    };
+    contaDoParticipante: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID da participação. */
+                participacaoId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conta vinculada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "participacaoId": "d6300000-0000-4000-8000-000000001921",
+                     *       "usuarioId": "d6300000-0000-4000-8000-000000002401",
+                     *       "nome": "Participante de Demonstração",
+                     *       "email": "participante@clinicalstudy.test"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ContaVinculadaResponse"];
+                };
+            };
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+            404: components["responses"]["Erro404"];
+            409: components["responses"]["Erro409"];
+        };
+    };
+    vincularContaDoParticipante: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID da participação (o participante incluído no estudo). */
+                participacaoId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "usuarioId": "d6300000-0000-4000-8000-000000002401"
+                 *     }
+                 */
+                "application/json": components["schemas"]["VincularContaRequest"];
+            };
+        };
+        responses: {
+            /** @description Conta vinculada. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "participacaoId": "d6300000-0000-4000-8000-000000001921",
+                     *       "usuarioId": "d6300000-0000-4000-8000-000000002401",
+                     *       "nome": "Participante de Demonstração",
+                     *       "email": "participante@clinicalstudy.test"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ContaVinculadaResponse"];
+                };
+            };
+            400: components["responses"]["Erro400"];
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+            404: components["responses"]["Erro404"];
+            409: components["responses"]["Erro409"];
+        };
+    };
+    contasDeParticipanteDisponiveis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contas disponíveis (pode ser vazia). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "usuarioId": "d6300000-0000-4000-8000-000000002402",
+                     *         "nome": "Outra Participante (Ficticia)",
+                     *         "email": "outra.participante@clinicalstudy.test"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["ContaParticipanteResponse"][];
+                };
+            };
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+            404: components["responses"]["Erro404"];
+            409: components["responses"]["Erro409"];
         };
     };
 }

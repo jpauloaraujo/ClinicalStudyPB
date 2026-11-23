@@ -184,22 +184,26 @@ class MinhasVisitasEndpointTest {
     }
 
     @Test
-    @DisplayName("Próximas: filtro por estudoId devolve só as visitas daquele estudo")
+    @DisplayName("Próximas: filtro por estudoId devolve as visitas daquele estudo e vazio para estudo de outro participante")
     void proximasFiltraPorEstudo() throws Exception {
+        // T111: a conta é um para um com o candidato (índice único), então o participante tem uma só participação
         UUID estudoA = criarEstudo("Estudo A T116");
         UUID estudoB = criarEstudo("Estudo B T116");
         UUID a = incluir(estudoA, participanteId, "CAND-963");
-        UUID b = incluir(estudoB, participanteId, "CAND-964");
-        UUID visitaB = agendar(b, criarVisitaPlanejada(estudoB, "Retorno B", 1), agora().plusDays(4), "AGENDADA",
+        UUID b = incluir(estudoB, criarOutraConta(), "CAND-964");
+        UUID visitaA = agendar(a, criarVisitaPlanejada(estudoA, "Retorno A", 1), agora().plusDays(2), "AGENDADA",
                 null, null);
-        agendar(a, criarVisitaPlanejada(estudoA, "Retorno A", 1), agora().plusDays(2), "AGENDADA", null, null);
+        agendar(b, criarVisitaPlanejada(estudoB, "Retorno B", 1), agora().plusDays(4), "AGENDADA", null, null);
 
-        enviar(mvc, "GET", "/api/me/visitas/proximas?estudoId=" + estudoB, participante, null)
+        enviar(mvc, "GET", "/api/me/visitas/proximas?estudoId=" + estudoA, participante, null)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].id").value(visitaB.toString()));
+                .andExpect(jsonPath("$[0].id").value(visitaA.toString()));
+        enviar(mvc, "GET", "/api/me/visitas/proximas?estudoId=" + estudoB, participante, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
         enviar(mvc, "GET", "/api/me/visitas/proximas", participante, null)
-                .andExpect(jsonPath("$", hasSize(2)));
+                .andExpect(jsonPath("$", hasSize(1)));
     }
 
     // ---- histórico ----

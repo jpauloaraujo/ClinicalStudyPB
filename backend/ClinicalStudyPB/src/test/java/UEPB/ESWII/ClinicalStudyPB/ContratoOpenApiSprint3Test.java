@@ -62,9 +62,16 @@ class ContratoOpenApiSprint3Test {
     /**
      * Quantas operações o YAML tem agora: 5 do agendamento (T74), 1 do histórico (T95), 2 dos resultados (T88), 2
      * do desfecho (T80 e T82: o POST do desfecho e o GET da visita), 2 da retirada (T101: POST e GET), 2 dos estudos do
-     * participante (T109) e 2 das visitas do participante (T115). Cada PBI só atualiza este número.
+     * participante (T109), 2 das visitas do participante (T115) e 3 do vínculo da conta do participante (T111). Cada PBI
+     * só atualiza este número.
      */
-    private static final int OPERACOES_ESPERADAS = 16;
+    private static final int OPERACOES_ESPERADAS = 19;
+
+    /** Operações do vínculo da conta do participante (T111), implementadas no {@code ContaParticipanteController}. */
+    private static final Set<String> OPERACOES_CONTA = Set.of(
+            "PUT /api/participacoes/{participacaoId}/conta",
+            "GET /api/participacoes/{participacaoId}/conta",
+            "GET /api/contas-participante/disponiveis");
 
     /** Operações do app do participante (T109): os estudos do participante logado, implementadas no {@code MeController}. */
     private static final Set<String> OPERACOES_ME = Set.of(
@@ -140,7 +147,7 @@ class ContratoOpenApiSprint3Test {
     void contratoTemAsOperacoesEsperadas() throws Exception {
         assertThat(operacoesDoContrato()).hasSize(OPERACOES_ESPERADAS).containsAll(OPERACOES_RESULTADOS)
                 .containsAll(OPERACOES_DESFECHO).containsAll(OPERACOES_RETIRADA).containsAll(OPERACOES_ME)
-                .containsAll(OPERACOES_ME_VISITAS).contains(
+                .containsAll(OPERACOES_ME_VISITAS).containsAll(OPERACOES_CONTA).contains(
                 "GET /api/participacoes/{participacaoId}/visitas",
                 "POST /api/participacoes/{participacaoId}/visitas-agendadas",
                 "PUT /api/visitas-agendadas/{visitaAgendadaId}",
@@ -302,6 +309,47 @@ class ContratoOpenApiSprint3Test {
         faltandoNaApi.removeAll(operacoesDaApi());
 
         assertThat(faltandoNaApi).as("operações /me que a API não tem").isEmpty();
+    }
+
+    @Test
+    @DisplayName("T111: os endpoints do vínculo da conta do contrato existem na API publicada")
+    void contaDoContratoExisteNaApi() throws Exception {
+        Set<String> faltandoNaApi = new TreeSet<>(OPERACOES_CONTA);
+        faltandoNaApi.removeAll(operacoesDaApi());
+
+        assertThat(faltandoNaApi).as("operações do vínculo da conta que a API não tem").isEmpty();
+    }
+
+    @SuppressWarnings("unchecked")
+    @ParameterizedTest(name = "T111: o schema {0} tem os mesmos campos do DTO")
+    @ValueSource(strings = {"VincularContaRequest", "ContaVinculadaResponse", "ContaParticipanteResponse"})
+    void schemaContaTemOsCamposDoDto(String nome) throws Exception {
+        Class<?> dto = switch (nome) {
+            case "VincularContaRequest" -> UEPB.ESWII.ClinicalStudyPB.controller.dto.VincularContaRequest.class;
+            case "ContaVinculadaResponse" -> UEPB.ESWII.ClinicalStudyPB.controller.dto.ContaVinculadaResponse.class;
+            default -> UEPB.ESWII.ClinicalStudyPB.controller.dto.ContaParticipanteResponse.class;
+        };
+        Set<String> camposDoDto = new TreeSet<>();
+        Arrays.stream(dto.getRecordComponents()).forEach(c -> camposDoDto.add(c.getName()));
+        Set<String> camposDoContrato = new TreeSet<>(((Map<String, Object>) schema(nome).get("properties")).keySet());
+
+        assertThat(camposDoContrato).as("campos do schema " + nome).isEqualTo(camposDoDto);
+        assertThat(camposDoContrato).as("nenhum dado de segurança no schema " + nome)
+                .doesNotContain("senha", "hash", "perfil", "ativo");
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    @DisplayName("T111: o vínculo declara 400 (corpo inválido) e os erros 404 e 409; o contrato lista os 5 códigos de conflito")
+    void vinculoDeclaraAsRespostasEOsCodigosDeConflito() throws Exception {
+        Map<String, Map<String, Object>> caminhos = (Map<String, Map<String, Object>>) documento().get("paths");
+        Map<String, Object> put = (Map<String, Object>) caminhos.get("/api/participacoes/{participacaoId}/conta").get("put");
+        Set<String> respostas = ((Map<Object, Object>) put.get("responses")).keySet().stream()
+                .map(Object::toString).collect(java.util.stream.Collectors.toSet());
+
+        assertThat(respostas).contains("200", "400", "401", "403", "404", "409");
+        assertThat((String) put.get("description")).contains("PARTICIPANTE_RETIRADO", "CONTA_NAO_E_PARTICIPANTE",
+                "CONTA_INATIVA", "PARTICIPACAO_JA_TEM_CONTA", "CONTA_JA_VINCULADA");
     }
 
     @SuppressWarnings("unchecked")
