@@ -69,6 +69,7 @@ public class AgendamentoService {
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         "Participação não encontrada: " + participacaoId));
         regras.validarEstadoDoEstudo(participacao);
+        regras.exigirParticipacaoAtiva(participacao);
         VisitaPlanejada visita = visitasPlanejadas.findById(visitaPlanejadaId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         "Visita prevista não encontrada: " + visitaPlanejadaId));

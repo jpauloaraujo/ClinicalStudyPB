@@ -27,12 +27,19 @@ import UEPB.ESWII.ClinicalStudyPB.repository.UsuarioRepository;
 import UEPB.ESWII.ClinicalStudyPB.repository.VisitaAgendadaRepository;
 
 /**
- * Regras dos resultados fictícios das avaliações de uma visita (RF14, regra 4; T89).
+ * Regras dos resultados fictícios das avaliações de uma visita (RF14, regra 4;
+ * T89).
  *
- * <p>Os resultados são <strong>fictícios</strong> (LGPD). O pesquisador registra um resultado por vez (resultado
- * parcial) para cada atividade da categoria {@code AVALIACAO_CLINICA} da visita prevista de uma visita
- * {@code REALIZADA}, e pode editá-lo enquanto o estudo não estiver encerrado. A permissão por perfil (só o pesquisador
- * escreve) é do controller (T90): este serviço não conhece o perfil e recebe o usuário por parâmetro.</p>
+ * <p>
+ * Os resultados são <strong>fictícios</strong> (LGPD). O pesquisador registra
+ * um resultado por vez (resultado
+ * parcial) para cada atividade da categoria {@code AVALIACAO_CLINICA} da visita
+ * prevista de uma visita
+ * {@code REALIZADA}, e pode editá-lo enquanto o estudo não estiver encerrado. A
+ * permissão por perfil (só o pesquisador
+ * escreve) é do controller (T90): este serviço não conhece o perfil e recebe o
+ * usuário por parâmetro.
+ * </p>
  */
 @Service
 public class ResultadoAtividadeService {
@@ -56,7 +63,10 @@ public class ResultadoAtividadeService {
     public record ComandoResultado(String valor, String unidade, String observacao) {
     }
 
-    /** Uma atividade de avaliação da visita prevista e o seu resultado ({@code null} enquanto estiver pendente). */
+    /**
+     * Uma atividade de avaliação da visita prevista e o seu resultado ({@code null}
+     * enquanto estiver pendente).
+     */
     public record AtividadeComResultado(Acao acao, ResultadoAtividade resultado) {
 
         public boolean registrado() {
@@ -65,7 +75,8 @@ public class ResultadoAtividadeService {
     }
 
     /**
-     * Atividades de avaliação de uma visita agendada, com as contagens e o motivo do modo somente leitura
+     * Atividades de avaliação de uma visita agendada, com as contagens e o motivo
+     * do modo somente leitura
      * ({@code bloqueio} nulo quando a visita aceita registro e edição).
      */
     public record ResultadosDaVisita(VisitaAgendada visitaAgendada, BloqueioResultados bloqueio,
@@ -84,13 +95,18 @@ public class ResultadoAtividadeService {
         }
     }
 
-    /** Resultado salvo e se ele foi criado agora (o controller responde 201) ou editado (200). */
+    /**
+     * Resultado salvo e se ele foi criado agora (o controller responde 201) ou
+     * editado (200).
+     */
     public record ResultadoRegistrado(ResultadoAtividade resultado, boolean criado) {
     }
 
     /**
-     * Lista todas as atividades {@code AVALIACAO_CLINICA} da visita prevista, ordenadas pelo nome, cada uma com o seu
-     * resultado ou pendente. Não exige visita realizada: em vez de recusar, informa o {@code bloqueio}.
+     * Lista todas as atividades {@code AVALIACAO_CLINICA} da visita prevista,
+     * ordenadas pelo nome, cada uma com o seu
+     * resultado ou pendente. Não exige visita realizada: em vez de recusar, informa
+     * o {@code bloqueio}.
      */
     @Transactional(readOnly = true)
     public ResultadosDaVisita consultar(UUID visitaAgendadaId) {
@@ -108,7 +124,8 @@ public class ResultadoAtividadeService {
     }
 
     /**
-     * Registra o resultado de uma atividade ou, se ela já tiver resultado, o edita. As verificações seguem a ordem do
+     * Registra o resultado de uma atividade ou, se ela já tiver resultado, o edita.
+     * As verificações seguem a ordem do
      * design da T89 (RQ-T89-01); cada falha tem o seu código.
      */
     @Transactional
@@ -166,20 +183,28 @@ public class ResultadoAtividadeService {
         return new ResultadoRegistrado(resultados.save(resultado), criado);
     }
 
-    /** Resposta da API para o registro: o resultado salvo e se ele foi criado agora (201) ou editado (200). */
+    /**
+     * Resposta da API para o registro: o resultado salvo e se ele foi criado agora
+     * (201) ou editado (200).
+     */
     public record RespostaDoRegistro(ResultadoAtividadeResponse resultado, boolean criado) {
     }
 
     /**
-     * {@link #consultar(UUID)} já convertido para a resposta da API (T90). A conversão fica dentro da transação
-     * porque lê relações LAZY (nomes de quem registrou e alterou) e o projeto usa {@code open-in-view=false}.
+     * {@link #consultar(UUID)} já convertido para a resposta da API (T90). A
+     * conversão fica dentro da transação
+     * porque lê relações LAZY (nomes de quem registrou e alterou) e o projeto usa
+     * {@code open-in-view=false}.
      */
     @Transactional(readOnly = true)
     public ResultadosDaVisitaResponse consultarResposta(UUID visitaAgendadaId) {
         return ResultadosDaVisitaResponse.de(consultar(visitaAgendadaId), clock.getZone());
     }
 
-    /** {@link #registrar} já convertido para a resposta da API (T90), dentro da mesma transação. */
+    /**
+     * {@link #registrar} já convertido para a resposta da API (T90), dentro da
+     * mesma transação.
+     */
     @Transactional
     public RespostaDoRegistro registrarResposta(UUID visitaAgendadaId, UUID acaoId, ComandoResultado comando,
             UUID usuarioId) {
@@ -189,15 +214,20 @@ public class ResultadoAtividadeService {
     }
 
     /**
-     * Ponto único da regra do participante retirado: a T102 preenche este método com 409
-     * {@code PARTICIPANTE_RETIRADO} (e a consulta passa a devolver o bloqueio correspondente). Hoje não existe
-     * situação de retirada na participação, então nada é verificado.
+     * Regra 6 (T102): participante retirado não aceita registro nem edição de
+     * resultados.
      */
     private void exigirParticipacaoAtiva(VisitaAgendada visita) {
-        // T102: recusar com ConflitoRegraException("PARTICIPANTE_RETIRADO", ...) quando a participação estiver retirada.
+        if (participacaoRetirada(visita)) {
+            throw new ConflitoRegraException("PARTICIPANTE_RETIRADO",
+                    "O participante foi retirado do estudo; não é possível registrar ou editar resultados");
+        }
     }
 
-    /** Motivo do modo somente leitura, por prioridade: visita não realizada, estudo encerrado (e, na T102, retirada). */
+    /**
+     * Motivo do modo somente leitura, por prioridade: visita não realizada, estudo
+     * encerrado e participante retirado.
+     */
     private BloqueioResultados bloqueio(VisitaAgendada visita) {
         if (visita.getSituacao() != SituacaoVisita.REALIZADA) {
             return BloqueioResultados.VISITA_NAO_REALIZADA;
@@ -205,7 +235,14 @@ public class ResultadoAtividadeService {
         if (estudoEncerrado(visita)) {
             return BloqueioResultados.ESTUDO_ENCERRADO;
         }
+        if (participacaoRetirada(visita)) {
+            return BloqueioResultados.PARTICIPANTE_RETIRADO;
+        }
         return null;
+    }
+
+    private static boolean participacaoRetirada(VisitaAgendada visita) {
+        return visita.getParticipacao() != null && visita.getParticipacao().estaRetirada();
     }
 
     private static boolean estudoEncerrado(VisitaAgendada visita) {
