@@ -165,6 +165,29 @@ class MeEndpointTest {
     }
 
     @Test
+    @DisplayName("T101: participação retirada vem RETIRADO na lista e no detalhe, com só a data da retirada (sem motivo)")
+    void participacaoRetiradaTrazSituacaoEDataSemMotivo() throws Exception {
+        UUID estudo = criarEstudo("Estudo retirado T101", "Objetivo.", "EXECUCAO");
+        UUID participacao = incluir(estudo, participanteId, "CAND-907", 20);
+        jdbc.update("UPDATE participacoes SET situacao = 'RETIRADO' WHERE id = CAST(? AS UUID)", participacao.toString());
+        jdbc.update("INSERT INTO retiradas_participacao (id, participacao_id, motivo, solicitante, data_retirada, "
+                + "registrado_por_id, registrado_em) VALUES (CAST(? AS UUID), CAST(? AS UUID), 'Motivo sigiloso', "
+                + "'COORDENACAO', DATE '2026-11-18', CAST(? AS UUID), TIMESTAMP '2026-11-18 14:30:00')",
+                UUID.randomUUID().toString(), participacao.toString(), COORDENADOR_ID);
+
+        enviar(mvc, "GET", "/api/me/estudos", participante, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].situacaoParticipacao").value("RETIRADO"));
+        enviar(mvc, "GET", "/api/me/estudos/" + estudo, participante, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.situacaoParticipacao").value("RETIRADO"))
+                .andExpect(jsonPath("$.retirada.dataRetirada").value("2026-11-18"))
+                .andExpect(jsonPath("$.retirada.motivo").doesNotExist())
+                .andExpect(jsonPath("$.retirada.solicitante").doesNotExist());
+    }
+
+    @Test
     @DisplayName("404: estudo que existe mas é de outro participante, com a mesma resposta de um estudo inexistente")
     void estudoDeOutroParticipanteRecebe404() throws Exception {
         UUID deOutro = criarEstudo("Estudo de outro T109", "Objetivo.", "EXECUCAO");
