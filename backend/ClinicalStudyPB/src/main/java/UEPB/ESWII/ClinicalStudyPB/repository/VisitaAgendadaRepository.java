@@ -85,4 +85,62 @@ public interface VisitaAgendadaRepository extends JpaRepository<VisitaAgendada, 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select v from VisitaAgendada v where v.id = :id")
     Optional<VisitaAgendada> buscarComBloqueio(@Param("id") UUID id);
+
+    /** Total de visitas de uma situação (resumo de comparecimento do app, T116). */
+    interface ContagemPorSituacao {
+        SituacaoVisita getSituacao();
+        long getTotal();
+    }
+
+    /**
+     * Próximas visitas do participante (T116): as de uma situação (AGENDADA) a partir de {@code agora}, da mais
+     * próxima para a mais distante. Parte das <b>participações da conta logada</b> (nunca de um id do cliente) e traz a
+     * visita prevista e o estudo na mesma consulta, para não haver consulta por linha. {@code participacoes} não pode
+     * ser vazio (quem chama devolve a lista vazia antes).
+     */
+    @Query("""
+            select va from VisitaAgendada va
+            join fetch va.visitaPlanejada
+            join fetch va.participacao p
+            join fetch p.estudo
+            where p.id in :participacoes
+              and va.situacao = :situacao
+              and va.dataHoraAgendada >= :agora
+            order by va.dataHoraAgendada asc, va.id asc
+            """)
+    List<VisitaAgendada> proximasDasParticipacoes(@Param("participacoes") Collection<UUID> participacoes,
+            @Param("situacao") SituacaoVisita situacao, @Param("agora") LocalDateTime agora);
+
+    /**
+     * Histórico de comparecimento do participante (T116): visitas nas situações pedidas (REALIZADA, AUSENTE e
+     * CANCELADA), da mais recente para a mais antiga, paginado. O desempate pelo id mantém a ordem estável entre as
+     * páginas. Traz a visita prevista e o estudo na mesma consulta.
+     */
+    @Query(value = """
+            select va from VisitaAgendada va
+            join fetch va.visitaPlanejada
+            join fetch va.participacao p
+            join fetch p.estudo
+            where p.id in :participacoes
+              and va.situacao in :situacoes
+            order by va.dataHoraAgendada desc, va.id desc
+            """,
+            countQuery = """
+                    select count(va) from VisitaAgendada va
+                    where va.participacao.id in :participacoes
+                      and va.situacao in :situacoes
+                    """)
+    Page<VisitaAgendada> historicoDasParticipacoes(@Param("participacoes") Collection<UUID> participacoes,
+            @Param("situacoes") Collection<SituacaoVisita> situacoes, Pageable pageable);
+
+    /** Totais por situação das visitas das participações, para o resumo do histórico (T116): uma consulta só. */
+    @Query("""
+            select va.situacao as situacao, count(va.id) as total
+            from VisitaAgendada va
+            where va.participacao.id in :participacoes
+              and va.situacao in :situacoes
+            group by va.situacao
+            """)
+    List<ContagemPorSituacao> contarPorSituacao(@Param("participacoes") Collection<UUID> participacoes,
+            @Param("situacoes") Collection<SituacaoVisita> situacoes);
 }

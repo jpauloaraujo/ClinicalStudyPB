@@ -14,7 +14,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -71,8 +70,7 @@ class ContratoOpenApiSprint3Test {
 
     /**
      * Operações do app do participante descritas na T115 (próximas visitas e histórico de comparecimento): o contrato
-     * vem antes; a implementação é da T116, que liga os casos {@code @Disabled("T116")} e tira estas operações da
-     * lista de pendentes de {@link #contratoNaoPrometeEndpointInexistente()}.
+     * vem antes; a T116 as implementou, e {@link #meVisitasDoContratoExistemNaApi()} confere que existem na API.
      */
     private static final Set<String> OPERACOES_ME_VISITAS = Set.of(
             "GET /api/me/visitas/proximas",
@@ -149,15 +147,12 @@ class ContratoOpenApiSprint3Test {
         faltandoNaApi.removeIf(operacao -> operacao.endsWith("/participacoes/{participacaoId}/historico"));
         faltandoNaApi.removeAll(OPERACOES_RESULTADOS);
         faltandoNaApi.removeAll(OPERACOES_DESFECHO);
-        // T115: as visitas do participante estão no contrato, mas só a T116 as implementa (apague esta linha lá)
-        faltandoNaApi.removeAll(OPERACOES_ME_VISITAS);
         faltandoNaApi.removeAll(operacoesDaApi());
 
         assertThat(faltandoNaApi).as("operações do contrato que a API não tem").isEmpty();
     }
 
     @Test
-    @Disabled("T116: ligar quando as consultas de visitas do participante existirem no backend")
     @DisplayName("T115: as consultas de visitas do participante do contrato existem na API publicada")
     void meVisitasDoContratoExistemNaApi() throws Exception {
         Set<String> faltandoNaApi = new TreeSet<>(OPERACOES_ME_VISITAS);
@@ -167,7 +162,6 @@ class ContratoOpenApiSprint3Test {
     }
 
     @SuppressWarnings("unchecked")
-    @Disabled("T116: ligar quando os DTOs das consultas de visitas do participante existirem no backend")
     @ParameterizedTest(name = "T115: o schema {0} tem os mesmos campos do DTO")
     @ValueSource(strings = {"MinhaVisitaResponse", "ResumoComparecimentoResponse", "HistoricoMinhasVisitasResponse"})
     void schemaMeVisitasTemOsCamposDoDto(String nome) throws Exception {
