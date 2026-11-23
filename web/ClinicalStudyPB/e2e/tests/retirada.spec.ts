@@ -11,7 +11,7 @@ import { test } from '../fixtures'
 // Prova o fluxo completo de sucesso (marca RETIRADO, aviso de irreversibilidade e contagem de visitas futuras,
 // cancelamento em cascata no histórico preservando visitas realizadas e resultados, ocultação das ações de escrita,
 // aviso de participante retirado na aba Avaliações e manutenção das vagas ocupadas) e o cenário de erro de motivo
-// vazio ou curto. Todo o estado de partida é montado pela API com dados únicos e datas relativas ao servidor.
+// vazio ou curto. O estado de partida é montado pela API com dados únicos e datas relativas ao servidor.
 
 const VISITA_REALIZADA = 'Triagem'
 const VISITA_FUTURA_1 = 'Retorno 15'
