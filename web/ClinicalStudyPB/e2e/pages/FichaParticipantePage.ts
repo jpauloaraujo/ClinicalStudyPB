@@ -139,4 +139,144 @@ export class FichaParticipantePage {
     await expect(this.page.getByRole('button', { name: `Salvar (${atividade})` })).toHaveCount(0)
     await expect(this.page.getByLabel(`Valor (${atividade})`)).toHaveCount(0)
   }
+
+  // ---- retirada de participante (RF16, T104/T107) ----
+
+  private readonly dialogoFormularioRetirada = () => this.page.getByRole('dialog', { name: 'Registrar retirada' })
+  private readonly dialogoConfirmacaoRetirada = () =>
+    this.page.getByRole('dialog', { name: 'Confirmar retirada do participante' })
+  private readonly regiaoDadosRetirada = () => this.page.getByRole('region', { name: 'Dados da retirada' })
+
+  async abrirDialogoRetirada() {
+    await this.page.getByRole('button', { name: 'Registrar retirada' }).click()
+    await expect(this.dialogoFormularioRetirada()).toBeVisible()
+  }
+
+  async preencherRetirada(dados: {
+    motivo?: string
+    solicitante?: 'PARTICIPANTE' | 'PESQUISADOR' | 'COORDENACAO'
+    dataRetirada?: string
+  }) {
+    const dialogo = this.dialogoFormularioRetirada()
+    if (dados.motivo !== undefined) {
+      await dialogo.getByLabel(/^Motivo da retirada/).fill(dados.motivo)
+    }
+    if (dados.solicitante !== undefined) {
+      await dialogo.getByLabel(/^Quem solicitou/).selectOption(dados.solicitante)
+    }
+    if (dados.dataRetirada !== undefined) {
+      await dialogo.getByLabel(/^Data da retirada/).fill(dados.dataRetirada)
+    }
+  }
+
+  async continuarParaConfirmacao() {
+    await this.dialogoFormularioRetirada().getByRole('button', { name: 'Continuar' }).click()
+  }
+
+  async fecharDialogoRetirada() {
+    await this.dialogoFormularioRetirada().getByRole('button', { name: 'Cancelar' }).click()
+    await expect(this.dialogoFormularioRetirada()).toHaveCount(0)
+  }
+
+  async expectErroNoDialogoRetirada(mensagem: string) {
+    await expect(this.dialogoFormularioRetirada()).toBeVisible()
+    await expect(this.dialogoConfirmacaoRetirada()).toHaveCount(0)
+    await expect(this.dialogoFormularioRetirada().getByText(mensagem)).toBeVisible()
+  }
+
+  async expectConfirmacaoRetirada(esperado: {
+    visitasFuturas: number
+    motivo: string
+    solicitanteRotulo: string
+  }) {
+    const dialogo = this.dialogoConfirmacaoRetirada()
+    await expect(dialogo).toBeVisible()
+    await expect(dialogo).toContainText('Esta retirada é irreversível')
+    await expect(dialogo).toContainText('RETIRADO')
+    const fraseVisitas =
+      esperado.visitasFuturas === 0
+        ? 'Nenhuma visita futura agendada será cancelada.'
+        : esperado.visitasFuturas === 1
+          ? '1 visita futura agendada será cancelada'
+          : `${esperado.visitasFuturas} visitas futuras agendadas serão canceladas`
+    await expect(dialogo).toContainText(fraseVisitas)
+    await expect(dialogo).toContainText(esperado.solicitanteRotulo)
+    await expect(dialogo).toContainText(esperado.motivo)
+  }
+
+  async confirmarRetirada(visitasCanceladas: number) {
+    const dialogo = this.dialogoConfirmacaoRetirada()
+    await dialogo.getByRole('button', { name: 'Confirmar retirada' }).click()
+    await expect(dialogo).toHaveCount(0)
+    const trecho =
+      visitasCanceladas === 0
+        ? 'Nenhuma visita futura agendada precisou ser cancelada.'
+        : visitasCanceladas === 1
+          ? '1 visita futura agendada foi cancelada.'
+          : `${visitasCanceladas} visitas futuras agendadas foram canceladas.`
+    await expect(this.page.getByRole('status').filter({ hasText: `Retirada registrada com sucesso. ${trecho}` })).toBeVisible()
+  }
+
+  async expectRetirado() {
+    await expect(this.page.locator('.titulo-com-selo .selo--retirado')).toHaveText('Retirado')
+    await expect(this.regiaoDadosRetirada()).toBeVisible()
+  }
+
+  async expectAtivoNaFicha() {
+    await expect(this.regiaoDadosRetirada()).toHaveCount(0)
+    await expect(this.page.locator('.titulo-com-selo .selo--retirado')).toHaveCount(0)
+    await expect(this.page.getByRole('button', { name: 'Registrar retirada' })).toBeVisible()
+  }
+
+  async expectDadosDaRetirada(esperado: { motivo: string; solicitanteRotulo: string }) {
+    const regiao = this.regiaoDadosRetirada()
+    await expect(regiao).toContainText('Participante retirado do estudo')
+    await expect(regiao).toContainText(esperado.solicitanteRotulo)
+    await expect(regiao).toContainText(esperado.motivo)
+  }
+
+  async expectMotivoDaVisita(nome: string, motivo: string) {
+    await this.expandirVisita(nome)
+    await expect(this.visita(nome).locator('.visita-historico__corpo')).toContainText(motivo)
+  }
+
+  async expectSemAcoesDeEscritaNaFicha() {
+    await expect(this.page.getByRole('region', { name: 'Ações do participante' })).toHaveCount(0)
+    await expect(this.page.getByRole('link', { name: 'Agendar visitas' })).toHaveCount(0)
+    await expect(this.page.getByRole('button', { name: 'Registrar retirada' })).toHaveCount(0)
+    await expect(this.page.getByRole('button', { name: 'Vincular conta' })).toHaveCount(0)
+  }
+
+  async expectAgendamentoBloqueadoPorRetirada(visitaEsperada: string) {
+    await expect(
+      this.page.getByRole('status').filter({
+        hasText: 'Participante retirado do estudo: não é possível agendar nem reagendar visitas.',
+      }),
+    ).toBeVisible()
+    await expect(this.page.locator('.titulo-com-selo .selo--retirado')).toHaveText('Retirado')
+    await expect(this.page.getByRole('cell', { name: visitaEsperada })).toBeVisible()
+    await expect(this.page.getByRole('button', { name: /^Agendar|^Reagendar/ })).toHaveCount(0)
+  }
+
+  async expectVisitaBloqueadaPorRetirada() {
+    await expect(
+      this.page.getByRole('status').filter({
+        hasText: 'Participante retirado do estudo: as ações de edição desta visita estão indisponíveis.',
+      }),
+    ).toBeVisible()
+    await expect(this.page.locator('.titulo-com-selo .selo--retirado')).toHaveText('Retirado')
+    await expect(this.page.getByRole('button', { name: /^Reagendar|^Registrar desfecho/ })).toHaveCount(0)
+  }
+
+  async expectAvaliacoesRetirado(atividade: string, valorPreservado: string) {
+    const aviso = this.page.getByRole('status').filter({
+      hasText:
+        'O participante foi retirado do estudo: os resultados ficam disponíveis somente para consulta e não podem mais ser registrados nem editados.',
+    })
+    await expect(aviso).toBeVisible()
+    await expect(aviso.locator('.selo--retirado')).toHaveText('Retirado')
+    await expect(this.page.getByRole('button', { name: `Salvar (${atividade})` })).toHaveCount(0)
+    await expect(this.page.getByLabel(`Valor (${atividade})`)).toHaveCount(0)
+    await expect(this.page.getByRole('article', { name: atividade })).toContainText(valorPreservado)
+  }
 }

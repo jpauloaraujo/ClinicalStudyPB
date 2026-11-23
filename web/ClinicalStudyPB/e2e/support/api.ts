@@ -178,4 +178,58 @@ export class ApiE2E {
   async registrarResultado(visitaAgendadaId: string, acaoId: string, valor: string, unidade?: string) {
     await this.chamar('put', `/api/visitas-agendadas/${visitaAgendadaId}/resultados/${acaoId}`, { valor, unidade })
   }
+
+  /**
+   * (Como pesquisador) estudo em recrutamento preparado para os cenários de retirada (T107): Triagem (dia 0, com
+   * atividade de avaliação), duas visitas futuras (Retorno 15 e Retorno 30) e uma visita adicional (Retorno 60).
+   */
+  async estudoParaRetirada(titulo: string, limite = 2) {
+    const estudoId = await this.criarEstudo(titulo, limite)
+    await this.criarCriterio(estudoId, 'INCLUSAO', 'Idade adulta', 'Candidato com 18 anos ou mais')
+    await this.criarCriterio(estudoId, 'EXCLUSAO', 'Gestante', 'Candidata em gestação confirmada')
+    const triagemId = await this.criarVisita(estudoId, 'Triagem', 0, 0)
+    const acaoId = await this.criarAtividade(triagemId, 'Pressão arterial')
+    const retorno15Id = await this.criarVisita(estudoId, 'Retorno 15', 15, 3)
+    const retorno30Id = await this.criarVisita(estudoId, 'Retorno 30', 30, 5)
+    const retorno60Id = await this.criarVisita(estudoId, 'Retorno 60', 60, 5)
+    await this.avancar(estudoId, 'RECRUTAMENTO')
+    return { estudoId, triagemId, retorno15Id, retorno30Id, retorno60Id, acaoId }
+  }
+
+  /** Consulta as visitas previstas do participante com as datas sugeridas calculadas pelo servidor. */
+  async visitasDoParticipante(participacaoId: string) {
+    const resposta = await this.chamar('get', `/api/participacoes/${participacaoId}/visitas`)
+    return (await resposta.json()) as {
+      visitaPlanejadaId: string
+      nome: string
+      dataSugerida: string
+      agendamento: { id: string; situacao: string } | null
+    }[]
+  }
+
+  /** (Como coordenador) registra a retirada do participante (RF16). */
+  async retirar(
+    participacaoId: string,
+    dados: {
+      motivo: string
+      solicitante: 'PARTICIPANTE' | 'PESQUISADOR' | 'COORDENACAO'
+      dataRetirada: string
+    },
+  ) {
+    const resposta = await this.chamar('post', `/api/participacoes/${participacaoId}/retirada`, dados)
+    return (await resposta.json()) as {
+      id: string
+      participacaoId: string
+      motivo: string
+      solicitante: string
+      dataRetirada: string
+      visitasCanceladas: number
+    }
+  }
+
+  /** Consulta o status HTTP de GET /api/participacoes/{id}/retirada (útil para provar 404 quando não foi gravada). */
+  async statusDaRetirada(participacaoId: string): Promise<number> {
+    const resposta = await this.contexto.get(`/api/participacoes/${participacaoId}/retirada`)
+    return resposta.status()
+  }
 }
