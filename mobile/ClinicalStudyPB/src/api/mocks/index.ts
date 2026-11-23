@@ -61,7 +61,8 @@ export async function responderMock<T>(
     }
     const detalhe = rota.match(/^\/api\/me\/estudos\/([^/]+)$/);
     if (metodo === 'GET' && detalhe) {
-      const estudo = estudosMock.find((item) => item.estudoId === detalhe[1]);
+      // Como no servidor: estudo inexistente e estudo de outra conta dão o mesmo 404 (conta sem vínculo não tem nenhum)
+      const estudo = conta.semEstudos ? undefined : estudosMock.find((item) => item.estudoId === detalhe[1]);
       if (!estudo) {
         throw erro(404, 'RECURSO_NAO_ENCONTRADO', 'Estudo não encontrado.');
       }

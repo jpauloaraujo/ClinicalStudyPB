@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 import * as cliente from '@/api/cliente';
+import { CONTAS_MOCK } from '@/api/mocks/dados';
 import { SessaoProvider, useSessao } from '@/contexts/sessao';
 
 // Sem SecureStore nos testes: o token fica numa variável (o prefixo "mock" é exigido pelo Jest)
@@ -216,6 +217,30 @@ describe('SessaoProvider', () => {
 
     await waitFor(() => expect(result.current.usuario).toBeNull());
     expect(result.current.aviso).toBe('Sua sessão expirou. Entre novamente.');
+  });
+
+  it('T119 · 403 em /api/me/* com sessão aberta volta ao login com o aviso do app exclusivo (RQ-T119-06)', async () => {
+    const { result } = await montar();
+    await act(async () => {
+      await result.current.entrar(EMAIL, SENHA);
+    });
+    expect(result.current.usuario).not.toBeNull();
+
+    // O servidor passa a ver a conta como de outro perfil: /api/me/* responde 403
+    const conta = CONTAS_MOCK.find((item) => item.email === EMAIL)!;
+    const perfilOriginal = conta.usuario.perfil;
+    conta.usuario.perfil = 'COORDENADOR';
+    try {
+      await act(async () => {
+        await cliente.requisitar('/api/me/estudos').catch(() => undefined);
+      });
+    } finally {
+      conta.usuario.perfil = perfilOriginal;
+    }
+
+    await waitFor(() => expect(result.current.usuario).toBeNull());
+    expect(result.current.aviso).toBe('Este aplicativo é exclusivo para participantes. Use a aplicação web.');
+    expect(mockToken).toBeNull();
   });
 
   it('T110 · 401 na restauração (sem sessão aberta) não mostra aviso', async () => {

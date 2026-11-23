@@ -42,3 +42,7 @@ yarn-error.*
 
 # Cobertura do Jest
 coverage/
+
+# Capturas soltas do Maestro (takeScreenshot): mover para docs/imagens/sprint3/ (T114)
+rf17-*.png
+*.mp4

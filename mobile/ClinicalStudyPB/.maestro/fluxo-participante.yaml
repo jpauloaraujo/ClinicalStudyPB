@@ -1,0 +1,108 @@
+# T114 e T121 · Fluxo E2E do app do participante (RF17 e RF18).
+# Login com o participante de demonstração -> aba Estudos -> detalhe de um estudo -> aba Visitas (próximas, detalhe da
+# visita e histórico com o resumo de comparecimento) -> sair pelo Perfil.
+#
+# Pré-requisitos (README do app, seção "E2E com Maestro"):
+#   - backend no ar com o perfil `demo` (participante@clinicalstudy.test vinculado ao P1, T111);
+#   - Expo rodando (`npm start`, porta 8082) com EXPO_PUBLIC_API_URL=http://10.0.2.2:8081 e um emulador Android com o Expo Go.
+#
+# Executar:   maestro test .maestro/fluxo-participante.yaml
+# Outro endereço do Expo (ex.: celular): maestro test -e EXPO_URL=exp://192.168.0.10:8082 .maestro/fluxo-participante.yaml
+#
+# Sem coordenadas de tela: só texto visível e identificadores (testID). Sempre começa do zero (clearState).
+appId: host.exp.exponent
+env:
+  EXPO_URL: exp://10.0.2.2:8082
+  EMAIL: participante@clinicalstudy.test
+  SENHA: senha-de-teste
+  ESTUDO: Demo - Acompanhamento de participantes
+  # P1 (seed R__demo_19): Triagem realizada e Retorno 30 dias agendado -> comparecimento: 1 de 1 visitas
+  VISITA_PROXIMA: Retorno 30 dias
+  VISITA_REALIZADA: Triagem
+---
+- launchApp:
+    clearState: true
+- openLink: ${EXPO_URL}
+
+# 1. Login (a primeira abertura do Expo Go carrega o pacote JS: espera longa)
+- extendedWaitUntil:
+    visible: "Aplicativo do participante"
+    timeout: 120000
+- takeScreenshot: rf17-login-mobile
+- tapOn:
+    id: campo-email
+- inputText: ${EMAIL}
+- tapOn:
+    id: campo-senha
+- inputText: ${SENHA}
+- hideKeyboard
+- tapOn:
+    id: botao-entrar
+
+# 2. Entrou: abas visíveis; abrir Meus estudos
+- extendedWaitUntil:
+    visible: "Estudos"
+    timeout: 30000
+- tapOn: "Estudos"
+- assertVisible: "Meus estudos"
+- extendedWaitUntil:
+    visible: ${ESTUDO}
+    timeout: 20000
+- assertVisible: "Em execução"
+- takeScreenshot: rf17-meus-estudos
+
+# 3. Detalhe do estudo
+- tapOn:
+    id: cartao-estudo
+    index: 0
+- extendedWaitUntil:
+    visible: "Objetivo"
+    timeout: 20000
+- assertVisible: ${ESTUDO}
+- assertVisible: "Ativo"
+- takeScreenshot: rf17-detalhe-estudo
+
+# 4. Voltar para a lista e abrir a aba Visitas: próximas visitas (RQ-T121-01)
+- back
+- assertVisible: "Meus estudos"
+- tapOn: "Visitas"
+- extendedWaitUntil:
+    visible: ${VISITA_PROXIMA}
+    timeout: 20000
+- assertVisible: "Agendada"
+- assertVisible: ${ESTUDO}
+- takeScreenshot: rf18-proximas-visitas
+
+# 5. Detalhe da visita (sem as ações do RF19) e volta
+- tapOn:
+    id: cartao-visita
+    index: 0
+- extendedWaitUntil:
+    visible: "Atividades previstas"
+    timeout: 20000
+- assertVisible: ${VISITA_PROXIMA}
+- assertVisible: ${ESTUDO}
+- takeScreenshot: rf18-detalhe-visita
+- back
+
+# 6. Histórico de comparecimento: a visita realizada, o selo e o resumo (RQ-T121-01)
+- tapOn:
+    id: segmento-historico
+- extendedWaitUntil:
+    visible: ${VISITA_REALIZADA}
+    timeout: 20000
+- assertVisible: "Realizada"
+- assertVisible: "comparecimento: 1 de 1 visitas"
+- takeScreenshot: rf18-historico-comparecimento
+
+# 7. Sair pelo Perfil
+- tapOn: "Perfil"
+- assertVisible: ${EMAIL}
+- tapOn:
+    id: botao-sair
+
+# 8. Voltou ao login (sessão encerrada)
+- extendedWaitUntil:
+    visible: "Aplicativo do participante"
+    timeout: 20000
+- assertVisible: "Entrar"

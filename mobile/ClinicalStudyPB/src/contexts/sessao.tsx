@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import {
   autenticacaoApi,
   definirAoExpirarSessao,
+  definirAoPerfilRecusado,
   ErroApi,
   tokenArmazenado,
   type UsuarioSessao,
@@ -72,6 +73,21 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
       definirUsuario(null);
     });
     return () => definirAoExpirarSessao(null);
+  }, [definirUsuario]);
+
+  // 403 em /api/me/* (RQ-T119-06): o perfil não é de participante; volta ao login com a mensagem do app exclusivo
+  useEffect(() => {
+    definirAoPerfilRecusado(() => {
+      if (entrandoRef.current) {
+        return;
+      }
+      tokenArmazenado.remover().catch(() => undefined);
+      if (usuarioRef.current) {
+        setAviso(MSG_PERFIL_NAO_PARTICIPANTE);
+      }
+      definirUsuario(null);
+    });
+    return () => definirAoPerfilRecusado(null);
   }, [definirUsuario]);
 
   const entrar = useCallback(

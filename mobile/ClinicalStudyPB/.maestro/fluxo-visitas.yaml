@@ -1,0 +1,75 @@
+# T121 · Fluxo E2E só das visitas do app do participante (RF18). Opcional: o fluxo completo é `fluxo-participante.yaml`.
+# Login -> aba Visitas -> próximas -> detalhe da visita -> histórico com o resumo de comparecimento -> sair.
+#
+# Pré-requisitos: os mesmos de `fluxo-participante.yaml` (backend no perfil `demo`, Expo na porta 8082 e emulador com o Expo Go).
+# Executar:   maestro test .maestro/fluxo-visitas.yaml
+#
+# O estado de erro (captura `rf18-erro-conexao`) não faz parte do fluxo: pare o backend, abra a aba Visitas e use
+# `maestro studio` ou o emulador para a captura; o texto esperado é "Não foi possível conectar. Verifique sua conexão e tente de novo.".
+appId: host.exp.exponent
+env:
+  EXPO_URL: exp://10.0.2.2:8082
+  EMAIL: participante@clinicalstudy.test
+  SENHA: senha-de-teste
+  ESTUDO: Demo - Acompanhamento de participantes
+  VISITA_PROXIMA: Retorno 30 dias
+  VISITA_REALIZADA: Triagem
+---
+- launchApp:
+    clearState: true
+- openLink: ${EXPO_URL}
+
+- extendedWaitUntil:
+    visible: "Aplicativo do participante"
+    timeout: 120000
+- tapOn:
+    id: campo-email
+- inputText: ${EMAIL}
+- tapOn:
+    id: campo-senha
+- inputText: ${SENHA}
+- hideKeyboard
+- tapOn:
+    id: botao-entrar
+
+# Próximas visitas
+- extendedWaitUntil:
+    visible: "Visitas"
+    timeout: 30000
+- tapOn: "Visitas"
+- extendedWaitUntil:
+    visible: ${VISITA_PROXIMA}
+    timeout: 20000
+- assertVisible: "Agendada"
+- assertVisible: ${ESTUDO}
+- takeScreenshot: rf18-proximas-visitas
+
+# Detalhe da visita (sem as ações do RF19)
+- tapOn:
+    id: cartao-visita
+    index: 0
+- extendedWaitUntil:
+    visible: "Atividades previstas"
+    timeout: 20000
+- assertVisible: ${VISITA_PROXIMA}
+- takeScreenshot: rf18-detalhe-visita
+- back
+
+# Histórico de comparecimento
+- tapOn:
+    id: segmento-historico
+- extendedWaitUntil:
+    visible: ${VISITA_REALIZADA}
+    timeout: 20000
+- assertVisible: "Realizada"
+- assertVisible: "comparecimento: 1 de 1 visitas"
+- takeScreenshot: rf18-historico-comparecimento
+
+# Sair
+- tapOn: "Perfil"
+- tapOn:
+    id: botao-sair
+- extendedWaitUntil:
+    visible: "Aplicativo do participante"
+    timeout: 20000
+- assertVisible: "Entrar"

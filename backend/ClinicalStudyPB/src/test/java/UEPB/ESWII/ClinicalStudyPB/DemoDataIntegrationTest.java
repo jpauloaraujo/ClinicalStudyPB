@@ -345,6 +345,33 @@ class DemoDataIntegrationTest {
                 + "where id = cast('d6300000-0000-4000-8000-000000002101' as uuid)", String.class)).isEqualTo("118/76");
     }
 
+    @Test
+    @DisplayName("T111: a carga demo liga participante@ ao P1 e demo.participante@ ao P5, um para um, e repetir a carga nao muda nada")
+    void demoVinculaAsContasDoParticipanteEEhIdempotente() throws Exception {
+        SingleConnectionDataSource banco = novoBanco();
+        migrarDemo(banco);
+        JdbcTemplate jdbc = new JdbcTemplate(banco);
+
+        assertThat(jdbc.queryForObject("select c.codigo from candidatos c join usuarios u on u.id = c.usuario_id "
+                + "where u.email = 'participante@clinicalstudy.test'", String.class)).isEqualTo("CAND-001");
+        assertThat(jdbc.queryForObject("select c.codigo from candidatos c join usuarios u on u.id = c.usuario_id "
+                + "where u.email = 'demo.participante@clinicalstudy.test'", String.class)).isEqualTo("CAND-005");
+        assertThat(jdbc.queryForObject("select count(usuario_id) from candidatos", Integer.class))
+                .as("um vinculo por conta (o indice uk_candidatos_usuario vale na carga do perfil demo)")
+                .isEqualTo(jdbc.queryForObject("select count(distinct usuario_id) from candidatos", Integer.class))
+                .isEqualTo(2);
+
+        Map<String, Integer> antes = contagens(jdbc);
+        try (Connection conexao = banco.getConnection()) {
+            ClassPathResource script = new ClassPathResource("db/demo/R__demo_24_conta_participante.sql");
+            ScriptUtils.executeSqlScript(conexao, script);
+            ScriptUtils.executeSqlScript(conexao, script);
+        }
+
+        assertThat(contagens(jdbc)).isEqualTo(antes);
+        assertThat(jdbc.queryForObject("select count(usuario_id) from candidatos", Integer.class)).isEqualTo(2);
+    }
+
     private static Flyway migrarDemo(SingleConnectionDataSource banco) throws Exception {
         Properties perfil = PropertiesLoaderUtils.loadProperties(new ClassPathResource("application-demo.properties"));
         Flyway flyway = Flyway.configure().dataSource(banco)

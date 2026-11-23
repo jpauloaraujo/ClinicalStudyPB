@@ -39,6 +39,17 @@ export function definirAoExpirarSessao(callback: (() => void) | null) {
   aoExpirarSessao = callback;
 }
 
+// T119 (RQ-T119-06): 403 em /api/me/* é perfil que não é de participante; o SessaoProvider leva ao login com o aviso
+let aoPerfilRecusado: (() => void) | null = null;
+
+export function definirAoPerfilRecusado(callback: (() => void) | null) {
+  aoPerfilRecusado = callback;
+}
+
+function ehConsultaDoParticipante(caminho: string): boolean {
+  return caminho.startsWith('/api/me/');
+}
+
 // Requisição JSON com o token salvo; erros seguem o formato único da Sprint 2
 export async function requisitar<T>(caminho: string, opcoes: RequestInit = {}): Promise<T> {
   const token = await tokenArmazenado.ler();
@@ -52,6 +63,9 @@ export async function requisitar<T>(caminho: string, opcoes: RequestInit = {}): 
     } catch (falha) {
       if (falha instanceof ErroApi && falha.status === 401 && !ehLogin) {
         aoExpirarSessao?.();
+      }
+      if (falha instanceof ErroApi && falha.status === 403 && ehConsultaDoParticipante(caminho)) {
+        aoPerfilRecusado?.();
       }
       throw falha;
     }
@@ -79,6 +93,9 @@ export async function requisitar<T>(caminho: string, opcoes: RequestInit = {}): 
   if (!resposta.ok) {
     if (resposta.status === 401 && !ehLogin) {
       aoExpirarSessao?.();
+    }
+    if (resposta.status === 403 && ehConsultaDoParticipante(caminho)) {
+      aoPerfilRecusado?.();
     }
     const corpo = (await resposta.json().catch(() => null)) as CorpoErroApi | null;
     throw erroDaResposta(resposta.status, corpo);
