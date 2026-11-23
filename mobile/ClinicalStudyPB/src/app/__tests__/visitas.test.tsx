@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { ErroApi } from '@/api/erro';
-import { visitasApi, type MinhaVisita } from '@/api/visitas';
+import { visitasApi, type HistoricoMinhasVisitas, type MinhaVisita } from '@/api/visitas';
 import VisitasScreen, { TEXTO_SEM_PROXIMAS } from '@/app/(tabs)/visitas';
+import { TEXTO_SEM_HISTORICO, juntarPaginas } from '@/components/ListaHistoricoVisitas';
 import DetalheVisitaScreen, { TEXTO_VISITA_NAO_ENCONTRADA, lerVisita } from '@/app/visitas/[visitaId]';
 import { descricaoDaVisita } from '@/utils/visitas';
 
@@ -169,13 +170,15 @@ describe('Aba Visitas: próximas (T117, RQ-T117-01 a 05 e 10)', () => {
     expect(screen.queryByRole('button', { name: 'Ver todas' })).toBeNull();
   });
 
-  it('a parte Histórico pode ser selecionada', async () => {
+  it('a parte Histórico pode ser selecionada e carrega o histórico', async () => {
     jest.spyOn(visitasApi, 'proximas').mockResolvedValue([]);
+    const historico = jest.spyOn(visitasApi, 'historico').mockResolvedValue(pagina([], 0, 0));
 
     await render(<VisitasScreen />);
     await fireEvent.press(screen.getByRole('tab', { name: 'Histórico' }));
 
     await waitFor(() => expect(screen.getByRole('tab', { name: 'Histórico', selected: true })).toBeTruthy());
+    await waitFor(() => expect(historico).toHaveBeenCalled());
   });
 });
 
@@ -213,5 +216,167 @@ describe('Detalhe da visita (T117, RQ-T117-06 e 07)', () => {
 
   it.each([undefined, '', 'não é json', '{"x":1}'])('lerVisita(%p) devolve null sem quebrar', (bruto) => {
     expect(lerVisita(bruto)).toBeNull();
+  });
+});
+
+const realizada: MinhaVisita = {
+  ...proxima,
+  id: 'h-1',
+  visitaNome: 'Triagem',
+  dataHora: '2026-10-30T09:00:00-03:00',
+  situacao: 'REALIZADA',
+  dataHoraRealizada: '2026-10-30T09:10:00-03:00',
+};
+const ausente: MinhaVisita = { ...proxima, id: 'h-2', visitaNome: 'Retorno 15 dias', dataHora: '2026-10-20T10:00:00-03:00', situacao: 'AUSENTE' };
+const cancelada: MinhaVisita = {
+  ...proxima,
+  id: 'h-3',
+  visitaNome: 'Retorno 45 dias',
+  dataHora: '2026-10-10T10:00:00-03:00',
+  situacao: 'CANCELADA',
+  motivo: 'retirada do estudo',
+};
+
+function pagina(
+  conteudo: MinhaVisita[],
+  numero = 0,
+  totalPaginas = 1,
+  resumo = { realizadas: 3, ausentes: 1, canceladas: 5 },
+): HistoricoMinhasVisitas {
+  return { resumo, conteudo, pagina: numero, tamanho: 20, totalElementos: conteudo.length, totalPaginas };
+}
+
+async function abrirHistorico() {
+  await render(<VisitasScreen />);
+  await fireEvent.press(screen.getByRole('tab', { name: 'Histórico' }));
+}
+
+describe('Aba Visitas: histórico de comparecimento (T118, RQ-T118-01 a 06 e 10)', () => {
+  beforeEach(() => {
+    jest.spyOn(visitasApi, 'proximas').mockResolvedValue([]);
+  });
+
+  it('mostra realizada, ausente e cancelada na ordem da API, com selo de texto, data e estudo (RQ-01)', async () => {
+    jest.spyOn(visitasApi, 'historico').mockResolvedValue(pagina([realizada, ausente, cancelada]));
+
+    await abrirHistorico();
+
+    expect(await screen.findByText('Triagem')).toBeTruthy();
+    expect(screen.getByText('Realizada')).toBeTruthy();
+    expect(screen.getByText('Ausente')).toBeTruthy();
+    expect(screen.getByText('Cancelada')).toBeTruthy();
+    expect(screen.getByText('sex, 30/10 às 09:00')).toBeTruthy();
+    expect(screen.getAllByText('Estudo de pressão arterial')).toHaveLength(3);
+    const nomes = screen.getAllByText(/^(Triagem|Retorno )/).map((no) => no.props.children);
+    expect(nomes).toEqual(['Triagem', 'Retorno 15 dias', 'Retorno 45 dias']);
+  });
+
+  it('a cancelada mostra o motivo e a realizada, a data e hora reais (RQ-02)', async () => {
+    jest.spyOn(visitasApi, 'historico').mockResolvedValue(pagina([realizada, cancelada]));
+
+    await abrirHistorico();
+
+    expect(await screen.findByText('Motivo: retirada do estudo')).toBeTruthy();
+    expect(screen.getByText('Realizada em sex, 30/10 às 09:10')).toBeTruthy();
+  });
+
+  it('o resumo vem do servidor e as canceladas não entram: "comparecimento: 3 de 4 visitas" (RQ-06)', async () => {
+    jest.spyOn(visitasApi, 'historico').mockResolvedValue(pagina([realizada]));
+
+    await abrirHistorico();
+
+    expect(await screen.findByText('comparecimento: 3 de 4 visitas')).toBeTruthy();
+    expect(screen.getByText('75%')).toBeTruthy();
+    expect(screen.getByLabelText('Comparecimento: 3 de 4 visitas')).toBeTruthy();
+  });
+
+  it('sem realizadas nem ausentes mostra "Sem visitas contabilizadas ainda" (RQ-06)', async () => {
+    jest
+      .spyOn(visitasApi, 'historico')
+      .mockResolvedValue(pagina([cancelada], 0, 1, { realizadas: 0, ausentes: 0, canceladas: 1 }));
+
+    await abrirHistorico();
+
+    expect(await screen.findByText('Sem visitas contabilizadas ainda')).toBeTruthy();
+  });
+
+  it('histórico vazio mostra "Nenhuma visita no histórico ainda." (RQ-04)', async () => {
+    jest.spyOn(visitasApi, 'historico').mockResolvedValue(pagina([], 0, 0, { realizadas: 0, ausentes: 0, canceladas: 0 }));
+
+    await abrirHistorico();
+
+    expect(await screen.findByText(TEXTO_SEM_HISTORICO)).toBeTruthy();
+    expect(TEXTO_SEM_HISTORICO).toBe('Nenhuma visita no histórico ainda.');
+  });
+
+  it('falha na carga mostra a mensagem e "Tentar de novo" repete a chamada (RQ-04)', async () => {
+    const historico = jest
+      .spyOn(visitasApi, 'historico')
+      .mockRejectedValueOnce(new ErroApi('Falha no servidor.', { status: 500 }))
+      .mockResolvedValue(pagina([realizada]));
+
+    await abrirHistorico();
+    expect(await screen.findByText('Falha no servidor.')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Tentar de novo' }));
+
+    expect(await screen.findByText('Triagem')).toBeTruthy();
+    expect(historico).toHaveBeenCalledTimes(2);
+  });
+
+  it('"Carregar mais" busca a próxima página sem duplicar itens e some na última (RQ-03)', async () => {
+    const historico = jest
+      .spyOn(visitasApi, 'historico')
+      .mockResolvedValueOnce(pagina([realizada, ausente], 0, 2))
+      .mockResolvedValueOnce(pagina([ausente, cancelada], 1, 2));
+
+    await abrirHistorico();
+    await screen.findByText('Triagem');
+    await fireEvent.press(screen.getByRole('button', { name: 'Carregar mais' }));
+
+    expect(await screen.findByText('Retorno 45 dias')).toBeTruthy();
+    expect(screen.getAllByText('Retorno 15 dias')).toHaveLength(1);
+    expect(historico).toHaveBeenLastCalledWith({ estudoId: undefined, pagina: 1, tamanho: 20 });
+    expect(screen.queryByRole('button', { name: 'Carregar mais' })).toBeNull();
+  });
+
+  it('puxar para atualizar recarrega do início (RQ-03)', async () => {
+    const historico = jest.spyOn(visitasApi, 'historico').mockResolvedValue(pagina([realizada]));
+
+    await abrirHistorico();
+    await screen.findByText('Triagem');
+    historico.mockResolvedValue(pagina([realizada, ausente]));
+
+    await act(async () => {
+      screen.getByTestId('lista-historico').props.refreshControl.props.onRefresh();
+    });
+
+    expect(await screen.findByText('Retorno 15 dias')).toBeTruthy();
+    expect(historico).toHaveBeenLastCalledWith({ estudoId: undefined, pagina: 0, tamanho: 20 });
+  });
+
+  it('com estudoId, o histórico também é filtrado (RQ-05)', async () => {
+    mockParametros = { estudoId: 'e-1' };
+    const historico = jest.spyOn(visitasApi, 'historico').mockResolvedValue(pagina([realizada]));
+
+    await abrirHistorico();
+    await screen.findByText('Triagem');
+
+    expect(historico).toHaveBeenCalledWith({ estudoId: 'e-1', pagina: 0, tamanho: 20 });
+  });
+
+  it('o cartão do histórico tem rótulo com a situação e o motivo (RQ-10)', async () => {
+    jest.spyOn(visitasApi, 'historico').mockResolvedValue(pagina([cancelada]));
+
+    await abrirHistorico();
+
+    expect(
+      await screen.findByRole('button', {
+        name: 'Visita Retorno 45 dias, sábado, 10 de outubro às 10:00, estudo Estudo de pressão arterial, cancelada, motivo: retirada do estudo',
+      }),
+    ).toBeTruthy();
+  });
+
+  it('juntarPaginas não repete visitas já carregadas', () => {
+    expect(juntarPaginas([realizada, ausente], [ausente, cancelada]).map((v) => v.id)).toEqual(['h-1', 'h-2', 'h-3']);
   });
 });

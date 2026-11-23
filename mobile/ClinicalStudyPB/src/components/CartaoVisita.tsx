@@ -24,6 +24,10 @@ export function CartaoVisita({ visita, aoAbrir }: Props) {
       </View>
       <Text style={local.nome}>{visita.visitaNome}</Text>
       <Text style={estilos.textoSuave}>{visita.estudoTitulo}</Text>
+      {visita.situacao === 'REALIZADA' && visita.dataHoraRealizada ? (
+        <Text style={estilos.texto}>Realizada em {formatarDataHora(visita.dataHoraRealizada)}</Text>
+      ) : null}
+      {visita.situacao === 'CANCELADA' && visita.motivo ? <Text style={estilos.texto}>Motivo: {visita.motivo}</Text> : null}
       {visita.atividades.length > 0 ? (
         <View style={local.atividades}>
           <Text style={local.atividadesTitulo}>Atividades previstas</Text>

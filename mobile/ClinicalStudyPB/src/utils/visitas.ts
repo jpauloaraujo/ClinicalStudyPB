@@ -32,6 +32,9 @@ export function descricaoDaVisita(visita: MinhaVisita): string {
     `estudo ${visita.estudoTitulo}`,
     rotuloSituacaoVisita(visita.situacao).toLowerCase(),
   ];
+  if (visita.situacao === 'REALIZADA' && visita.dataHoraRealizada) {
+    partes.push(`realizada em ${formatarDataHoraPorExtenso(visita.dataHoraRealizada)}`);
+  }
   if (visita.situacao === 'CANCELADA' && visita.motivo) {
     partes.push(`motivo: ${visita.motivo}`);
   }

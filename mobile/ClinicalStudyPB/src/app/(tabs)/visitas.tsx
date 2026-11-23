@@ -8,13 +8,14 @@ import { Carregando } from '@/components/Carregando';
 import { EstadoErro } from '@/components/EstadoErro';
 import { EstadoVazio } from '@/components/EstadoVazio';
 import { cores, espaco, raio } from '@/components/tema';
+import { ListaHistoricoVisitas } from '@/components/ListaHistoricoVisitas';
 import { Botao, estilos } from '@/components/ui';
 
 export const TEXTO_SEM_PROXIMAS = 'Nenhuma visita agendada.';
 
 type Parte = 'proximas' | 'historico';
 
-// M05 Visitas: seletor de duas partes. Próximas é a padrão; o histórico de comparecimento é a T118.
+// M05 e M06 Visitas: seletor de duas partes. Próximas é a padrão; Histórico traz o resumo de comparecimento (T118).
 export default function VisitasScreen() {
   const { estudoId } = useLocalSearchParams<{ estudoId?: string }>();
   const [parte, setParte] = useState<Parte>('proximas');
@@ -27,11 +28,9 @@ export default function VisitasScreen() {
         <Segmento id="historico" rotulo="Histórico" ativo={parte === 'historico'} aoTocar={() => setParte('historico')} />
       </View>
       {parte === 'proximas' ? (
-        <ListaProximas key={filtro ?? "todas"} estudoId={filtro} />
+        <ListaProximas key={`proximas-${filtro ?? 'todas'}`} estudoId={filtro} />
       ) : (
-        <View style={estilos.conteudo}>
-          <EstadoVazio titulo="O histórico de comparecimento chega na T118." />
-        </View>
+        <ListaHistoricoVisitas key={`historico-${filtro ?? 'todas'}`} estudoId={filtro} />
       )}
     </View>
   );
