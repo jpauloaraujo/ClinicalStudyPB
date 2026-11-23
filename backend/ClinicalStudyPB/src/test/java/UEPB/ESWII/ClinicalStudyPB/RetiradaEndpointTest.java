@@ -1,7 +1,13 @@
 package UEPB.ESWII.ClinicalStudyPB;
 
+import static UEPB.ESWII.ClinicalStudyPB.support.CenarioRecrutamento.avaliarAprovado;
+import static UEPB.ESWII.ClinicalStudyPB.support.CenarioRecrutamento.consentir;
+import static UEPB.ESWII.ClinicalStudyPB.support.CenarioRecrutamento.criarCandidato;
 import static UEPB.ESWII.ClinicalStudyPB.support.CenarioRecrutamento.enviar;
+import static UEPB.ESWII.ClinicalStudyPB.support.CenarioRecrutamento.estudoEmRecrutamento;
+import static UEPB.ESWII.ClinicalStudyPB.support.CenarioRecrutamento.id;
 import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -157,6 +163,73 @@ class RetiradaEndpointTest {
                 "{\"motivo\":\"Mudança de cidade\",\"solicitante\":\"INVALIDO\",\"dataRetirada\":\"" + hoje + "\"}")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.codigo").value("CORPO_INVALIDO"));
+
+        // T106 (RQ-T106-03 e RQ-T106-12): motivo com 4 caracteres, >500 caracteres e JSON malformado
+        enviar(mvc, "POST", url(PARTICIPACAO_P3), coordenador,
+                "{\"motivo\":\"abcd\",\"solicitante\":\"PARTICIPANTE\",\"dataRetirada\":\"" + hoje + "\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value("MOTIVO_OBRIGATORIO"));
+
+        enviar(mvc, "POST", url(PARTICIPACAO_P3), coordenador,
+                "{\"motivo\":\"" + "m".repeat(501) + "\",\"solicitante\":\"PARTICIPANTE\",\"dataRetirada\":\"" + hoje + "\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value("VALIDACAO_CAMPOS"));
+
+        enviar(mvc, "POST", url(PARTICIPACAO_P3), coordenador, "{\"motivo\":")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value("CORPO_INVALIDO"));
+    }
+
+    @Test
+    @DisplayName("T106 (RQ-T106-14): lista de participantes traz situacao RETIRADO após a retirada")
+    void listaDeParticipantesMostraSituacaoRetirado() throws Exception {
+        enviar(mvc, "POST", url(PARTICIPACAO_P1), coordenador, corpoValido())
+                .andExpect(status().isCreated());
+
+        enviar(mvc, "GET", "/api/estudos/" + ESTUDO_DEMO + "/participantes", pesquisador, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id=='" + PARTICIPACAO_P1 + "')].situacao", hasItem("RETIRADO")))
+                .andExpect(jsonPath("$[?(@.id=='" + PARTICIPACAO_P3 + "')].situacao", hasItem("ATIVO")));
+    }
+
+    @Test
+    @DisplayName("T106 (RQ-T106-11): retirada não libera vaga e nova inclusão em estudo cheio devolve 409 VAGAS_ESGOTADAS")
+    void retiradaNaoLiberaVagaECandidatoNovoRecebeVagasEsgotadas() throws Exception {
+        String estudoId = estudoEmRecrutamento(mvc, pesquisador, 1);
+
+        String cand1 = criarCandidato(mvc, coordenador, estudoId, "Pessoa Um (Ficticia)");
+        avaliarAprovado(mvc, coordenador, cand1, estudoId);
+        consentir(mvc, coordenador, cand1).andExpect(status().isCreated());
+        String participacao1 = id(enviar(mvc, "POST", "/api/estudos/" + estudoId + "/participantes", coordenador,
+                "{\"candidatoId\":\"" + cand1 + "\"}").andExpect(status().isCreated()));
+
+        enviar(mvc, "GET", "/api/estudos/" + estudoId + "/participantes/vagas", coordenador, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.incluidos").value(1))
+                .andExpect(jsonPath("$.limite").value(1))
+                .andExpect(jsonPath("$.restantes").value(0));
+
+        // Retira o único participante (com motivo exatamente no limite mínimo de 5 caracteres)
+        enviar(mvc, "POST", url(participacao1), coordenador,
+                "{\"motivo\":\"12345\",\"solicitante\":\"COORDENACAO\",\"dataRetirada\":\"" + hoje + "\"}")
+                .andExpect(status().isCreated());
+
+        // Contagem de vagas não muda
+        enviar(mvc, "GET", "/api/estudos/" + estudoId + "/participantes/vagas", coordenador, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.incluidos").value(1))
+                .andExpect(jsonPath("$.limite").value(1))
+                .andExpect(jsonPath("$.restantes").value(0));
+
+        // Segundo candidato pronto tenta entrar: continua VAGAS_ESGOTADAS
+        String cand2 = criarCandidato(mvc, coordenador, estudoId, "Pessoa Dois (Ficticia)");
+        avaliarAprovado(mvc, coordenador, cand2, estudoId);
+        consentir(mvc, coordenador, cand2).andExpect(status().isCreated());
+
+        enviar(mvc, "POST", "/api/estudos/" + estudoId + "/participantes", coordenador,
+                "{\"candidatoId\":\"" + cand2 + "\"}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo").value("VAGAS_ESGOTADAS"));
     }
 
     @Test
