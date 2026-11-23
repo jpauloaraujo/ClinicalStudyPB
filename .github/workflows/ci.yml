@@ -154,9 +154,20 @@ jobs:
           DB_USERNAME: postgres
           DB_PASSWORD: postgres
           JWT_SECRET: segredo-ficticio-do-e2e-com-mais-de-256-bits-0123456789
+        # O wrapper baixa o Maven de repo.maven.apache.org, que às vezes recusa o runner (HTTP 429, o mesmo limite do
+        # Docker, D-S3-14): repete até 3 vezes e, se ainda falhar, usa o Maven que já vem instalado no runner
         run: |
           chmod +x mvnw
-          ./mvnw -B -DskipTests package
+          empacotar() {
+            for tentativa in 1 2 3; do
+              ./mvnw -B -DskipTests package && return 0
+              echo "mvnw falhou (tentativa $tentativa de 3); nova tentativa em $((tentativa * 20))s"
+              sleep $((tentativa * 20))
+            done
+            echo "mvnw falhou 3 vezes; usando o mvn instalado no runner"
+            mvn -B -DskipTests package
+          }
+          empacotar
           nohup java -jar "$(ls target/*.jar | grep -v original | head -1)" > "$GITHUB_WORKSPACE/backend.log" 2>&1 &
 
       - name: Instala, constrói e serve o web
