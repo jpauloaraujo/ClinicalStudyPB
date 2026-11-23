@@ -13,7 +13,7 @@ export default function PerfilScreen() {
         <Text style={estilos.textoSuave}>{usuario?.email}</Text>
         <Text style={estilos.etiqueta}>Participante</Text>
       </Cartao>
-      <Botao rotulo="Sair" variante="perigo" onPress={() => void sair().catch(() => undefined)} />
+      <Botao rotulo="Sair" variante="perigo" testID="botao-sair" onPress={() => void sair().catch(() => undefined)} />
     </Tela>
   );
 }

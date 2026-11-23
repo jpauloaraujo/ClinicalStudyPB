@@ -115,7 +115,7 @@ Dez pontos do planejamento foram ajustados para funcionar com o código real da 
 | T111 | Vínculo da conta do participante (backend e web) | I7 | 3h | Sáb 21/11 | T109, T97 (ficha do PBI-22) | 🟡 backend e web prontos com testes; falta a conferência manual e a ressalva da retirada (T101) | [Design da T111](T111-vinculo-da-conta-do-participante-backend-e-web.md) · [Plano](T111-plano-de-implementacao.md) · [Testes](../../testes/testes-t111-vinculo-da-conta-do-participante.md) · 14 requisitos |
 | T112 | Telas Meus estudos e detalhe do estudo | I7 | 3h | Sáb 21/11 | T108, T109 | 🟡 telas e testes prontos (129 no app); falta a conferência em emulador ou celular com a API real (RQ-T112-11) | [Design da T112](T112-telas-meus-estudos-e-detalhe-do-estudo.md) · [Plano](T112-plano-de-implementacao.md) · [Testes](../../testes/testes-t112-telas-meus-estudos-e-detalhe.md) · 11 requisitos |
 | T113 | Testes de backend e de componente do app | I7 | 3h | Sáb 21/11 | T109, T110, T111, T112 | 🟡 testes e cobertura prontos; falta a suíte no PostgreSQL (CI) | [Design da T113](T113-testes-de-backend-e-de-componente-do-app.md) · [Plano](T113-plano-de-implementacao.md) · [Testes](../../testes/testes-t113-testes-de-backend-e-de-componente-do-app.md) · 16 requisitos |
-| T114 | E2E mobile (Maestro), capturas e documentação | I7 | 2h | Sáb 21/11 | T110, T112 | ⬜ | [Design da T114](T114-e2e-mobile-maestro-capturas-e-documentacao.md) · 12 requisitos |
+| T114 | E2E mobile (Maestro), capturas e documentação | I7 | 2h | Sáb 21/11 | T110, T112 | 🟡 fluxos Maestro, identificadores e documentação prontos; falta rodar em emulador com evidência e as capturas (RQ-T114-05 e 08) | [Design da T114](T114-e2e-mobile-maestro-capturas-e-documentacao.md) · [Plano](T114-plano-de-implementacao.md) · [Evidência](../../sprint3/e2e-mobile-evidencia.md) · 12 requisitos |
 
 ### PBI-25 · RF18 App: próximas visitas e histórico de comparecimento (I5 · Dom 22/11 a Seg 23/11 · 21h)
 
@@ -181,3 +181,4 @@ Cada dia pertence a um único PBI; ao fim do segundo dia de cada janela, o PBI e
 3. Escreva os testes **junto com o código**; cada PBI traz a sua task de testes de backend (e de componente) e a de E2E.
 4. Ao terminar a janela, faça a passagem de bastão (tabela acima), zere o Remaining Work no Azure Boards e avise o dono do PBI seguinte.
 5. Se o Planning (T94) ou a implementação mudar algo, corrija a seção 1 das convenções e o documento da task afetada **no mesmo dia**.
+ 
