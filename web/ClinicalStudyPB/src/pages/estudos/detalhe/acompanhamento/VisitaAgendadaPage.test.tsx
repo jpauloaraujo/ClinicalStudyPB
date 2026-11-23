@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { agendamentoApi } from '../../../../api/agendamento'
+import { visitasAgendadasApi } from '../../../../api/visitasAgendadas'
 import { erroHttp, renderizarAba } from '../../../../test/ambiente'
 import type { PerfilUsuario } from '../../../../types/usuario'
 import { VisitaAgendadaPage } from './VisitaAgendadaPage'
@@ -24,7 +25,17 @@ vi.mock('../../../../api/agendamento', () => ({
   },
 }))
 
+vi.mock('../../../../api/visitasAgendadas', () => ({
+  visitasAgendadasApi: {
+    buscar: vi.fn(),
+    registrarDesfecho: vi.fn(),
+    resultados: vi.fn(),
+    registrarResultado: vi.fn(),
+  },
+}))
+
 const visitasApi = vi.mocked(agendamentoApi.visitasDoParticipante)
+const resultadosApi = vi.mocked(visitasAgendadasApi.resultados)
 const reagendar = vi.mocked(agendamentoApi.reagendar)
 
 function renderizar(visitaAgendadaId: string, perfil: PerfilUsuario = 'COORDENADOR', estudo: Estudo = estudoEmRecrutamento) {
@@ -55,14 +66,39 @@ describe('VisitaAgendadaPage (T77)', () => {
     expect(within(dados).getAllByText(/Coordenador Demo \(Ficticio\) em 11\/11\/2026 10:00/)).toHaveLength(2)
   })
 
-  it('mostra uma única aba, Dados, definida em abasVisita.ts', async () => {
+  it('mostra as abas Dados e Avaliações, definidas em abasVisita.ts, com Dados aberta', async () => {
     renderizar('va-1')
 
     const abas = await screen.findByRole('navigation', { name: 'Seções da visita' })
     const botoes = within(abas).getAllByRole('button')
-    expect(botoes.map((b) => b.textContent)).toEqual(['Dados'])
+    expect(botoes.map((b) => b.textContent)).toEqual(['Dados', 'Avaliações'])
     expect(botoes[0]).toHaveAttribute('aria-current', 'page')
   })
+
+  it.each<PerfilUsuario>(['PESQUISADOR', 'COORDENADOR'])(
+    'a aba Avaliações (T91) aparece para o %s e mostra os resultados da visita',
+    async (perfil) => {
+      resultadosApi.mockResolvedValue({
+        visitaAgendadaId: 'va-0',
+        situacaoVisita: 'REALIZADA',
+        bloqueio: null,
+        total: 1,
+        registrados: 0,
+        pendentes: 1,
+        atividades: [{ acaoId: 'acao-1', nome: 'Aferir pressão arterial', descricao: null, resultado: null }],
+      })
+      renderizar('va-0', perfil)
+
+      const abas = await screen.findByRole('navigation', { name: 'Seções da visita' })
+      await userEvent.click(within(abas).getByRole('button', { name: 'Avaliações' }))
+
+      expect(within(abas).getByRole('button', { name: 'Avaliações' })).toHaveAttribute('aria-current', 'page')
+      expect(await screen.findByRole('region', { name: 'Avaliações da visita' })).toBeInTheDocument()
+      expect(resultadosApi).toHaveBeenCalledWith('va-0')
+      expect(screen.getByText(/0 de 1/)).toHaveTextContent('0 de 1 avaliações registradas')
+      expect(screen.queryByRole('region', { name: 'Dados da visita' })).not.toBeInTheDocument()
+    },
+  )
 
   it('o coordenador tem Reagendar (ponto de encaixe AcoesDaVisita) e reagenda com a janela como limite', async () => {
     reagendar.mockResolvedValue(agendamentoDe({ dataHora: '2026-11-27T09:30:00-03:00' }))

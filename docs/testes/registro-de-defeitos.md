@@ -2,64 +2,215 @@
 
 Registro vivo dos defeitos encontrados nos testes e nas revisões, do primeiro ao último, para manter a **rastreabilidade** entre requisito, teste e correção. Cada linha tem um identificador estável: use-o na mensagem do commit e na descrição do Pull Request que corrige o defeito.
 
-Relatórios que usam este registro: [Sprints 1 a 3](relatorio-de-testes-sprints-1-a-3.md) e [Release 1](relatorio-de-testes-release1.md).
+Este é o resumo oficial. O histórico completo (causa, resolução, o que funciona e o que não funciona, alterações e PRs) está na [rastreabilidade de erros e alterações](../rastreabilidade/rastreabilidade-erros-e-alteracoes.md), que usa os mesmos identificadores e estados. Relatórios que usam este registro: [Sprints 1 a 3](relatorio-de-testes-sprints-1-a-3.md) e [Release 1](relatorio-de-testes-release1.md).
 
-**Como registrar um defeito novo:** acrescente uma linha na tabela da seção 1 (e, se precisar de mais detalhe, uma subseção da seção 2) com o próximo identificador, a evidência (comando, teste e mensagem) e o estado. Mude o estado quando houver correção e aponte o commit ou o PR. Não apague defeitos fechados.
+**Atualizado em 16/11/2026**, sobre o ramo `develop` no commit `3257595`.
 
-**Legenda:** Severidade **Alta** (perde dado, burla regra ou bloqueia o fluxo principal), **Média** (comportamento incorreto com contorno ou bloqueia um merge), **Baixa** (cosmético ou de teste). Estado **Aberto**, **Em correção** ou **Fechado**.
+| Como registrar um defeito novo | |
+|---|---|
+| 1 | Acrescente uma linha na tabela da seção 1 com o próximo identificador, a origem, a evidência (comando, teste e mensagem) e o estado |
+| 2 | Mude o estado quando houver correção e aponte o commit ou o PR. Não apague defeitos fechados |
+| 3 | Atualize também a rastreabilidade de erros e a seção 6 do `README.md`, em uma branch de documentação própria (nunca junto da branch de uma task) |
+
+| Legenda | Significado |
+|---|---|
+| Severidade **Alta** | Perde dado, burla regra ou bloqueia o fluxo principal |
+| Severidade **Média** | Comportamento incorreto com contorno, ou bloqueia um merge |
+| Severidade **Baixa** | Cosmético, de teste ou de processo |
+| Estado **Aberto** | Sem correção |
+| Estado **Em verificação** | Corrigido e mesclado; falta confirmação (em geral, do CI) |
+| Estado **Fechado** | Corrigido e verificado |
 
 ## 1. Resumo
 
-| ID | Data | Origem | Descrição | Severidade | Estado | Teste que o cobre |
-|---|---|---|---|---|---|---|
-| **D-S3-01** | 13/11/2026 | Sprint 3 · T75 · **PR #12** | O teste `validaLimitesInclusivosDaJanela` falha: agenda uma data passada e a regra da data passada a recusa | Média | **Aberto** | `AgendamentoVisitaServiceTest.validaLimitesInclusivosDaJanela` (o próprio teste falhando) |
-| **OBS-12-01** | 13/11/2026 | Sprint 3 · T75 · PR #12 | A entidade `VisitaAgendada` perdeu o `@UniqueConstraint` do `@Table` | A confirmar | **Aberto** | `VisitaAgendadaRepositoryTest` (o UNIQUE continua no banco) |
-| **OBS-12-02** | 13/11/2026 | Sprint 3 · T75 · PR #12 | A entidade perdeu o `@PreUpdate`: `alteradoEm` deixa de ser atualizado sozinho | A confirmar | **Aberto** | Sem teste (criar na T78) |
-| **OBS-12-03** | 13/11/2026 | Sprint 3 · T75 · PR #12 | `criadoPor` e `criadoEm` deixaram de ser `updatable = false` | Baixa | **Aberto** | Sem teste |
-| **OBS-12-04** | 13/11/2026 | Sprint 3 · T75 · PR #12 | Códigos e tipo de erro do serviço diferem do contrato `openapi-sprint3.yaml` e do design da T75 | Média | **Aberto** | `ContratoOpenApiSprint3Test` (quando a T76 ligar o caso da API) |
-| B-T67-01 | Nov/2026 | Sprint 1 (segurança) · T67 | CORS com origens fixas no código impedia servir a web em outra porta ou host | Média | Fechado | `CorsIntegrationTest`, `CorsOrigensConfiguradasIntegrationTest` |
-| B-T68-01 | Nov/2026 | Sprint 2 · T42 | `PUT`/`POST` do estudo aceitavam mudar o estado fora da transição, permitindo abrir o recrutamento sem critério ou visita | Alta | Fechado | `EstudoServiceTest`, `EstudoTransicaoRf07Test` |
-| B-T68-02 | Nov/2026 | Sprint 2 · T54 | Candidato incluído podia ser reavaliado | Média | Fechado | `AvaliacaoEndpointTest` |
-| B-T68-03 | Nov/2026 | Sprint 2 · T60 | A inclusão podia ultrapassar o limite de vagas sob concorrência | Alta | Fechado | `ParticipacaoConcorrenciaTest` |
-| B-T68-04 | Nov/2026 | Sprint 2 · PR #5 | `AuthContext` e `Login` do PR #5 quebravam o lint, usavam endpoint e chave de token errados e duplicavam a `LoginPage` | Média | Fechado | `AuthContext.test.tsx`, E2E de login |
-| B-AUD-01 | Nov/2026 | Sprint 2 · T62 | Faltava o teste de endpoint dos participantes pedido pelo design e o teste de concorrência não limpava os dados | Baixa | Fechado | `ParticipacaoEndpointTest` (15) |
+| ID | Data | Origem | Descrição | Severidade | Estado | Teste que o cobre | Resolução |
+|---|---|---|---|---|---|---|---|
+| B-T67-01 | Nov/2026 | Sprint 1 (segurança) · T67 | CORS com origens fixas no código impedia servir a web em outra porta ou host | Média | Fechado | `CorsIntegrationTest`, `CorsOrigensConfiguradasIntegrationTest` | `CORS_ALLOWED_ORIGINS` |
+| B-T68-01 | Nov/2026 | Sprint 2 · T42 | `PUT`/`POST` do estudo aceitavam mudar o estado fora da transição, permitindo abrir o recrutamento sem critério ou visita | Alta | Fechado | `EstudoServiceTest`, `EstudoTransicaoRf07Test` | `409 ESTADO_ALTERADO_FORA_DA_TRANSICAO` |
+| B-T68-02 | Nov/2026 | Sprint 2 · T54 | Candidato incluído podia ser reavaliado | Média | Fechado | `AvaliacaoEndpointTest` | `409 CANDIDATO_JA_INCLUIDO` |
+| B-T68-03 | Nov/2026 | Sprint 2 · T60 | A inclusão podia ultrapassar o limite de vagas sob concorrência | Alta | Fechado | `ParticipacaoConcorrenciaTest` | Bloqueio pessimista do estudo |
+| B-T68-04 | Nov/2026 | Sprint 2 · PR #5 | `AuthContext` e `Login` do PR #5 quebravam o lint, usavam endpoint e chave de token errados e duplicavam a `LoginPage` | Média | Fechado | `AuthContext.test.tsx`, E2E de login | `AuthContext` sobre a sessão real; `Login` duplicado removido |
+| B-AUD-01 | Nov/2026 | Sprint 2 · T62 | Faltava o teste de endpoint dos participantes e o teste de concorrência não limpava os dados | Baixa | Fechado | `ParticipacaoEndpointTest` (15) | Teste criado e limpeza no `@AfterEach` |
+| D-S2-01 | 07/11/2026 | Sprint 2 · merge `518fc2e` | Depois do merge da `main`, o backend não compilava com os testes antigos (`ConsentimentoServiceTest`, `VisitaServiceTest`) | Média | Fechado | Suíte completa (376 testes na época) | Testes adaptados ao bloqueio de escrita do estudo |
+| D-S2-02 | 07/11/2026 | Sprint 2 · commit `0306618` | `.env.e2e` versionado apesar do `.gitignore` | Baixa | Fechado | — | Removido do índice |
+| D-S2-03 | 09/11/2026 | Sprint 2 · commit `1394554` | Arquivos `.pyc` rastreados no Git | Baixa | Fechado | — | Removidos; `__pycache__` ignorado |
+| D-S2-04 | 09/11/2026 | Sprint 2 · commit `4151afc` | 4 documentos duplicados com nome corrompido | Baixa | Fechado | — | Duplicatas removidas |
+| D-S3-00 | 12/11/2026 | Sprint 3 · T73 · PR #10 | A T73 divergia do documento de design (versão, auditoria, cascata, CHECKs) | Média | Fechado | `VisitaAgendadaRepositoryTest` | Migration `V6_19_1` reescrita |
+| D-S3-01 | 13/11/2026 | Sprint 3 · T75 · PR #12 | `validaLimitesInclusivosDaJanela` falhava: agendava uma data passada e a regra (correta) a recusava | Média | Fechado | `AgendamentoVisitaServiceTest` | `961952f`; PR #12 mesclado em `8d54754` |
+| OBS-12-01 | 13/11/2026 | Sprint 3 · T75 · PR #12 | A entidade `VisitaAgendada` perdeu o `@UniqueConstraint` | Média | Fechado | `VisitaAgendadaRepositoryTest` | Restaurado no PR #17 |
+| OBS-12-02 | 13/11/2026 | Sprint 3 · T75 · PR #12 | A entidade perdeu o `@PreUpdate` | Baixa | Fechado | — | Restaurado no PR #17; removido de novo na T76 (ver D-S3-11) |
+| OBS-12-03 | 13/11/2026 | Sprint 3 · T75 · PR #12 | `criadoPor` e `criadoEm` deixaram de ser `updatable = false` | Baixa | Fechado | — | Restaurado no PR #17 |
+| OBS-12-04 | 13/11/2026 | Sprint 3 · T75 · PR #12 | Códigos e tipo de erro do serviço diferiam do contrato `openapi-sprint3.yaml` | Média | Fechado | `ContratoOpenApiSprint3Test` | Corrigido na T76 (PR #21) |
+| D-S3-02 | 15/11/2026 | Sprint 3 · T75 | `AgendamentoVisitaServiceTest` com 3 falhas: datas do relógio real contra `Clock` fixo | Média | Fechado | `AgendamentoVisitaServiceTest` | `Clock` fixo no teste (PR #17) |
+| D-S3-03 | 15/11/2026 | Sprint 3 · T96 | Push direto na `develop`, sem Pull Request (`eb37e3a`), porque a branch foi criada com o upstream na `develop` | Média | Aberto | `HistoricoParticipanteServiceTest`, `HistoricoParticipanteEndpointTest` | Upstream removido; ⏳ falta o review do commit |
+| D-S3-04 | 15/11/2026 | Sprint 3 · T85 · `task80-85` | 32 erros em `DesfechoEndpointTest` (participação ainda não gravada antes do INSERT por SQL) | Média | Fechado | `DesfechoEndpointTest` (33) | `flush()` no cenário de teste (PR #20) |
+| D-S3-05 | 15/11/2026 | Sprint 3 · `task80-85` | Conflito da branch com a `develop` em 5 arquivos | Média | Fechado | Suíte completa | Resolvido e mesclado (PR #20) |
+| D-S3-06 | 15/11/2026 | Sprint 3 · `task80-85` | T84 (RQ-T84-07 a 10), T86, T78 e T79 por fazer; T83 estava bloqueada pela T77 | Média | Aberto (parcial) | — | T77 (PR #23) e T83 (PR #20) na `develop`; restam T84, T86, T78 e T79 |
+| D-S3-07 | 15/11/2026 | Sprint 3 · T76 | Ordem das regras: o estado do estudo era checado antes do participante | Média | Fechado | `AgendamentoVisitaServiceTest` | `c298605` |
+| D-S3-08 | 15/11/2026 | Sprint 3 · T76 (CI H2) | `filtraEPaginaAgenda` voltava vazio no CI por diferença de fuso (UTC contra America/Recife) | Média | Fechado | `AgendamentoEndpointTest` | `17a4030` |
+| D-S3-09 | 16/11/2026 | Sprint 3 · T76 (CI PostgreSQL) | `could not determine data type of parameter $2` na consulta da agenda | Média | Em verificação | `AgendamentoEndpointTest` (H2) | `d594e19` (PR #21); falta confirmar o job PostgreSQL do CI |
+| D-S3-10 | 15/11/2026 | Sprint 3 · T76 (rodada local) | `DemoDataIntegrationTest` falhou 2 testes localmente (esperava 3 participantes, achou 5) | Baixa | Em verificação | `DemoDataIntegrationTest` (passa em 16/11) | Não reproduzido; causa não esclarecida |
+| D-S3-11 | 15/11/2026 | Sprint 3 · T76 | A T76 removeu o `@PreUpdate` de `VisitaAgendada` | Baixa | Em verificação | Sem teste | A decidir pelo revisor |
+| D-S3-12 | 15/11/2026 | Sprint 3 · verificação local | `cmd //c mvnw.cmd ...` não rodava e, com `-q`, parecia sucesso | Baixa | Fechado | — | Refeito com `./mvnw.cmd` |
+| D-S3-13 | 15/11/2026 | Sprint 3 · ferramentas | Heredoc grande falhou e Python indisponível no ambiente | Baixa | Fechado | — | Ferramentas de escrita de arquivos |
+| D-S3-14 | 16/11/2026 | Sprint 3 · T77 (CI Docker) | Build do backend falhou com Maven Central respondendo 429 (Too Many Requests); não é erro do código nem do banco | Média | Em verificação | Job "Ambiente Docker (T67)" | Retry de 5 tentativas no Dockerfile (PR #24); falta um job verde |
+| D-T109-01 | 19/11/2026 | Sprint 3 · T109 (primeira rodada do backend) | `ContratoOpenApiSprint3Test.operacoesDeclaramAsRespostasDeErro` falhou: `GET /api/me/estudos` declara só `200, 401, 403`, e o teste exige `404` e `409` em toda operação | Baixa | Fechado | `ContratoOpenApiSprint3Test.operacoesDeclaramAsRespostasDeErro` | Erro da **premissa do teste** (escrita para a agenda, com 404/409 possíveis): a lista do `/me` não tem id nem regra de negócio. Teste refinado (404 e 409 deixam de ser exigidos onde são impossíveis; nada removido). Detalhe em [testes-t109](testes-t109-acesso-do-participante-e-endpoints-me.md#4-falhas-encontradas-e-correções) |
+| D-T109-02 | 19/11/2026 | Sprint 3 · T109 (primeira rodada do backend) | `MeEndpointTest.detalheDoEstudoDaConta` falhou: `jsonPath("$.resumo.length()")` devolveu `null` | Baixa | Fechado | `MeEndpointTest.detalheDoEstudoDaConta` | Erro do **teste novo** (a função `length()` do JsonPath não se aplica a texto); o código estava correto. Asserção trocada por `matchesPattern("(?s).{1,160}")`. Detalhe em [testes-t109](testes-t109-acesso-do-participante-e-endpoints-me.md#4-falhas-encontradas-e-correções) |
+| D-T110-01 | 20/11/2026 | Sprint 3 · T110 (primeira rodada do app) | `npm run typecheck` falhou em `login.tsx`: `useRef<TextInput>` não tem `focus` neste React Native | Baixa | Fechado | `npm run typecheck` | Erro do **código novo**; `ref` tipado com `ComponentRef<typeof TextInput>`. [testes-t110](testes-t110-login-e-logout-no-app.md#4-falhas-encontradas-e-correções), F-T110-01 |
+| D-T110-02 | 20/11/2026 | Sprint 3 · T110 (primeira rodada do app) | `npm run lint` falhou em `(tabs)/index.tsx`: `react-hooks/set-state-in-effect` | Baixa | Fechado | `npm run lint` | Erro do **código novo**; `setState` só em callbacks assíncronos. F-T110-02 |
+| D-T110-03 | 20/11/2026 | Sprint 3 · T110 (testes novos) | `login.test` estourou 5000 ms no primeiro teste (intermitente, carga das 8 suítes em paralelo) | Baixa | Fechado | `login.test.tsx` | Erro do **ambiente de teste**; `jest.setTimeout(30000)` no arquivo novo. F-T110-03 |
+| D-T110-04 | 20/11/2026 | Sprint 3 · T110 (testes novos) | O teste de envio pendente travava: `await fireEvent.press` esperava a promessa que o próprio teste controlava; três reparos seguidos (F-T110-05 a 07) causaram cascata de 11 falhas, `props.onPress` indefinido e `{enter}` inválido | Baixa | Fechado | `login.test.tsx` › "desabilita o botão durante o envio…" | Erro do **teste novo**; tela correta. Passou a usar `userEvent` (`press` e `type(..., { submitEditing: true })`). F-T110-04 a 07 |
 
-Resumo: **5 abertos** (todos no PR #12, que ainda não foi integrado) e 6 fechados. Nenhum defeito aberto na `develop`.
+Nota: estas linhas foram registradas na branch da task (como a T109); a rastreabilidade de erros e o `README.md` raiz ainda precisam ser atualizados em branch de documentação própria (pendência P23).
+
+Resumo em 16/11/2026: **29 itens** registrados; **23 fechados**, **4 em verificação** (D-S3-09, 10, 11 e 14) e **2 abertos** (D-S3-03 e D-S3-06, ambos de processo e de tasks por fazer). Nenhuma falha de teste na `develop` (672 testes de backend e 257 de web).
 
 ---
 
-## 2. Detalhe dos defeitos abertos
+## 2. Detalhe dos itens que ainda não estão fechados
 
-### D-S3-01 · `AgendamentoVisitaServiceTest.validaLimitesInclusivosDaJanela` falha
+| Item | Campo | Valor |
+|---|---|---|
+| **D-S3-03** | Origem | T96, commit `eb37e3a` direto na `develop` |
+| | Causa | A branch foi criada com `checkout -b x origin/develop`, o que define o upstream como a `develop`; o push caiu direto nela |
+| | Correção | `git branch --unset-upstream`; as próximas branches são criadas com `--no-track` |
+| | Pendência | Pedir o review do commit por link, sem criar outra branch |
+| **D-S3-06** | Origem | `task80-85` (T83 a T86) e PBI-19 |
+| | Já resolvido | T77 (PR #23) e T83 (PR #20) na `develop` |
+| | Pendência | T84 (RQ-T84-07 a 10), T86 (E2E e documentação do RF13), T78 e T79 |
+| **D-S3-09** | Origem | T76, consulta `buscarAgenda` |
+| | Causa | `(:de is null or ...)`: com valor nulo o PostgreSQL não infere o tipo |
+| | Correção | Consulta sem parâmetro nulo (`>= :de`, `<= :ate`, `situacao in :situacoes`) |
+| | Pendência | O job "Backend (testes no PostgreSQL)" do CI confirma; não foi executado localmente |
+| **D-S3-10** | Origem | `DemoDataIntegrationTest`, rodada local de 15/11 |
+| | Situação | Não se reproduziu no CI nem em 16/11 (9 testes, 0 falhas); causa não confirmada |
+| **D-S3-11** | Origem | T76 removeu o `@PreUpdate` de `VisitaAgendada` |
+| | Efeito | Nenhum hoje: o reagendamento e o desfecho definem `alteradoPor` e `alteradoEm` no serviço |
+| | Pendência | O revisor decide entre restaurar o `@PreUpdate` ou aceitar a auditoria só pelo serviço |
+| **D-S3-14** | Origem | Job "Ambiente Docker (T67)" do CI |
+| | Causa | Limite de requisições do Maven Central (HTTP 429) no runner |
+| | Correção | Cada passo do `mvn` do Dockerfile repete até 5 vezes, esperando 20, 40, 60 e 80 s |
+| | Pendência | Um job verde no CI; se o 429 persistir, usar cache ou espelho do Maven |
+
+## 3. Defeito D-S3-01 (histórico, fechado)
 
 | Campo | Valor |
 |---|---|
 | **Pull Request** | #12, branch `task/t75/domain`, autoria de zePadd |
-| **Commits** | `859ccd2`, `39af5b2`, `3aa0fc0` e `cf5792d` (de 12/11/2026, 23:44 a 23:57) |
-| **Task e requisito** | T75, regras de agendamento (RQ-T75-04, passos 4 e 5: a data é de hoje em diante e, depois, dentro da janela) |
-| **Como reproduzir** | `git fetch origin pull/12/head:pr-12`, entrar na branch e rodar `./mvnw test` em `backend/ClinicalStudyPB`. Para ver o que o CI vê, usar `pull/12/merge` |
-| **Resultado** | Só a branch: 479 testes, 0 falhas, **1 erro**, 2 ignorados. Com o merge na `develop` (`499c951`): 488 testes, 0 falhas, **1 erro**, 2 ignorados |
+| **Task e requisito** | T75, regras de agendamento (RQ-T75-04: a data é de hoje em diante e, depois, dentro da janela) |
 | **Mensagem** | `AgendamentoVisitaServiceTest.validaLimitesInclusivosDaJanela:119 ConflitoRegra A data agendada não pode estar no passado.` |
-| **Causa** | O teste fixa "hoje" em 12/11/2026 e agenda `HOJE.minusDays(2)` esperando que seja aceita como o limite inferior inclusivo da janela. Mas o serviço verifica a data passada (`DATA_PASSADA`) **antes** de verificar a janela, exatamente na ordem que o design da T75 manda (RQ-T75-04: passo 4, data de hoje em diante; passo 5, janela). Logo a data de dois dias atrás é recusada pela regra correta e **o erro está no teste**, que espera o contrário |
-| **Determinístico?** | Sim. O relógio é fixo no teste (`Clock.fixed`), então não depende do dia em que roda |
-| **Impacto** | O CI falha nos jobs de backend e bloqueia o merge do PR. Afeta só a T75, nada da `develop` |
-| **Como corrigir** | Ajustar o teste para usar limites **válidos** (a primeira data aceita é hoje, mesmo que o início da janela seja anterior) e manter um caso próprio em que uma data passada dentro da janela é recusada |
-| **Sobre os "2 erros"** | Foi relatado que o PR tinha 2 erros no backend. Localmente só foi reproduzido **1** (o acima). O segundo não foi identificado: provavelmente é o mesmo teste contado em dois jobs do CI (H2 e PostgreSQL). **Pendente:** conferir o log do CI do PR #12 e, se houver outro erro, registrar aqui como D-S3-02 |
-| **Estado** | **Aberto** |
-
-### OBS-12-01 a OBS-12-04 · Pontos de revisão do mesmo Pull Request
-
-São diferenças entre o PR #12 e o design da Sprint 3 / o código já integrado, encontradas na leitura do diff. **Não são falhas de teste**: precisam de decisão do autor e do revisor (I3) antes do merge.
-
-| ID | Observação | Referência |
-|---|---|---|
-| OBS-12-01 | `VisitaAgendada` voltou a `@Table(name = "visitas_agendadas")`, sem o `@UniqueConstraint` de `(participacao_id, visita_planejada_id)`. O UNIQUE continua existindo no banco (migration `V6_19_1`), então não há efeito funcional, mas a entidade deixa de documentá-lo | RQ-T73-02; RQ-T73-09 |
-| OBS-12-02 | O método `@PreUpdate` que atualizava `alteradoEm` foi removido. O reagendamento precisa então definir `alteradoPor` e `alteradoEm` no serviço (RQ-T75-09); fora dele, uma alteração futura (desfecho, T81) deixaria `alteradoEm` desatualizado | RQ-T73-09; RQ-T75-09 |
-| OBS-12-03 | `criado_por_id` e `criado_em` deixaram de ser `updatable = false`; a auditoria de criação passa a poder ser alterada por engano | RQ-T73-09 |
-| OBS-12-04 | O serviço usa `ConflitoRegraException` (HTTP 409) com os códigos `AGENDAMENTO_DUPLICADO`, `DATA_PASSADA`, `FORA_DA_JANELA`, `ESTUDO_INVALIDO`, `VISITA_INCOMPATIVEL`, `REAGENDAMENTO_INVALIDO` e `PARTICIPANTE_RETIRADO`. O contrato (`openapi-sprint3.yaml`) e a T75 definem `VISITA_JA_AGENDADA`, `DATA_NO_PASSADO` (**400**, via `ValidacaoRegraException`), `DATA_FORA_DA_JANELA`, `ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO` e `VISITA_NAO_ESTA_AGENDADA`. A diferença quebraria o contrato quando a T76 ligar o teste da API | RQ-T75-01, RQ-T75-04, RQ-T75-08; contrato da T74 |
+| **Causa** | O teste fixava "hoje" em 12/11/2026 e agendava `HOJE.minusDays(2)` esperando-a como limite inferior da janela, mas o serviço verifica a data passada **antes** da janela (ordem do design). O erro estava no teste |
+| **Determinístico?** | Sim: o relógio é fixo no teste (`Clock.fixed`) |
+| **Correção** | `961952f` (zePadd, 14/11); PR #12 mesclado em `8d54754` |
+| **Estado** | **Fechado** |
 
 ---
 
-## 3. Defeitos fechados (histórico)
+## 4. Falhas de teste da T111 (vínculo da conta do participante)
 
-Os seis defeitos fechados da Release 1 estão detalhados (descrição, correção e teste de regressão) na [seção 10 do relatório da Release 1](relatorio-de-testes-release1.md#10-defeitos). A correção de cada um mantém o teste que o cobre, listado na tabela da seção 1.
+> Seção própria da T111, em ordem de ocorrência. Regra do projeto: **a falha é registrada aqui antes de ser corrigida** e nenhum teste é excluído. Os testes e o contexto estão em [testes-t111](testes-t111-vinculo-da-conta-do-participante.md). Os registros D-T109-01/02 e D-T110-01 a 04 estão nas branches da T109 e da T110.
+
+### D-T111-01 · Dados do teste novo repetiam nome e data de nascimento no mesmo estudo
+
+| Campo | Valor |
+|---|---|
+| **Data e rodada** | 22/11/2026 · 1ª rodada completa do backend (`./mvnw test`, 718 testes) |
+| **Task e requisito** | T111, RQ-T111-01 (migration `V6_24_1`) |
+| **Testes** | `FlywayMigrationIntegrationTest.uniqueDaContaDoCandidato` e `contasDiferentesConvivem` (2 erros, ambos meus, escritos nesta task) |
+| **Mensagem** | `DuplicateKey ... Unique index or primary key violation: "uk_candidatos_estudo_nome_nascimento" (estudo_id, nome_ficticio, data_nascimento)` ao inserir o segundo candidato |
+| **Causa** | Erro do **teste novo**, não da migration: o helper `inserirCandidatoComConta` inseria todos os candidatos de um estudo com o mesmo `nome_ficticio` e a mesma data de nascimento, e o índice único da Sprint 2 (`uk_candidatos_estudo_nome_nascimento`, V4) recusa a segunda linha antes de o teste chegar ao índice novo. A migration `V6_24_1` não tem relação com o erro |
+| **Determinístico?** | Sim |
+| **Correção** | Gerar o `nome_ficticio` a partir do código do candidato, como nos demais testes |
+| **Estado** | **Fechado** em 22/11/2026: corrigido e confirmado nas rodadas seguintes (backend completo: 757 testes, 0 falhas; ver [testes-t111](testes-t111-vinculo-da-conta-do-participante.md), seção 5) |
+
+### D-T111-02 · `MeEndpointTest.listaSoOsEstudosDaConta` vincula duas participações à mesma conta
+
+| Campo | Valor |
+|---|---|
+| **Data e rodada** | 22/11/2026 · 1ª rodada completa do backend (`./mvnw test`, 718 testes) |
+| **Task e requisito** | T111, RQ-T111-01 (índice único `uk_candidatos_usuario`); pendência **P10** da T109 |
+| **Teste** | `MeEndpointTest.listaSoOsEstudosDaConta` (T109) |
+| **Mensagem** | `DuplicateKey ... Unique index or primary key violation: "uk_candidatos_usuario ON candidatos(usuario_id)" VALUES (UUID '44444444-4444-4444-8444-444444444444')` em `incluir:81`, na linha 101 do teste |
+| **Causa** | **Esperada e prevista** na [pendência P10](../design/sprint3/T109-pendencias-para-proximas-tasks.md): o teste liga **dois candidatos à mesma conta** (`CAND-901` e `CAND-902`), o que a regra 7 (um para um) agora proíbe no banco. O erro é da **premissa do teste**; o código de produção está certo e a falha prova que o índice funciona |
+| **Determinístico?** | Sim |
+| **Correção** | Reescrever o teste sem repetir a conta: a lista de uma conta traz um estudo, e a ordem "da inclusão mais recente para a mais antiga" passa a ser provada no nível do serviço (`MeusEstudosService`, sem o `UNIQUE`). O teste **não é excluído** |
+| **Estado** | **Fechado** em 22/11/2026: corrigido e confirmado nas rodadas seguintes (backend completo: 757 testes, 0 falhas; ver [testes-t111](testes-t111-vinculo-da-conta-do-participante.md), seção 5) |
+
+### D-T111-03 · Os helpers dos testes de endpoint e de corrida repetiam o nome do candidato (mesma causa do D-T111-01)
+
+| Campo | Valor |
+|---|---|
+| **Data e rodada** | 22/11/2026 · 2ª rodada (testes da T111 e dos arquivos que ela tocou, 133 testes, 2 erros) |
+| **Task e requisito** | T111, RQ-T111-03/04 (regras e corrida do vínculo) |
+| **Testes** | `ContaParticipanteEndpointTest.contaJaVinculada` (linha 264) e `ContaParticipanteConcorrenciaTest.mesmaContaEmVariosParticipantes` (linha 134), ambos escritos nesta task. Na rodada, os outros 14 testes do endpoint e o outro de corrida passaram |
+| **Mensagem** | `DuplicateKey ... uk_candidatos_estudo_nome_nascimento` ao inserir o **segundo** candidato do mesmo estudo (só os testes que criam dois candidatos no mesmo estudo chegam a esse ponto) |
+| **Causa** | Erro do **teste novo**, igual ao D-T111-01: os helpers `criarParticipacao` e `novaParticipacao` fixam `nome_ficticio` e `data_nascimento`, e o índice único da Sprint 2 recusa o segundo candidato igual no mesmo estudo. Repeti o padrão porque copiei os helpers sem tornar o nome único. O vínculo e o banco estão certos |
+| **Determinístico?** | Sim |
+| **Correção** | Nome do candidato derivado do código (`"Pessoa " + codigo`), nos dois helpers |
+| **Estado** | **Fechado** em 22/11/2026: corrigido e confirmado nas rodadas seguintes (backend completo: 757 testes, 0 falhas; ver [testes-t111](testes-t111-vinculo-da-conta-do-participante.md), seção 5) |
+
+### D-T111-04 · Quatro testes antigos da web estouraram 5 s na rodada completa e passaram isolados
+
+| Campo | Valor |
+|---|---|
+| **Data e rodada** | 22/11/2026 · 1ª rodada completa da web (`npx vitest run`, 275 testes: 271 passaram, 4 falharam) |
+| **Task e requisito** | T111 (a mudança da ficha e da área de ações); nenhum requisito específico |
+| **Testes** | `mocks.test.tsx` (2: "a aba de critérios lista os dados do mock…" e "o mock devolve o erro de duplicidade…"), `FichaCandidatoPage.test.tsx` ("mostra os dados do candidato e as três seções…") e `AbaAgenda.test.tsx` ("lista a agenda do estudo…"). Nenhum é da T111 e nenhum dos arquivos foi alterado |
+| **Mensagem** | Estouro do tempo do teste (5,0 a 7,1 s; o limite do Vitest é 5 s) |
+| **Causa** | Provável **carga da máquina** na execução em paralelo: os mesmos 3 arquivos, rodados sozinhos logo depois, passaram (33 de 33). Os arquivos da T111 (ficha, área de ações, diálogo) passaram na mesma rodada. Causa não confirmada além disso |
+| **Determinístico?** | **Não** (intermitente) |
+| **Correção** | Nenhuma no código. Reexecutar a suíte completa e conferir no CI; se voltar a ocorrer, tratar como defeito de teste lento (aumentar o limite desses arquivos) em registro próprio |
+| **Estado** | **Fechado (não reproduzido)** em 22/11/2026: a suíte completa da web foi reexecutada (27 arquivos, 315 testes) e passou inteira, inclusive com o `mvn verify` rodando ao mesmo tempo. Se voltar no CI, abrir registro próprio |
+
+### D-T111-05 · Dois erros de autoria nos testes novos da web (sintaxe e seletor ambíguo)
+
+| Campo | Valor |
+|---|---|
+| **Data e rodada** | 22/11/2026 · 1ª execução dos testes novos da web (`npx vitest run src/api/contaParticipante.test.ts src/pages/estudos/detalhe/acompanhamento`: 161 passaram, 1 falhou, 1 arquivo não executou) |
+| **Task e requisito** | T111, RQ-T111-09, 10 e 12 (testes de componente) |
+| **Testes** | (a) `AreaAcoesParticipante.test.tsx`: **o arquivo inteiro não executou** (`BabelError: Unexpected token (111:0)`; o `eslint` e o `tsc` acusaram `'}' expected`). (b) `FichaParticipantePage.test.tsx` › "depois de vincular, recarrega a conta, mostra a confirmação e esconde o botão": `Found multiple elements with the role "status"` |
+| **Causa** | **Erros do teste novo**, nenhum do código de produção. (a) Ao acrescentar o `describe` novo com um script de substituição, removi sem querer o `})` que fechava o `describe` original da T97; os testes antigos não foram apagados, só ficaram sem o fechamento. (b) A ficha já tem outro elemento `role="status"` (a contagem "Exibindo N de N visitas" do filtro), então `getByRole('status')` sem escopo é ambíguo |
+| **Determinístico?** | Sim |
+| **Correção** | (a) Restaurar o fechamento do `describe` original. (b) Procurar a confirmação dentro da região "Ações do participante" |
+| **Estado** | **Fechado** em 22/11/2026: corrigido e confirmado nas rodadas seguintes (backend completo: 757 testes, 0 falhas; ver [testes-t111](testes-t111-vinculo-da-conta-do-participante.md), seção 5) |
+
+### D-T111-06 · Teste novo do Flyway usou uma consulta que só existe no H2 e quebrou no PostgreSQL (CI)
+
+| Campo | Valor |
+|---|---|
+| **Data e rodada** | 22/11/2026 · CI do PR #42, job "Backend (testes no PostgreSQL)" (757 testes, 1 erro; os outros 5 jobs passaram) |
+| **Task e requisito** | T111, RQ-T111-01 (a migration deve funcionar no H2 **e** no PostgreSQL) |
+| **Teste** | `FlywayMigrationIntegrationTest.uniqueDaContaDoCandidato:208`, escrito nesta task |
+| **Mensagem** | `BadSqlGrammar StatementCallback; bad SQL grammar [SELECT COUNT(*) FROM information_schema.indexes WHERE LOWER(index_name) = 'uk_candidatos_usuario']` |
+| **Causa** | Erro do **teste novo**: `information_schema.indexes` existe no H2, mas **não no PostgreSQL**. A migration e o índice estão certos (as demais asserções do mesmo teste e o job H2 passaram). Era exatamente a lacuna que o documento de testes registrava ("não rodei o job do PostgreSQL localmente") |
+| **Determinístico?** | Sim |
+| **Correção** | Verificar a existência do índice pelo `DatabaseMetaData.getIndexInfo` do JDBC, que é portável, comparando o nome sem diferenciar maiúsculas; o resto do teste (aceita vários sem conta e recusa a mesma conta) não muda |
+| **Estado** | **Fechado** em 22/11/2026: com a consulta portável, a suíte completa do backend foi executada contra um **PostgreSQL 16 real** (mesmo setup do job do CI): 757 testes, 0 falhas, `BUILD SUCCESS`; no H2 o `FlywayMigrationIntegrationTest` também passa (14 de 14) |
+
+## 5. Falhas de teste da T113 (testes de backend e de componente do app)
+
+### D-T113-01 · Os quatro testes novos de `MeIsolamentoEndpointTest` receberam 401 no login
+
+| Campo | Valor |
+|---|---|
+| **Data e rodada** | 22/11/2026 · `./mvnw -B -q test -Dtest='MeIsolamentoEndpointTest,MeusEstudosServiceTest,MeEndpointTest'` (19 testes, 4 falhas) |
+| **Task e requisito** | T113, RQ-T113-01, 03, 05 e 06 |
+| **Teste** | `MeIsolamentoEndpointTest.aNuncaVeEstudoDeBENemBDeA:124`, `doisParticipantesNoMesmoEstudo:155`, `respostaNaoTrazDadosDoCandidato:171` e `depoisDeVincularAContaVeOEstudo:193`, escritos nesta task |
+| **Mensagem** | `AssertionError: Status expected:<200> but was:<401>` (no `POST /api/auth/login`, dentro de `TokenDeTeste.bearer`) |
+| **Causa (confirmada no código)** | Erro do **teste novo**: o `AuthService` procura o usuário por `UsuarioService.normalizarEmail(email)` (minúsculas), e o helper `criarConta` gravava o e-mail com maiúsculas (`t113.A.<uuid>@...`), então o login não achava a conta. O código de produção está certo |
+| **Determinístico?** | Sim |
+| **Correção prevista** | Gravar o e-mail em minúsculas no helper (`toLowerCase(Locale.ROOT)`); asserções inalteradas. Nenhum teste excluído |
+| **Estado** | **Fechado** em 22/11/2026: com o e-mail em minúsculas, os 4 testes passam (`MeIsolamentoEndpointTest` 4/4, `MeusEstudosServiceTest` 4/4, `MeEndpointTest` 11/11) |
+
+### D-T113-02 · `ParticipacaoEndpointTest.incluiEDevolveAParticipacao` falha no CI entre 00h e 03h UTC (data esperada no fuso errado)
+
+| Campo | Valor |
+|---|---|
+| **Data e rodada** | 22/11/2026 (23/11 01:26 UTC) · CI do PR #45, jobs "Backend (Java 21 + Maven)" e "Backend (testes no PostgreSQL)" (o resto passou; localmente, às 22h no fuso de Recife, o teste passou porque a JVM local está no mesmo fuso) |
+| **Task e requisito** | Sprint 2 (T62, teste antigo) exposto pela correção #41 (data de inclusão pelo relógio da aplicação); sem relação com os testes da T113 |
+| **Teste** | `ParticipacaoEndpointTest.incluiEDevolveAParticipacao:82` |
+| **Mensagem** | `JSON path "$.dataInclusao" expected:<2026-11-23> but was:<2026-11-22>` |
+| **Causa (confirmada no código)** | Erro do **teste**: espera `LocalDate.now()` (fuso da JVM, UTC no CI), enquanto o `ParticipacaoService`, desde o #41, grava a data com o `Clock` da aplicação (`app.fuso-horario`, padrão `America/Recife`). Entre 21h e 24h em Recife (00h a 03h UTC) os dois dias diferem. O código de produção está certo; o #41 corrigiu o serviço e o `ParticipacaoServiceTest`, mas não este teste de endpoint |
+| **Determinístico?** | Sim, dependente do horário da execução (janela de 3 h por dia) |
+| **Correção prevista** | Injetar o `Clock` da aplicação no teste e usar `LocalDate.now(clock)`; asserção e demais testes intactos. Outros `LocalDate.now()` dos testes (`CandidatoIntegrationTest:110`, `CandidatoServiceTest:131`, `VisitaAgendadaRepositoryTest:72`) não falharam e ficam fora desta correção, anotados como risco |
+| **Estado** | **Fechado** em 22/11/2026: com `LocalDate.now(clock)` o teste passa com a JVM em UTC (`-Duser.timezone=UTC`, 15 de 15) na janela em que falhava (agora, 01h UTC) |

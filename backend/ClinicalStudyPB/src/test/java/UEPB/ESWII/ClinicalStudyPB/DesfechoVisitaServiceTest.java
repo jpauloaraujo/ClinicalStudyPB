@@ -262,6 +262,23 @@ class DesfechoVisitaServiceTest {
                 .satisfies(e -> assertThat(codigoDe(e)).isEqualTo("TRANSICAO_VISITA_INVALIDA"));
     }
 
+    @Test
+    @DisplayName("T102: participante retirado recusa desfecho com 409 PARTICIPANTE_RETIRADO (depois do estudo e antes da transição)")
+    void participanteRetiradoRecusaDesfecho() {
+        visita.getParticipacao().retirar();
+        visita.setSituacao(SituacaoVisita.REALIZADA);
+
+        assertThatThrownBy(() -> registrar(comando(TipoDesfecho.AUSENTE, null, null, null)))
+                .isInstanceOfSatisfying(ConflitoRegraException.class,
+                        e -> assertThat(e.getCodigo()).isEqualTo("PARTICIPANTE_RETIRADO"));
+
+        estudo.setStatus(StatusEstudo.ENCERRADO);
+        assertThatThrownBy(() -> registrar(comando(TipoDesfecho.AUSENTE, null, null, null)))
+                .isInstanceOfSatisfying(ConflitoRegraException.class,
+                        e -> assertThat(e.getCodigo()).isEqualTo("ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO"));
+        verify(repositorio, never()).saveAndFlush(any());
+    }
+
     // ---------------------------------------------------------------- concorrência
 
     @Test

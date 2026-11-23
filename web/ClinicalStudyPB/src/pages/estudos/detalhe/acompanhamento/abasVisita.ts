@@ -12,10 +12,13 @@ export type AbaVisita = {
  *
  * Como acrescentar uma aba (contrato dos próximos PBIs): inclua aqui `{ caminho, rotulo, perfis }` e trate o
  * novo `caminho` em `ConteudoDaAba`, dentro de VisitaAgendadaPage.tsx. Não é preciso reescrever o resto da tela.
- *  - Agora: `dados`.
- *  - T91 (PBI-21): `avaliacoes` (perfis PESQUISADOR e COORDENADOR).
+ *  - `dados` (T77).
+ *  - `avaliacoes` (T91, PBI-21): resultados fictícios das avaliações da visita.
  */
-export const abasVisita: AbaVisita[] = [{ caminho: 'dados', rotulo: 'Dados', perfis: ['PESQUISADOR', 'COORDENADOR'] }]
+export const abasVisita: AbaVisita[] = [
+  { caminho: 'dados', rotulo: 'Dados', perfis: ['PESQUISADOR', 'COORDENADOR'] },
+  { caminho: 'avaliacoes', rotulo: 'Avaliações', perfis: ['PESQUISADOR', 'COORDENADOR'] },
+]
 
 export function abasVisitaDoPerfil(perfil: PerfilUsuario): AbaVisita[] {
   return abasVisita.filter((aba) => aba.perfis.includes(perfil))

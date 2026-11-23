@@ -1,8 +1,9 @@
 # Contrato OpenAPI da Sprint 3 (RF12 a RF18). Mantido pela equipe: edite-o diretamente quando houver divergência
 # com o código, no mesmo Pull Request. Este arquivo cresce a cada PBI e cada PBI acrescenta só os seus caminhos, para
 # evitar conflito de merge: a T74 trouxe o agendamento (PBI-19), a T95 o histórico do participante, a T88 os
-# resultados das avaliações (PBI-21) e a T80/T82 o desfecho da visita e sua consulta (PBI-20); a retirada e o app entram
-# nos PBIs seguintes.
+# resultados das avaliações (PBI-21), a T80/T82 o desfecho da visita e sua consulta (PBI-20), a T101 a retirada de
+# participante (PBI-23), a T109 os estudos do participante e a T115 as consultas de visitas do participante
+# (próximas e histórico) e a T111 o vínculo da conta do participante.
 openapi: 3.0.3
 info:
   title: ClinicalStudyPB — contrato da Sprint 3 (RF12 a RF18)
@@ -18,8 +19,9 @@ info:
     **Erros:** formato único `{"erro", "codigo?"}` (ver o schema `Erro`): 400 validação, 401 sem token, 403 perfil
     sem permissão, 404 recurso inexistente, 409 regra de negócio violada, sempre com `codigo`.
 
-    **Perfis:** a escrita do agendamento e do desfecho das visitas é só do COORDENADOR e a dos resultados das avaliações é só do PESQUISADOR; a
-    leitura (visitas, agenda, resultados e histórico) é de COORDENADOR e PESQUISADOR.
+    **Perfis:** a escrita do agendamento, do desfecho das visitas e da retirada de participante é só do COORDENADOR e a
+    dos resultados das avaliações é só do PESQUISADOR; as consultas do app (`/api/me/**`) são só do PARTICIPANTE; a
+    leitura (visitas, agenda, resultados, histórico e retirada) é de COORDENADOR e PESQUISADOR.
 
     **Teste de contrato:** `ContratoOpenApiSprint3Test` confere que o YAML e os DTOs do backend têm os mesmos campos.
 servers:
@@ -30,8 +32,11 @@ security:
 tags:
 - name: Agendamento
 - name: Agenda
+- name: Conta do participante
 - name: Histórico do participante
+- name: Participante (me)
 - name: Resultados das avaliações
+- name: Retirada
 - name: Visitas agendadas
 paths:
   /api/participacoes/{participacaoId}/visitas:
@@ -707,6 +712,532 @@ paths:
                   value:
                     erro: O participante foi retirado do estudo
                     codigo: PARTICIPANTE_RETIRADO
+  /api/me/estudos:
+    get:
+      tags:
+      - Participante (me)
+      summary: Estudos do participante logado
+      operationId: meusEstudos
+      description: |-
+        Lista os estudos em que a conta logada está incluída, **um item por participação**, do mais recente para o mais
+        antigo (pela data de inclusão). O participante é identificado **pelo token**: o endpoint não recebe id de
+        participante. Conta sem candidato vinculado devolve **200 com lista vazia** (não é erro). Participações retiradas
+        continuam na lista, com `situacaoParticipacao = RETIRADO`.
+
+        Perfis: só PARTICIPANTE; ADMINISTRADOR, PESQUISADOR e COORDENADOR recebem 403.
+      responses:
+        '200':
+          description: Estudos do participante (lista vazia se a conta não tem participação).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MeuEstudoResponse'
+              example:
+              - participacaoId: d6300000-0000-4000-8000-000000002401
+                estudoId: d6300000-0000-4000-8000-000000001901
+                titulo: Demo - Acompanhamento de participantes
+                resumo: Demonstrar o acompanhamento de participantes com dados fictícios.
+                statusEstudo: EXECUCAO
+                dataInclusao: '2026-11-09'
+                situacaoParticipacao: ATIVO
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+  /api/me/estudos/{estudoId}:
+    get:
+      tags:
+      - Participante (me)
+      summary: Detalhe de um estudo do participante logado
+      operationId: meuEstudo
+      description: |-
+        Detalhe de um estudo em que a conta logada está incluída. Devolve **404** (`RECURSO_NAO_ENCONTRADO`) quando o
+        estudo não existe **ou** existe mas a conta não participa dele, sem distinguir os dois casos, para não revelar
+        que o dado existe. O motivo da retirada nunca é exposto ao app: `retirada` traz só `dataRetirada`.
+
+        Participante ativo: `retirada` vem `null`; retirado: `retirada.dataRetirada` com a data registrada.
+
+        Perfis: só PARTICIPANTE; ADMINISTRADOR, PESQUISADOR e COORDENADOR recebem 403.
+      parameters:
+      - name: estudoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Detalhe do estudo do participante.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeuEstudoDetalheResponse'
+              example:
+                participacaoId: d6300000-0000-4000-8000-000000002401
+                estudoId: d6300000-0000-4000-8000-000000001901
+                titulo: Demo - Acompanhamento de participantes
+                resumo: Demonstrar o acompanhamento de participantes com dados fictícios.
+                statusEstudo: EXECUCAO
+                dataInclusao: '2026-11-09'
+                situacaoParticipacao: ATIVO
+                objetivo: Demonstrar o acompanhamento de participantes com dados fictícios.
+                dataInicio: '2026-11-01'
+                dataFim: '2027-05-01'
+                responsavelNome: Pesquisador Demo (Ficticio)
+                retirada: null
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+  /api/me/visitas/proximas:
+    get:
+      tags:
+      - Participante (me)
+      summary: Próximas visitas do participante logado
+      operationId: minhasProximasVisitas
+      description: |-
+        Visitas **AGENDADA** das participações da conta logada, com `dataHora` **de agora em diante**, da **mais
+        próxima para a mais distante**. O participante é identificado **pelo token**: o endpoint não recebe id de
+        participante (regra 7).
+
+        Devolve **200 com lista vazia** (nunca erro) quando o participante não tem visita futura, foi retirado (a
+        retirada cancela as visitas futuras, RF16) ou a conta não tem candidato vinculado. O parâmetro opcional
+        `estudoId` restringe a lista a um estudo; um `estudoId` que **não é do participante** também devolve lista
+        vazia, **nunca 404 e nunca dados de outro participante**.
+
+        Cada visita traz só os **nomes das atividades previstas**. **Não traz resultados** das avaliações: eles ficam
+        fora do escopo do RF18 (privacidade).
+
+        Perfis: só PARTICIPANTE; ADMINISTRADOR, PESQUISADOR e COORDENADOR recebem 403.
+      parameters:
+      - $ref: '#/components/parameters/EstudoIdOpcional'
+      responses:
+        '200':
+          description: Próximas visitas do participante, da mais próxima para a mais distante (lista vazia se não houver).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MinhaVisitaResponse'
+              example:
+              - id: d6300000-0000-4000-8000-000000002501
+                participacaoId: d6300000-0000-4000-8000-000000002401
+                estudoId: d6300000-0000-4000-8000-000000001901
+                estudoTitulo: Demo - Acompanhamento de participantes
+                visitaNome: Retorno 30 dias
+                dataHora: '2026-11-24T09:30:00-03:00'
+                situacao: AGENDADA
+                dataHoraRealizada: null
+                motivo: null
+                atividades:
+                - Escala de dor
+                - Exame físico
+              - id: d6300000-0000-4000-8000-000000002502
+                participacaoId: d6300000-0000-4000-8000-000000002401
+                estudoId: d6300000-0000-4000-8000-000000001901
+                estudoTitulo: Demo - Acompanhamento de participantes
+                visitaNome: Retorno 60 dias
+                dataHora: '2026-12-24T10:00:00-03:00'
+                situacao: AGENDADA
+                dataHoraRealizada: null
+                motivo: null
+                atividades:
+                - Avaliação final
+                - Entrega de medicação
+        '400':
+          $ref: '#/components/responses/ErroParametroInvalido'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+  /api/me/visitas/historico:
+    get:
+      tags:
+      - Participante (me)
+      summary: Histórico de comparecimento do participante logado
+      operationId: meuHistoricoDeVisitas
+      description: |-
+        Visitas **REALIZADA**, **AUSENTE** e **CANCELADA** das participações da conta logada, da **mais recente para a
+        mais antiga** (pela data e hora agendadas), **paginadas** (`pagina` base 0, `tamanho` padrão 20 e máximo 100).
+        O participante é identificado **pelo token**: o endpoint não recebe id de participante (regra 7).
+
+        O `resumo` traz os totais de comparecimento do participante (`realizadas`, `ausentes` e `canceladas`) e é
+        **independente da página** pedida. As visitas canceladas trazem o `motivo` (inclusive "retirada do estudo", das
+        visitas futuras canceladas na retirada) e as realizadas, a `dataHoraRealizada`.
+
+        O parâmetro opcional `estudoId` restringe o histórico (e o resumo) a um estudo. Um `estudoId` que **não é do
+        participante**, ou uma conta sem vínculo, devolve **200 com lista vazia e resumo zerado**, **nunca 404 e nunca
+        dados de outro participante**.
+
+        Cada visita traz só os **nomes das atividades previstas**. **Não traz resultados** das avaliações: eles ficam
+        fora do escopo do RF18 (privacidade).
+
+        Perfis: só PARTICIPANTE; ADMINISTRADOR, PESQUISADOR e COORDENADOR recebem 403.
+      parameters:
+      - $ref: '#/components/parameters/EstudoIdOpcional'
+      - name: pagina
+        in: query
+        required: false
+        description: Página, base 0.
+        schema:
+          type: integer
+          default: 0
+          minimum: 0
+      - name: tamanho
+        in: query
+        required: false
+        description: Itens por página (máximo 100).
+        schema:
+          type: integer
+          default: 20
+          minimum: 1
+          maximum: 100
+      responses:
+        '200':
+          description: Página do histórico de comparecimento, com o resumo do participante.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoricoMinhasVisitasResponse'
+              example:
+                resumo:
+                  realizadas: 1
+                  ausentes: 1
+                  canceladas: 1
+                conteudo:
+                - id: d6300000-0000-4000-8000-000000002511
+                  participacaoId: d6300000-0000-4000-8000-000000002401
+                  estudoId: d6300000-0000-4000-8000-000000001901
+                  estudoTitulo: Demo - Acompanhamento de participantes
+                  visitaNome: Retorno 60 dias
+                  dataHora: '2026-11-18T10:00:00-03:00'
+                  situacao: CANCELADA
+                  dataHoraRealizada: null
+                  motivo: retirada do estudo
+                  atividades:
+                  - Avaliação final
+                  - Entrega de medicação
+                - id: d6300000-0000-4000-8000-000000002512
+                  participacaoId: d6300000-0000-4000-8000-000000002401
+                  estudoId: d6300000-0000-4000-8000-000000001901
+                  estudoTitulo: Demo - Acompanhamento de participantes
+                  visitaNome: Retorno 30 dias
+                  dataHora: '2026-11-12T09:30:00-03:00'
+                  situacao: AUSENTE
+                  dataHoraRealizada: null
+                  motivo: null
+                  atividades:
+                  - Escala de dor
+                  - Exame físico
+                - id: d6300000-0000-4000-8000-000000002513
+                  participacaoId: d6300000-0000-4000-8000-000000002401
+                  estudoId: d6300000-0000-4000-8000-000000001901
+                  estudoTitulo: Demo - Acompanhamento de participantes
+                  visitaNome: Triagem
+                  dataHora: '2026-11-09T09:00:00-03:00'
+                  situacao: REALIZADA
+                  dataHoraRealizada: '2026-11-09T09:10:00-03:00'
+                  motivo: null
+                  atividades:
+                  - Aferir pressão arterial
+                  - Coletar sangue
+                pagina: 0
+                tamanho: 20
+                totalElementos: 3
+                totalPaginas: 1
+        '400':
+          $ref: '#/components/responses/ErroParametroInvalido'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+  /api/participacoes/{participacaoId}/retirada:
+    post:
+      tags:
+      - Retirada
+      summary: Registrar a retirada de um participante do estudo
+      operationId: registrarRetirada
+      description: |-
+        Registra, em uma **única transação**, a retirada formal de um participante ativo do estudo (RF16, regra 6).
+        A retirada é **irreversível**: o participante passa de `ATIVO` para `RETIRADO` (não existe reativação), as
+        visitas futuras ainda `AGENDADA` são automaticamente canceladas com o motivo `"retirada do estudo"`, o
+        histórico (visitas realizadas, ausentes, canceladas e resultados) permanece preservado e a **vaga continua
+        ocupada** (a contagem de incluídos do RF11 não diminui).
+
+        Pré-condições verificadas nesta ordem (depois do 403 do perfil e 404 da participação):
+        1. o participante está `ATIVO` (409 `PARTICIPANTE_JA_RETIRADO`);
+        2. o estudo não está encerrado (409 `ESTUDO_ENCERRADO`);
+        3. `motivo` é obrigatório com 5 a 500 caracteres depois do `trim` (400 `MOTIVO_OBRIGATORIO` ou `VALIDACAO_CAMPOS`);
+        4. `dataRetirada` não pode ser futura (400 `DATA_RETIRADA_FUTURA`).
+
+        Perfis: somente COORDENADOR; PESQUISADOR, ADMINISTRADOR e PARTICIPANTE recebem 403.
+      parameters:
+      - $ref: '#/components/parameters/ParticipacaoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetiradaRequest'
+            example:
+              motivo: Mudança de cidade
+              solicitante: PARTICIPANTE
+              dataRetirada: '2026-11-18'
+      responses:
+        '201':
+          description: Retirada registrada; devolve o registro com o total de visitas futuras canceladas.
+          headers:
+            Location:
+              description: URI da consulta da retirada registrada (`/api/participacoes/{participacaoId}/retirada`).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetiradaResponse'
+              example:
+                id: d6300000-0000-4000-8000-000000002391
+                participacaoId: d6300000-0000-4000-8000-000000001921
+                motivo: Mudança de cidade
+                solicitante: PARTICIPANTE
+                dataRetirada: '2026-11-18'
+                registradoPor: Coordenador Demo (Ficticio)
+                registradoEm: '2026-11-18T14:30:00-03:00'
+                visitasCanceladas: 2
+        '400':
+          description: 'Dado inválido: `VALIDACAO_CAMPOS` (campo obrigatório ausente ou acima do limite), `CORPO_INVALIDO`
+            (JSON malformado ou solicitante inexistente), `MOTIVO_OBRIGATORIO` (motivo em branco ou menor que 5 caracteres
+            após trim) ou `DATA_RETIRADA_FUTURA` (data posterior a hoje).'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+              examples:
+                motivoObrigatorio:
+                  summary: Motivo ausente ou curto
+                  value:
+                    erro: Informe o motivo da retirada, com ao menos 5 caracteres
+                    codigo: MOTIVO_OBRIGATORIO
+                dataRetiradaFutura:
+                  summary: Data da retirada no futuro
+                  value:
+                    erro: A data da retirada não pode estar no futuro
+                    codigo: DATA_RETIRADA_FUTURA
+                validacaoCampos:
+                  summary: Campo obrigatório ausente
+                  value:
+                    erro: 'solicitante: Informe quem solicitou a retirada'
+                    codigo: VALIDACAO_CAMPOS
+                    errosCampo:
+                    - campo: solicitante
+                      erro: Informe quem solicitou a retirada
+                corpoInvalido:
+                  summary: Corpo malformado ou solicitante inválido
+                  value:
+                    erro: Corpo da requisição inválido ou malformado
+                    codigo: CORPO_INVALIDO
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          description: 'Regra de negócio violada: `PARTICIPANTE_JA_RETIRADO` (retirada é irreversível) ou `ESTUDO_ENCERRADO`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+              examples:
+                participanteJaRetirado:
+                  summary: Participante já retirado
+                  value:
+                    erro: O participante já foi retirado do estudo
+                    codigo: PARTICIPANTE_JA_RETIRADO
+                estudoEncerrado:
+                  summary: Estudo encerrado
+                  value:
+                    erro: Não é possível registrar retirada em um estudo encerrado
+                    codigo: ESTUDO_ENCERRADO
+    get:
+      tags:
+      - Retirada
+      summary: Consultar a retirada de um participante
+      operationId: buscarRetirada
+      description: |-
+        Devolve o registro formal de retirada da participação, incluindo a contagem de visitas canceladas pelo motivo
+        `"retirada do estudo"`. Responde **404** se a participação não existir ou se o participante ainda estiver `ATIVO`.
+
+        Perfis: COORDENADOR e PESQUISADOR leem; ADMINISTRADOR e PARTICIPANTE recebem 403.
+      parameters:
+      - $ref: '#/components/parameters/ParticipacaoId'
+      responses:
+        '200':
+          description: Registro de retirada do participante.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetiradaResponse'
+              example:
+                id: d6300000-0000-4000-8000-000000002391
+                participacaoId: d6300000-0000-4000-8000-000000001921
+                motivo: Mudança de cidade
+                solicitante: PARTICIPANTE
+                dataRetirada: '2026-11-18'
+                registradoPor: Coordenador Demo (Ficticio)
+                registradoEm: '2026-11-18T14:30:00-03:00'
+                visitasCanceladas: 2
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          description: Participação inexistente ou participante ainda ativo (sem retirada registrada).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+              example:
+                erro: 'Retirada não encontrada para a participação: d6300000-0000-4000-8000-000000001921'
+                codigo: RECURSO_NAO_ENCONTRADO
+        '409':
+          $ref: '#/components/responses/Erro409'
+  /api/participacoes/{participacaoId}/conta:
+    put:
+      tags:
+      - Conta do participante
+      summary: Vincular uma conta de participante a um participante do estudo
+      operationId: vincularContaDoParticipante
+      description: |-
+        Liga uma conta de perfil `PARTICIPANTE` ao participante (candidato incluído) para que ele entre no app e veja os
+        estudos dele. A relação é **um para um** e **não há desvincular nem trocar a conta** nesta Sprint.
+
+        Verificações, **nesta ordem** (a primeira que falhar responde):
+        1. a participação e a conta existem: senão **404** `RECURSO_NAO_ENCONTRADO`;
+        2. a participação está ativa: senão **409** `PARTICIPANTE_RETIRADO`;
+        3. a conta tem perfil `PARTICIPANTE`: senão **409** `CONTA_NAO_E_PARTICIPANTE`;
+        4. a conta está ativa: senão **409** `CONTA_INATIVA`;
+        5. a participação ainda não tem conta: senão **409** `PARTICIPACAO_JA_TEM_CONTA` (inclusive reenviar a mesma conta);
+        6. a conta não está vinculada a outro participante: senão **409** `CONTA_JA_VINCULADA`.
+
+        Dois vínculos simultâneos da mesma conta resolvem em um sucesso e um 409 `CONTA_JA_VINCULADA`, nunca em 500.
+        Enquanto a retirada de participante (T101) não existir, toda participação é ativa e o passo 2 não falha.
+
+        Perfis: só COORDENADOR; PESQUISADOR, ADMINISTRADOR e PARTICIPANTE recebem 403.
+      parameters:
+      - name: participacaoId
+        in: path
+        required: true
+        description: UUID da participação (o participante incluído no estudo).
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VincularContaRequest'
+            example:
+              usuarioId: d6300000-0000-4000-8000-000000002401
+      responses:
+        '200':
+          description: Conta vinculada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContaVinculadaResponse'
+              example:
+                participacaoId: d6300000-0000-4000-8000-000000001921
+                usuarioId: d6300000-0000-4000-8000-000000002401
+                nome: Participante de Demonstração
+                email: participante@clinicalstudy.test
+        '400':
+          $ref: '#/components/responses/Erro400'
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
+    get:
+      tags:
+      - Conta do participante
+      summary: Conta vinculada a um participante
+      operationId: contaDoParticipante
+      description: |-
+        Devolve a conta vinculada ao participante (`participacaoId`, `usuarioId`, `nome` e `email`). **404**
+        (`RECURSO_NAO_ENCONTRADO`) quando a participação não existe **ou** ainda não tem conta vinculada. Nunca devolve
+        senha, hash, perfil nem situação da conta.
+
+        Perfis: PESQUISADOR e COORDENADOR leem; ADMINISTRADOR e PARTICIPANTE recebem 403.
+      parameters:
+      - name: participacaoId
+        in: path
+        required: true
+        description: UUID da participação.
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Conta vinculada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContaVinculadaResponse'
+              example:
+                participacaoId: d6300000-0000-4000-8000-000000001921
+                usuarioId: d6300000-0000-4000-8000-000000002401
+                nome: Participante de Demonstração
+                email: participante@clinicalstudy.test
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
+  /api/contas-participante/disponiveis:
+    get:
+      tags:
+      - Conta do participante
+      summary: Contas de participante disponíveis para vínculo
+      operationId: contasDeParticipanteDisponiveis
+      description: |-
+        Lista as contas **ativas**, de perfil `PARTICIPANTE`, que **ainda não estão vinculadas** a nenhum participante,
+        ordenadas por nome. Cada item traz só `usuarioId`, `nome` e `email`. Lista vazia é 200, não erro.
+
+        Perfis: só COORDENADOR; PESQUISADOR, ADMINISTRADOR e PARTICIPANTE recebem 403.
+      responses:
+        '200':
+          description: Contas disponíveis (pode ser vazia).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ContaParticipanteResponse'
+              example:
+              - usuarioId: d6300000-0000-4000-8000-000000002402
+                nome: Outra Participante (Ficticia)
+                email: outra.participante@clinicalstudy.test
+        '401':
+          $ref: '#/components/responses/Erro401'
+        '403':
+          $ref: '#/components/responses/Erro403'
+        '404':
+          $ref: '#/components/responses/Erro404'
+        '409':
+          $ref: '#/components/responses/Erro409'
 components:
   securitySchemes:
     bearerAuth:
@@ -730,7 +1261,26 @@ components:
       schema:
         type: string
         format: uuid
+    EstudoIdOpcional:
+      name: estudoId
+      in: query
+      required: false
+      description: |-
+        Restringe a consulta a um estudo do participante. Um `estudoId` que **não é do participante** devolve lista
+        vazia (nunca 404 e nunca dados de outro participante). Valor que não é um UUID responde 400.
+      schema:
+        type: string
+        format: uuid
   responses:
+    ErroParametroInvalido:
+      description: Parâmetro de consulta inválido (`estudoId` que não é um UUID, `pagina` negativa ou `tamanho` fora de 1 a 100).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+          example:
+            erro: Valor inválido para o parâmetro estudoId
+            codigo: PARAMETRO_INVALIDO
     Erro400:
       description: Validação falhou (campo obrigatório, formato de data) ou regra de formato.
       content:
@@ -1407,3 +1957,320 @@ components:
           example: Sentado, após 5 minutos
       required:
       - valor
+    MeuEstudoResponse:
+      type: object
+      description: Estudo em que o participante logado está incluído (um item por participação). Não traz dado de candidato.
+      properties:
+        participacaoId:
+          type: string
+          format: uuid
+        estudoId:
+          type: string
+          format: uuid
+        titulo:
+          type: string
+        resumo:
+          type: string
+          maxLength: 160
+          description: Objetivo do estudo cortado em 160 caracteres (termina com reticências quando foi cortado).
+        statusEstudo:
+          type: string
+          enum:
+          - PLANEJAMENTO
+          - RECRUTAMENTO
+          - EXECUCAO
+          - ENCERRADO
+        dataInclusao:
+          type: string
+          format: date
+          description: Dia 0 da participação.
+        situacaoParticipacao:
+          $ref: '#/components/schemas/SituacaoParticipacao'
+      required:
+      - participacaoId
+      - estudoId
+      - titulo
+      - resumo
+      - statusEstudo
+      - dataInclusao
+      - situacaoParticipacao
+    RetiradaDoMeuEstudo:
+      type: object
+      description: Dados da retirada visíveis ao app. O motivo da retirada nunca é exposto.
+      properties:
+        dataRetirada:
+          type: string
+          format: date
+      required:
+      - dataRetirada
+    MeuEstudoDetalheResponse:
+      type: object
+      description: Detalhe de um estudo do participante logado (os campos de `MeuEstudoResponse` mais os abaixo).
+      properties:
+        participacaoId:
+          type: string
+          format: uuid
+        estudoId:
+          type: string
+          format: uuid
+        titulo:
+          type: string
+        resumo:
+          type: string
+          maxLength: 160
+        statusEstudo:
+          type: string
+          enum:
+          - PLANEJAMENTO
+          - RECRUTAMENTO
+          - EXECUCAO
+          - ENCERRADO
+        dataInclusao:
+          type: string
+          format: date
+        situacaoParticipacao:
+          $ref: '#/components/schemas/SituacaoParticipacao'
+        objetivo:
+          type: string
+          description: Objetivo completo do estudo.
+        dataInicio:
+          type: string
+          format: date
+          nullable: true
+        dataFim:
+          type: string
+          format: date
+          nullable: true
+        responsavelNome:
+          type: string
+          description: Nome do responsável pelo estudo.
+        retirada:
+          nullable: true
+          allOf:
+          - $ref: '#/components/schemas/RetiradaDoMeuEstudo'
+      required:
+      - participacaoId
+      - estudoId
+      - titulo
+      - resumo
+      - statusEstudo
+      - dataInclusao
+      - situacaoParticipacao
+      - objetivo
+      - responsavelNome
+    MinhaVisitaResponse:
+      type: object
+      description: |-
+        Visita do participante logado, para o app (RF18). Traz só os **nomes** das atividades previstas e **nenhum
+        resultado** das avaliações (decisão de escopo e de privacidade).
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador da visita agendada.
+        participacaoId:
+          type: string
+          format: uuid
+        estudoId:
+          type: string
+          format: uuid
+        estudoTitulo:
+          type: string
+        visitaNome:
+          type: string
+          description: Nome da visita prevista.
+          example: Retorno 30 dias
+        dataHora:
+          type: string
+          format: date-time
+          description: Data e hora agendadas, com o deslocamento do fuso do centro (ISO 8601).
+          example: '2026-11-24T09:30:00-03:00'
+        situacao:
+          $ref: '#/components/schemas/SituacaoVisita'
+        dataHoraRealizada:
+          type: string
+          format: date-time
+          nullable: true
+          description: Preenchida nas visitas REALIZADA.
+        motivo:
+          type: string
+          nullable: true
+          description: Preenchido nas visitas CANCELADA (inclusive "retirada do estudo").
+        atividades:
+          type: array
+          description: Nomes das atividades previstas da visita, em ordem alfabética.
+          items:
+            type: string
+      required:
+      - id
+      - participacaoId
+      - estudoId
+      - estudoTitulo
+      - visitaNome
+      - dataHora
+      - situacao
+      - atividades
+    ResumoComparecimentoResponse:
+      type: object
+      description: |-
+        Totais de comparecimento do participante (e do estudo, quando `estudoId` é informado), calculados no servidor e
+        **independentes da página** pedida.
+      properties:
+        realizadas:
+          type: integer
+          format: int64
+        ausentes:
+          type: integer
+          format: int64
+        canceladas:
+          type: integer
+          format: int64
+      required:
+      - realizadas
+      - ausentes
+      - canceladas
+    HistoricoMinhasVisitasResponse:
+      type: object
+      description: Página do histórico de comparecimento do participante logado, com o resumo.
+      properties:
+        resumo:
+          $ref: '#/components/schemas/ResumoComparecimentoResponse'
+        conteudo:
+          type: array
+          items:
+            $ref: '#/components/schemas/MinhaVisitaResponse'
+        pagina:
+          type: integer
+          description: Base 0.
+        tamanho:
+          type: integer
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+      required:
+      - resumo
+      - conteudo
+      - pagina
+      - tamanho
+      - totalElementos
+      - totalPaginas
+    SituacaoParticipacao:
+      type: string
+      enum:
+      - ATIVO
+      - RETIRADO
+      description: Situação da participação no estudo. Nasce ATIVO; RETIRADO é irreversível (RF16, regra 6).
+    SolicitanteRetirada:
+      type: string
+      enum:
+      - PARTICIPANTE
+      - PESQUISADOR
+      - COORDENACAO
+      description: Quem solicitou a retirada do participante do estudo.
+    RetiradaRequest:
+      type: object
+      description: Pedido de registro de retirada de um participante do estudo.
+      properties:
+        motivo:
+          type: string
+          minLength: 5
+          maxLength: 500
+          description: Motivo da retirada; obrigatório, de 5 a 500 caracteres depois do `trim` (`MOTIVO_OBRIGATORIO`).
+          example: Mudança de cidade
+        solicitante:
+          $ref: '#/components/schemas/SolicitanteRetirada'
+        dataRetirada:
+          type: string
+          format: date
+          description: Data da retirada (`yyyy-MM-dd`); não pode ser futura (`DATA_RETIRADA_FUTURA`).
+          example: '2026-11-18'
+      required:
+      - motivo
+      - solicitante
+      - dataRetirada
+    RetiradaResponse:
+      type: object
+      description: Registro formal da retirada de um participante do estudo.
+      properties:
+        id:
+          type: string
+          format: uuid
+        participacaoId:
+          type: string
+          format: uuid
+        motivo:
+          type: string
+          example: Mudança de cidade
+        solicitante:
+          $ref: '#/components/schemas/SolicitanteRetirada'
+        dataRetirada:
+          type: string
+          format: date
+          example: '2026-11-18'
+        registradoPor:
+          type: string
+          example: Coordenador Demo (Ficticio)
+        registradoEm:
+          type: string
+          format: date-time
+          example: '2026-11-18T14:30:00-03:00'
+        visitasCanceladas:
+          type: integer
+          minimum: 0
+          description: Quantidade de visitas futuras AGENDADA canceladas com o motivo "retirada do estudo".
+          example: 2
+      required:
+      - id
+      - participacaoId
+      - motivo
+      - solicitante
+      - dataRetirada
+      - registradoPor
+      - registradoEm
+      - visitasCanceladas
+    VincularContaRequest:
+      type: object
+      description: Conta de participante a vincular ao participante do estudo.
+      properties:
+        usuarioId:
+          type: string
+          format: uuid
+          description: Conta de perfil PARTICIPANTE, ativa e ainda sem vínculo.
+      required:
+      - usuarioId
+    ContaVinculadaResponse:
+      type: object
+      description: Conta vinculada a uma participação. Só identificação; nunca senha, hash, perfil nem situação da conta.
+      properties:
+        participacaoId:
+          type: string
+          format: uuid
+        usuarioId:
+          type: string
+          format: uuid
+        nome:
+          type: string
+        email:
+          type: string
+      required:
+      - participacaoId
+      - usuarioId
+      - nome
+      - email
+    ContaParticipanteResponse:
+      type: object
+      description: Conta de perfil PARTICIPANTE, ativa e ainda não vinculada, disponível para vínculo.
+      properties:
+        usuarioId:
+          type: string
+          format: uuid
+        nome:
+          type: string
+        email:
+          type: string
+      required:
+      - usuarioId
+      - nome
+      - email

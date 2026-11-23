@@ -5,8 +5,11 @@ import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoParticipacao;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -15,6 +18,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -54,4 +58,22 @@ public class Participacao {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "incluido_por_id", nullable = false)
     private Usuario incluidoPor;
+
+    /**
+     * Situação da participação no estudo. Nasce {@link SituacaoParticipacao#ATIVO} e só muda para
+     * {@link SituacaoParticipacao#RETIRADO} por {@link #retirar()}, de forma irreversível (sem reativação).
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Setter(AccessLevel.NONE)
+    private SituacaoParticipacao situacao = SituacaoParticipacao.ATIVO;
+
+    public boolean estaRetirada() {
+        return situacao == SituacaoParticipacao.RETIRADO;
+    }
+
+    /** Marca a participação como retirada do estudo de forma irreversível (RF16, regra 6). */
+    public void retirar() {
+        this.situacao = SituacaoParticipacao.RETIRADO;
+    }
 }
