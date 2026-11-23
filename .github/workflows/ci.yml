@@ -38,6 +38,8 @@ jobs:
             sleep $((tentativa * 20))
           done
           echo "Usando o espelho do Maven Central (D-S3-19)"
+          # O wrapper guarda o Maven numa pasta calculada a partir da URL: os passos seguintes precisam da mesma variável
+          echo "MVNW_REPOURL=https://maven-central.storage-download.googleapis.com/maven2" >> "$GITHUB_ENV"
           MVNW_REPOURL=https://maven-central.storage-download.googleapis.com/maven2 ./mvnw -B -v
       # Testes usam H2 em memória e segredo JWT fictício (src/test/resources), sem PostgreSQL
       - name: Testes
@@ -106,6 +108,8 @@ jobs:
             sleep $((tentativa * 20))
           done
           echo "Usando o espelho do Maven Central (D-S3-19)"
+          # O wrapper guarda o Maven numa pasta calculada a partir da URL: os passos seguintes precisam da mesma variável
+          echo "MVNW_REPOURL=https://maven-central.storage-download.googleapis.com/maven2" >> "$GITHUB_ENV"
           MVNW_REPOURL=https://maven-central.storage-download.googleapis.com/maven2 ./mvnw -B -v
       - name: Testes no PostgreSQL
         run: |
@@ -179,6 +183,8 @@ jobs:
             sleep $((tentativa * 20))
           done
           echo "Usando o espelho do Maven Central (D-S3-19)"
+          # O wrapper guarda o Maven numa pasta calculada a partir da URL: os passos seguintes precisam da mesma variável
+          echo "MVNW_REPOURL=https://maven-central.storage-download.googleapis.com/maven2" >> "$GITHUB_ENV"
           MVNW_REPOURL=https://maven-central.storage-download.googleapis.com/maven2 ./mvnw -B -v
 
       - name: Empacota e sobe o backend
