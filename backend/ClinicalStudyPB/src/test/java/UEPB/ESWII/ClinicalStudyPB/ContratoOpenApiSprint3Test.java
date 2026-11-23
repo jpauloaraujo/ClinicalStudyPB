@@ -555,9 +555,9 @@ class ContratoOpenApiSprint3Test {
     }
 
     @SuppressWarnings("unchecked")
-    @ParameterizedTest(name = "T95: o schema {0} tem os mesmos campos do DTO")
-    @ValueSource(strings = {"HistoricoParticipanteResponse", "ParticipanteDoHistorico", "ResumoDoHistorico",
-            "VisitaDoHistorico", "ResultadoDoHistorico"})
+    @ParameterizedTest(name = "T95/T104: o schema {0} tem os mesmos campos do DTO")
+    @ValueSource(strings = {"HistoricoParticipanteResponse", "ParticipanteDoHistorico", "RetiradaDoHistorico",
+            "ResumoDoHistorico", "VisitaDoHistorico", "ResultadoDoHistorico"})
     void schemaTemOsCamposDoDto(String nome) throws Exception {
         Class<?> dto = nome.equals("HistoricoParticipanteResponse") ? HistoricoParticipanteResponse.class
                 : Arrays.stream(HistoricoParticipanteResponse.class.getDeclaredClasses())

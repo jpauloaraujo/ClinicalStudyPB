@@ -268,6 +268,34 @@ describe('AbaAvaliacoesVisita (T91)', () => {
     expect(screen.queryByRole('button', { name: /Salvar/ })).not.toBeInTheDocument()
   })
 
+  it('participante retirado (T104): mostra marca Retirado, aviso e campos somente leitura preservando os resultados', async () => {
+    resultadosApi.mockResolvedValue(resultadosDaVisita({ bloqueio: 'PARTICIPANTE_RETIRADO' }))
+    renderizar('PESQUISADOR')
+
+    expect(await screen.findByText('Retirado')).toHaveClass('selo--retirado')
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'O participante foi retirado do estudo: os resultados ficam disponíveis somente para consulta e não podem mais ser registrados nem editados.',
+    )
+    const registrada = await atividade('Aferir pressão arterial')
+    expect(registrada.getByText('120/80')).toBeInTheDocument()
+    expect(registrada.getByText('mmHg')).toBeInTheDocument()
+    expect((await atividade('Aferir peso')).getByText('Sem resultado registrado.')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Salvar/ })).not.toBeInTheDocument()
+  })
+
+  it('erro 409 PARTICIPANTE_RETIRADO ao salvar resultado mostra a mensagem traduzida (T104)', async () => {
+    registrarResultado.mockRejectedValueOnce(erroHttp(409, 'mensagem do servidor', 'PARTICIPANTE_RETIRADO'))
+    renderizar('PESQUISADOR')
+    const pendente = await atividade('Aferir peso')
+    await userEvent.type(pendente.getByLabelText('Valor (Aferir peso)'), '72')
+
+    await userEvent.click(pendente.getByRole('button', { name: 'Salvar (Aferir peso)' }))
+    expect(await pendente.findByRole('alert')).toHaveTextContent(
+      'O participante foi retirado do estudo: os resultados não podem mais ser registrados nem editados.',
+    )
+  })
+
   it('visita sem atividades de avaliação mostra o texto próprio', async () => {
     resultadosApi.mockResolvedValue(resultadosDaVisita({ total: 0, registrados: 0, pendentes: 0, atividades: [] }))
     renderizar()

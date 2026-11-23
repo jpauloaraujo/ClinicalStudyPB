@@ -73,7 +73,7 @@ describe('SecaoInclusao (T61)', () => {
   it('pede confirmação antes de incluir e só chama a API depois de confirmar', async () => {
     incluir.mockResolvedValue({
       id: 'p-1', candidatoId: pronto.id, codigo: 'CAND-001', nomeFicticio: 'J. S.', estudoId: estudo.id,
-      dataInclusao: '2026-11-04', incluidoPor: 'Coordenadora Fictícia',
+      dataInclusao: '2026-11-04', incluidoPor: 'Coordenadora Fictícia', situacao: 'ATIVO',
     })
     renderizar()
     await userEvent.click(await botao())

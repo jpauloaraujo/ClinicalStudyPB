@@ -197,7 +197,7 @@ export interface paths {
          *     lista de resultados das atividades.
          *
          *     `pendentes = agendadas + naoAgendadas`: visitas previstas sem agendamento mais as ainda agendadas, sem desfecho.
-         *     O desenho do histórico de um participante retirado (situação e dados da retirada) entra com a retirada de participante.
+         *     Quando o participante já foi retirado do estudo, `participante.situacao` sai `RETIRADO` e `participante.retirada` traz a data, o motivo e quem solicitou; para participantes ativos, `retirada` é nulo.
          *
          *     Perfis: PESQUISADOR e COORDENADOR leem; ADMINISTRADOR e PARTICIPANTE recebem 403.
          */
@@ -293,8 +293,6 @@ export interface paths {
          *     participante. Conta sem candidato vinculado devolve **200 com lista vazia** (não é erro). Participações retiradas
          *     continuam na lista, com `situacaoParticipacao = RETIRADO`.
          *
-         *     Enquanto a retirada de participante (T101 a T103) não existir, `situacaoParticipacao` vem sempre `ATIVO`.
-         *
          *     Perfis: só PARTICIPANTE; ADMINISTRADOR, PESQUISADOR e COORDENADOR recebem 403.
          */
         get: operations["meusEstudos"];
@@ -319,7 +317,7 @@ export interface paths {
          *     estudo não existe **ou** existe mas a conta não participa dele, sem distinguir os dois casos, para não revelar
          *     que o dado existe. O motivo da retirada nunca é exposto ao app: `retirada` traz só `dataRetirada`.
          *
-         *     Enquanto a retirada de participante (T101 a T103) não existir, `retirada` vem sempre `null`.
+         *     Participante ativo: `retirada` vem `null`; retirado: `retirada.dataRetirada` com a data registrada.
          *
          *     Perfis: só PARTICIPANTE; ADMINISTRADOR, PESQUISADOR e COORDENADOR recebem 403.
          */
@@ -346,7 +344,7 @@ export interface paths {
          *     participante (regra 7).
          *
          *     Devolve **200 com lista vazia** (nunca erro) quando o participante não tem visita futura, foi retirado (a
-         *     retirada cancela as visitas futuras, T101 a T103) ou a conta não tem candidato vinculado. O parâmetro opcional
+         *     retirada cancela as visitas futuras, RF16) ou a conta não tem candidato vinculado. O parâmetro opcional
          *     `estudoId` restringe a lista a um estudo; um `estudoId` que **não é do participante** também devolve lista
          *     vazia, **nunca 404 e nunca dados de outro participante**.
          *
@@ -393,6 +391,45 @@ export interface paths {
         get: operations["meuHistoricoDeVisitas"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/participacoes/{participacaoId}/retirada": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Consultar a retirada de um participante
+         * @description Devolve o registro formal de retirada da participação, incluindo a contagem de visitas canceladas pelo motivo
+         *     `"retirada do estudo"`. Responde **404** se a participação não existir ou se o participante ainda estiver `ATIVO`.
+         *
+         *     Perfis: COORDENADOR e PESQUISADOR leem; ADMINISTRADOR e PARTICIPANTE recebem 403.
+         */
+        get: operations["buscarRetirada"];
+        put?: never;
+        /**
+         * Registrar a retirada de um participante do estudo
+         * @description Registra, em uma **única transação**, a retirada formal de um participante ativo do estudo (RF16, regra 6).
+         *     A retirada é **irreversível**: o participante passa de `ATIVO` para `RETIRADO` (não existe reativação), as
+         *     visitas futuras ainda `AGENDADA` são automaticamente canceladas com o motivo `"retirada do estudo"`, o
+         *     histórico (visitas realizadas, ausentes, canceladas e resultados) permanece preservado e a **vaga continua
+         *     ocupada** (a contagem de incluídos do RF11 não diminui).
+         *
+         *     Pré-condições verificadas nesta ordem (depois do 403 do perfil e 404 da participação):
+         *     1. o participante está `ATIVO` (409 `PARTICIPANTE_JA_RETIRADO`);
+         *     2. o estudo não está encerrado (409 `ESTUDO_ENCERRADO`);
+         *     3. `motivo` é obrigatório com 5 a 500 caracteres depois do `trim` (400 `MOTIVO_OBRIGATORIO` ou `VALIDACAO_CAMPOS`);
+         *     4. `dataRetirada` não pode ser futura (400 `DATA_RETIRADA_FUTURA`).
+         *
+         *     Perfis: somente COORDENADOR; PESQUISADOR, ADMINISTRADOR e PARTICIPANTE recebem 403.
+         */
+        post: operations["registrarRetirada"];
         delete?: never;
         options?: never;
         head?: never;
@@ -664,30 +701,7 @@ export interface components {
             visitasPrevistas: number;
             /** @description Visitas previstas que já têm agendamento, em qualquer situação. */
             visitasAgendadas: number;
-        };
-        /** @description Conta de participante a vincular ao participante do estudo. */
-        VincularContaRequest: {
-            /**
-             * Format: uuid
-             * @description Conta de perfil PARTICIPANTE, ativa e ainda sem vínculo.
-             */
-            usuarioId: string;
-        };
-        /** @description Conta vinculada a uma participação. Só identificação; nunca senha, hash, perfil nem situação da conta. */
-        ContaVinculadaResponse: {
-            /** Format: uuid */
-            participacaoId: string;
-            /** Format: uuid */
-            usuarioId: string;
-            nome: string;
-            email: string;
-        };
-        /** @description Conta de perfil PARTICIPANTE, ativa e ainda não vinculada, disponível para vínculo. */
-        ContaParticipanteResponse: {
-            /** Format: uuid */
-            usuarioId: string;
-            nome: string;
-            email: string;
+            situacaoParticipacao: components["schemas"]["SituacaoParticipacao"];
         };
         /** @description Formato único de erro da API. O status HTTP identifica a classe do erro: 400 validação ou regra de formato, 401 sem token, 403 perfil sem permissão, 404 recurso inexistente, 409 regra de negócio violada (sempre com "codigo"). */
         Erro: {
@@ -735,6 +749,20 @@ export interface components {
              * @example 2026-10-20
              */
             dataInclusao: string;
+            situacao: components["schemas"]["SituacaoParticipacao"];
+            /** @description Dados da retirada; nulo enquanto o participante estiver ativo. */
+            retirada?: components["schemas"]["RetiradaDoHistorico"] | null;
+        };
+        /** @description Resumo da retirada do participante exibido na ficha e no histórico. */
+        RetiradaDoHistorico: {
+            /**
+             * Format: date
+             * @example 2026-11-18
+             */
+            dataRetirada: string;
+            /** @example Mudança de cidade */
+            motivo: string;
+            solicitante: components["schemas"]["SolicitanteRetirada"];
         };
         /** @description Contagem de visitas por situação. `pendentes = agendadas + naoAgendadas`. */
         ResumoDoHistorico: {
@@ -875,11 +903,6 @@ export interface components {
             /** @example Sentado, após 5 minutos */
             observacao?: string | null;
         };
-        /**
-         * @description Situação da participação. Enquanto a retirada (T101 a T103) não existir, toda participação é ATIVO.
-         * @enum {string}
-         */
-        SituacaoParticipacao: "ATIVO" | "RETIRADO";
         /** @description Estudo em que o participante logado está incluído (um item por participação). Não traz dado de candidato. */
         MeuEstudoResponse: {
             /** Format: uuid */
@@ -985,6 +1008,82 @@ export interface components {
             /** Format: int64 */
             totalElementos: number;
             totalPaginas: number;
+        };
+        /**
+         * @description Situação da participação no estudo. Nasce ATIVO; RETIRADO é irreversível (RF16, regra 6).
+         * @enum {string}
+         */
+        SituacaoParticipacao: "ATIVO" | "RETIRADO";
+        /**
+         * @description Quem solicitou a retirada do participante do estudo.
+         * @enum {string}
+         */
+        SolicitanteRetirada: "PARTICIPANTE" | "PESQUISADOR" | "COORDENACAO";
+        /** @description Pedido de registro de retirada de um participante do estudo. */
+        RetiradaRequest: {
+            /**
+             * @description Motivo da retirada; obrigatório, de 5 a 500 caracteres depois do `trim` (`MOTIVO_OBRIGATORIO`).
+             * @example Mudança de cidade
+             */
+            motivo: string;
+            solicitante: components["schemas"]["SolicitanteRetirada"];
+            /**
+             * Format: date
+             * @description Data da retirada (`yyyy-MM-dd`); não pode ser futura (`DATA_RETIRADA_FUTURA`).
+             * @example 2026-11-18
+             */
+            dataRetirada: string;
+        };
+        /** @description Registro formal da retirada de um participante do estudo. */
+        RetiradaResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            participacaoId: string;
+            /** @example Mudança de cidade */
+            motivo: string;
+            solicitante: components["schemas"]["SolicitanteRetirada"];
+            /**
+             * Format: date
+             * @example 2026-11-18
+             */
+            dataRetirada: string;
+            /** @example Coordenador Demo (Ficticio) */
+            registradoPor: string;
+            /**
+             * Format: date-time
+             * @example 2026-11-18T14:30:00-03:00
+             */
+            registradoEm: string;
+            /**
+             * @description Quantidade de visitas futuras AGENDADA canceladas com o motivo "retirada do estudo".
+             * @example 2
+             */
+            visitasCanceladas: number;
+        };
+        /** @description Conta de participante a vincular ao participante do estudo. */
+        VincularContaRequest: {
+            /**
+             * Format: uuid
+             * @description Conta de perfil PARTICIPANTE, ativa e ainda sem vínculo.
+             */
+            usuarioId: string;
+        };
+        /** @description Conta vinculada a uma participação. Só identificação; nunca senha, hash, perfil nem situação da conta. */
+        ContaVinculadaResponse: {
+            /** Format: uuid */
+            participacaoId: string;
+            /** Format: uuid */
+            usuarioId: string;
+            nome: string;
+            email: string;
+        };
+        /** @description Conta de perfil PARTICIPANTE, ativa e ainda não vinculada, disponível para vínculo. */
+        ContaParticipanteResponse: {
+            /** Format: uuid */
+            usuarioId: string;
+            nome: string;
+            email: string;
         };
     };
     responses: {
@@ -1356,7 +1455,9 @@ export interface operations {
                      *         "candidatoId": "d6300000-0000-4000-8000-000000001911",
                      *         "codigo": "CAND-001",
                      *         "nomeFicticio": "Pessoa Teta (Ficticia)",
-                     *         "dataInclusao": "2026-10-20"
+                     *         "dataInclusao": "2026-10-20",
+                     *         "situacao": "ATIVO",
+                     *         "retirada": null
                      *       },
                      *       "resumo": {
                      *         "previstas": 3,
@@ -1834,6 +1935,128 @@ export interface operations {
             400: components["responses"]["ErroParametroInvalido"];
             401: components["responses"]["Erro401"];
             403: components["responses"]["Erro403"];
+        };
+    };
+    buscarRetirada: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID da participação (o participante incluído no estudo). */
+                participacaoId: components["parameters"]["ParticipacaoId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Registro de retirada do participante. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "d6300000-0000-4000-8000-000000002391",
+                     *       "participacaoId": "d6300000-0000-4000-8000-000000001921",
+                     *       "motivo": "Mudança de cidade",
+                     *       "solicitante": "PARTICIPANTE",
+                     *       "dataRetirada": "2026-11-18",
+                     *       "registradoPor": "Coordenador Demo (Ficticio)",
+                     *       "registradoEm": "2026-11-18T14:30:00-03:00",
+                     *       "visitasCanceladas": 2
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RetiradaResponse"];
+                };
+            };
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+            /** @description Participação inexistente ou participante ainda ativo (sem retirada registrada). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "erro": "Retirada não encontrada para a participação: d6300000-0000-4000-8000-000000001921",
+                     *       "codigo": "RECURSO_NAO_ENCONTRADO"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Erro"];
+                };
+            };
+            409: components["responses"]["Erro409"];
+        };
+    };
+    registrarRetirada: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID da participação (o participante incluído no estudo). */
+                participacaoId: components["parameters"]["ParticipacaoId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "motivo": "Mudança de cidade",
+                 *       "solicitante": "PARTICIPANTE",
+                 *       "dataRetirada": "2026-11-18"
+                 *     }
+                 */
+                "application/json": components["schemas"]["RetiradaRequest"];
+            };
+        };
+        responses: {
+            /** @description Retirada registrada; devolve o registro com o total de visitas futuras canceladas. */
+            201: {
+                headers: {
+                    /** @description URI da consulta da retirada registrada (`/api/participacoes/{participacaoId}/retirada`). */
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "d6300000-0000-4000-8000-000000002391",
+                     *       "participacaoId": "d6300000-0000-4000-8000-000000001921",
+                     *       "motivo": "Mudança de cidade",
+                     *       "solicitante": "PARTICIPANTE",
+                     *       "dataRetirada": "2026-11-18",
+                     *       "registradoPor": "Coordenador Demo (Ficticio)",
+                     *       "registradoEm": "2026-11-18T14:30:00-03:00",
+                     *       "visitasCanceladas": 2
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RetiradaResponse"];
+                };
+            };
+            /** @description Dado inválido: `VALIDACAO_CAMPOS` (campo obrigatório ausente ou acima do limite), `CORPO_INVALIDO` (JSON malformado ou solicitante inexistente), `MOTIVO_OBRIGATORIO` (motivo em branco ou menor que 5 caracteres após trim) ou `DATA_RETIRADA_FUTURA` (data posterior a hoje). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Erro"];
+                };
+            };
+            401: components["responses"]["Erro401"];
+            403: components["responses"]["Erro403"];
+            404: components["responses"]["Erro404"];
+            /** @description Regra de negócio violada: `PARTICIPANTE_JA_RETIRADO` (retirada é irreversível) ou `ESTUDO_ENCERRADO`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Erro"];
+                };
+            };
         };
     };
     contaDoParticipante: {

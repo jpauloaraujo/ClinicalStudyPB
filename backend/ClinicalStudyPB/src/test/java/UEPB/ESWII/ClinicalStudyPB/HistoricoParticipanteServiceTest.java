@@ -26,16 +26,20 @@ import UEPB.ESWII.ClinicalStudyPB.controller.dto.HistoricoParticipanteResponse;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.HistoricoParticipanteResponse.ResumoDoHistorico;
 import UEPB.ESWII.ClinicalStudyPB.controller.dto.HistoricoParticipanteResponse.VisitaDoHistorico;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoNoHistorico;
+import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoParticipacao;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoVisita;
+import UEPB.ESWII.ClinicalStudyPB.domain.enums.SolicitanteRetirada;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Acao;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Candidato;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Estudo;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Participacao;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.ResultadoAtividade;
+import UEPB.ESWII.ClinicalStudyPB.domain.model.RetiradaParticipacao;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.VisitaAgendada;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.VisitaPlanejada;
 import UEPB.ESWII.ClinicalStudyPB.repository.ParticipacaoRepository;
 import UEPB.ESWII.ClinicalStudyPB.repository.ResultadoAtividadeRepository;
+import UEPB.ESWII.ClinicalStudyPB.repository.RetiradaParticipacaoRepository;
 import UEPB.ESWII.ClinicalStudyPB.repository.VisitaAgendadaRepository;
 import UEPB.ESWII.ClinicalStudyPB.repository.VisitaPlanejadaRepository;
 import UEPB.ESWII.ClinicalStudyPB.service.HistoricoParticipanteService;
@@ -56,6 +60,7 @@ class HistoricoParticipanteServiceTest {
     private VisitaPlanejadaRepository previstas;
     private VisitaAgendadaRepository agendadas;
     private ResultadoAtividadeRepository resultados;
+    private RetiradaParticipacaoRepository retiradas;
     private HistoricoParticipanteService service;
     private Participacao participacao;
     private UUID estudoId;
@@ -66,7 +71,8 @@ class HistoricoParticipanteServiceTest {
         previstas = mock(VisitaPlanejadaRepository.class);
         agendadas = mock(VisitaAgendadaRepository.class);
         resultados = mock(ResultadoAtividadeRepository.class);
-        service = new HistoricoParticipanteService(participacoes, previstas, agendadas, resultados, RELOGIO);
+        retiradas = mock(RetiradaParticipacaoRepository.class);
+        service = new HistoricoParticipanteService(participacoes, previstas, agendadas, resultados, retiradas, RELOGIO);
 
         estudoId = UUID.randomUUID();
         Estudo estudo = new Estudo();
@@ -140,8 +146,31 @@ class HistoricoParticipanteServiceTest {
         assertThat(historico.participante().codigo()).isEqualTo("CAND-001");
         assertThat(historico.participante().nomeFicticio()).isEqualTo("Pessoa Teta (Ficticia)");
         assertThat(historico.participante().dataInclusao()).isEqualTo(INCLUSAO);
+        assertThat(historico.participante().situacao()).isEqualTo(SituacaoParticipacao.ATIVO);
+        assertThat(historico.participante().retirada()).isNull();
+        verify(retiradas, never()).findByParticipacaoId(any());
         assertThat(historico.visitas()).extracting(VisitaDoHistorico::dataSugerida)
                 .containsExactly(INCLUSAO, INCLUSAO.plusDays(30));
+    }
+
+    @Test
+    @DisplayName("T104: participante retirado traz situacao RETIRADO e os dados da retirada no histórico")
+    void participanteRetiradoTrazDadosDaRetirada() {
+        participacao.retirar();
+        RetiradaParticipacao retirada = new RetiradaParticipacao();
+        retirada.setParticipacao(participacao);
+        retirada.setDataRetirada(LocalDate.of(2026, 11, 10));
+        retirada.setMotivo("Mudança de cidade");
+        retirada.setSolicitante(SolicitanteRetirada.PARTICIPANTE);
+        when(retiradas.findByParticipacaoId(participacao.getId())).thenReturn(Optional.of(retirada));
+
+        HistoricoParticipanteResponse historico = service.historico(participacao.getId());
+
+        assertThat(historico.participante().situacao()).isEqualTo(SituacaoParticipacao.RETIRADO);
+        assertThat(historico.participante().retirada()).isNotNull();
+        assertThat(historico.participante().retirada().dataRetirada()).isEqualTo(LocalDate.of(2026, 11, 10));
+        assertThat(historico.participante().retirada().motivo()).isEqualTo("Mudança de cidade");
+        assertThat(historico.participante().retirada().solicitante()).isEqualTo(SolicitanteRetirada.PARTICIPANTE);
     }
 
     @Test

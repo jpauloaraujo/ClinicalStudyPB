@@ -35,6 +35,7 @@ export type VisitaDasAcoes = {
   visitaNome: string
   janelaInicio?: string
   janelaFim?: string
+  participanteRetirado?: boolean
 }
 
 type AcoesDaVisitaProps = {
@@ -56,7 +57,8 @@ export function AcoesDaVisita({ visita, aoAlterar }: AcoesDaVisitaProps) {
   const janela =
     visita.janelaInicio && visita.janelaFim ? { inicio: visita.janelaInicio, fim: visita.janelaFim } : undefined
   const estudoAceita = estudoPermiteAgendar(estudo.status)
-  const mostrarReagendar = usuario.perfil === 'COORDENADOR' && podeReagendar(visita.situacao)
+  const mostrarReagendar =
+    usuario.perfil === 'COORDENADOR' && !visita.participanteRetirado && podeReagendar(visita.situacao)
 
   function fechar() {
     setReagendando(false)

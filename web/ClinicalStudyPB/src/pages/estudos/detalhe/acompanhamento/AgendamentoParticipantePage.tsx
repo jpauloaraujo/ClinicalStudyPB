@@ -33,6 +33,7 @@ export function AgendamentoParticipantePage() {
   const visitas = useCarregamento(carregarVisitas)
   const participantes = useCarregamento(carregarParticipantes)
   const participante = participantes.dados?.find((item) => item.participacaoId === participacaoId)
+  const participanteRetirado = participante?.situacaoParticipacao === 'RETIRADO'
 
   const [edicao, setEdicao] = useState<Edicao | null>(null)
   const [enviando, setEnviando] = useState(false)
@@ -84,7 +85,10 @@ export function AgendamentoParticipantePage() {
   return (
     <div className="pilha">
       <div className="barra-titulo">
-        <h2>Agendamento de visitas</h2>
+        <div className="titulo-com-selo">
+          <h2>Agendamento de visitas</h2>
+          {participanteRetirado && <span className="selo selo--retirado">Retirado</span>}
+        </div>
         <Link to={`/estudos/${estudo.id}/participantes`} className="botao botao--secundario botao--pequeno">
           ← Voltar para os participantes
         </Link>
@@ -94,7 +98,12 @@ export function AgendamentoParticipantePage() {
         {participante && ` · ${participante.visitasAgendadas} de ${participante.visitasPrevistas} visitas agendadas`}
       </p>
 
-      {!estudoAceita && (
+      {participanteRetirado && (
+        <p className="alerta alerta--info" role="status">
+          Participante retirado do estudo: não é possível agendar nem reagendar visitas.
+        </p>
+      )}
+      {!participanteRetirado && !estudoAceita && (
         <p className="alerta alerta--info" role="status">
           {EXPLICACAO_ESTUDO_FORA_DE_ESTADO}
         </p>
@@ -175,7 +184,7 @@ export function AgendamentoParticipantePage() {
                             Abrir visita
                           </Link>
                         )}
-                        {ehCoordenador && !agendamento && (
+                        {ehCoordenador && !participanteRetirado && !agendamento && (
                           <button
                             type="button"
                             className="botao botao--pequeno"
@@ -187,7 +196,7 @@ export function AgendamentoParticipantePage() {
                             Agendar
                           </button>
                         )}
-                        {ehCoordenador && agendamento && podeReagendar(agendamento.situacao) && (
+                        {ehCoordenador && !participanteRetirado && agendamento && podeReagendar(agendamento.situacao) && (
                           <button
                             type="button"
                             className="botao botao--secundario botao--pequeno"

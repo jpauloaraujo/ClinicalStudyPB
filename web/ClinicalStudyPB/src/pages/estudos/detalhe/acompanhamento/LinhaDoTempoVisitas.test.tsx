@@ -7,10 +7,15 @@ import { LinhaDoTempoVisitas } from './LinhaDoTempoVisitas'
 
 const estudoId = 'estudo-1'
 
-function montar(visitas = [triagem, retorno30, retorno60, cancelada]) {
+function montar(visitas = [triagem, retorno30, retorno60, cancelada], participanteRetirado = false) {
   render(
     <MemoryRouter>
-      <LinhaDoTempoVisitas visitas={visitas} estudoId={estudoId} participacaoId={participacaoId} />
+      <LinhaDoTempoVisitas
+        visitas={visitas}
+        estudoId={estudoId}
+        participacaoId={participacaoId}
+        participanteRetirado={participanteRetirado}
+      />
     </MemoryRouter>,
   )
 }
@@ -125,5 +130,16 @@ describe('LinhaDoTempoVisitas (T97)', () => {
       'Ausente',
       'Cancelada',
     ])
+  })
+
+  it('mostra a marca Retirado e preserva visitas e resultados quando o participante foi retirado (T104)', async () => {
+    montar([triagem, cancelada], true)
+
+    expect(screen.getByText('Retirado')).toHaveClass('selo--retirado')
+    expect(screen.getByText(/Histórico preservado em modo somente leitura após a retirada do estudo/)).toBeInTheDocument()
+
+    await userEvent.click(botaoDa(/Triagem/))
+    expect(screen.getByText('Aferir pressão arterial')).toBeInTheDocument()
+    expect(screen.getByText('120/80 mmHg')).toBeInTheDocument()
   })
 })

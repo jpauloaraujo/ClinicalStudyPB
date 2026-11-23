@@ -3,18 +3,21 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { contaParticipanteApi } from '../../../../api/contaParticipante'
 import { historicoApi } from '../../../../api/historico'
+import { retiradaApi } from '../../../../api/retirada'
 import { erroHttp, estudoBase, renderizarAba } from '../../../../test/ambiente'
 import type { PerfilUsuario } from '../../../../types/usuario'
 import { FichaParticipantePage } from './FichaParticipantePage'
-import { cancelada, historicoBase, participacaoId, retorno30, retorno60, triagem } from './historicoFixture'
+import { cancelada, historicoBase, historicoRetirado, participacaoId, retorno30, retorno60, triagem } from './historicoFixture'
 
 vi.mock('../../../../api/historico', () => ({ historicoApi: { buscar: vi.fn() } }))
 vi.mock('../../../../api/contaParticipante', () => ({
   contaParticipanteApi: { buscar: vi.fn(), vincular: vi.fn(), listarDisponiveis: vi.fn() },
 }))
+vi.mock('../../../../api/retirada', () => ({ retiradaApi: { registrar: vi.fn(), buscar: vi.fn() } }))
 
 const buscar = vi.mocked(historicoApi.buscar)
 const buscarConta = vi.mocked(contaParticipanteApi.buscar)
+const registrarRetirada = vi.mocked(retiradaApi.registrar)
 
 function abrir(perfil: PerfilUsuario = 'COORDENADOR') {
   return renderizarAba(<FichaParticipantePage />, {
@@ -287,5 +290,68 @@ describe('FichaParticipantePage: conta vinculada (T111, RQ-T111-09 e 10)', () =>
     )
     expect(screen.queryByRole('button', { name: 'Vincular conta' })).not.toBeInTheDocument()
     expect(contaParticipanteApi.vincular).toHaveBeenCalledWith(participacaoId, 'u-9')
+  })
+})
+
+describe('FichaParticipantePage: retirada (T104)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    buscar.mockResolvedValue(historicoBase)
+    buscarConta.mockResolvedValue(null)
+  })
+
+  it('participante retirado mostra a marca Retirado, os dados da retirada, esconde as ações e preserva o histórico', async () => {
+    buscar.mockResolvedValue(historicoRetirado)
+    abrir('COORDENADOR')
+
+    expect(await screen.findByRole('heading', { name: 'CAND-001 · Pessoa Teta (Ficticia)' })).toBeInTheDocument()
+    expect(screen.getAllByText('Retirado').length).toBeGreaterThanOrEqual(2)
+
+    const dadosRetirada = screen.getByRole('region', { name: 'Dados da retirada' })
+    expect(within(dadosRetirada).getByText('18/11/2026')).toBeInTheDocument()
+    expect(within(dadosRetirada).getByText('Participante')).toBeInTheDocument()
+    expect(within(dadosRetirada).getByText('Mudança de cidade')).toBeInTheDocument()
+
+    expect(screen.queryByRole('region', { name: 'Ações do participante' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Registrar retirada' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Vincular conta' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Agendar visitas' })).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /Triagem/ }))
+    expect(screen.getByText('Aferir pressão arterial')).toBeInTheDocument()
+    expect(screen.getByText('120/80 mmHg')).toBeInTheDocument()
+  })
+
+  it('ao confirmar a retirada recarrega a ficha e mostra o total de visitas canceladas', async () => {
+    registrarRetirada.mockResolvedValue({
+      id: 'ret-1',
+      participacaoId,
+      dataRetirada: '2026-11-18',
+      motivo: 'Mudança de cidade',
+      solicitante: 'PARTICIPANTE',
+      registradoPor: 'Coordenador Fictício',
+      registradoEm: '2026-11-18T14:00:00-03:00',
+      visitasCanceladas: 1,
+    })
+    buscar.mockResolvedValueOnce(historicoBase).mockResolvedValueOnce(historicoRetirado)
+    abrir('COORDENADOR')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Registrar retirada' }))
+    await userEvent.type(screen.getByLabelText('Motivo da retirada'), 'Mudança de cidade')
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar retirada' }))
+
+    expect(registrarRetirada).toHaveBeenCalledWith(participacaoId, {
+      motivo: 'Mudança de cidade',
+      solicitante: 'PARTICIPANTE',
+      dataRetirada: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+    })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Dados da retirada' })).toBeInTheDocument()
+    expect(
+      screen.getByText('Retirada registrada com sucesso. 1 visita futura agendada foi cancelada.'),
+    ).toBeInTheDocument()
+    expect(buscar).toHaveBeenCalledTimes(2)
+    expect(buscarConta).toHaveBeenCalledTimes(2)
   })
 })

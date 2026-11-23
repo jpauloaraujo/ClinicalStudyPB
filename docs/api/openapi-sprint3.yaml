@@ -416,7 +416,7 @@ paths:
         lista de resultados das atividades.
 
         `pendentes = agendadas + naoAgendadas`: visitas previstas sem agendamento mais as ainda agendadas, sem desfecho.
-        O desenho do histórico de um participante retirado (situação e dados da retirada) entra com a retirada de participante.
+        Quando o participante já foi retirado do estudo, `participante.situacao` sai `RETIRADO` e `participante.retirada` traz a data, o motivo e quem solicitou; para participantes ativos, `retirada` é nulo.
 
         Perfis: PESQUISADOR e COORDENADOR leem; ADMINISTRADOR e PARTICIPANTE recebem 403.
       parameters:
@@ -441,6 +441,8 @@ paths:
                   codigo: CAND-001
                   nomeFicticio: Pessoa Teta (Ficticia)
                   dataInclusao: '2026-10-20'
+                  situacao: ATIVO
+                  retirada: null
                 resumo:
                   previstas: 3
                   realizadas: 1
@@ -1613,6 +1615,8 @@ components:
         visitasAgendadas:
           type: integer
           description: Visitas previstas que já têm agendamento, em qualquer situação.
+        situacaoParticipacao:
+          $ref: '#/components/schemas/SituacaoParticipacao'
       required:
       - participacaoId
       - candidatoId
@@ -1621,6 +1625,7 @@ components:
       - dataInclusao
       - visitasPrevistas
       - visitasAgendadas
+      - situacaoParticipacao
     Erro:
       type: object
       description: 'Formato único de erro da API. O status HTTP identifica a classe do erro: 400 validação ou regra
@@ -1702,12 +1707,37 @@ components:
           format: date
           description: Dia 0 do cronograma do participante.
           example: '2026-10-20'
+        situacao:
+          $ref: '#/components/schemas/SituacaoParticipacao'
+        retirada:
+          nullable: true
+          description: Dados da retirada; nulo enquanto o participante estiver ativo.
+          allOf:
+          - $ref: '#/components/schemas/RetiradaDoHistorico'
       required:
       - participacaoId
       - candidatoId
       - codigo
       - nomeFicticio
       - dataInclusao
+      - situacao
+    RetiradaDoHistorico:
+      type: object
+      description: Resumo da retirada do participante exibido na ficha e no histórico.
+      properties:
+        dataRetirada:
+          type: string
+          format: date
+          example: '2026-11-18'
+        motivo:
+          type: string
+          example: Mudança de cidade
+        solicitante:
+          $ref: '#/components/schemas/SolicitanteRetirada'
+      required:
+      - dataRetirada
+      - motivo
+      - solicitante
     ResumoDoHistorico:
       type: object
       description: Contagem de visitas por situação. `pendentes = agendadas + naoAgendadas`.

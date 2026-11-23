@@ -62,6 +62,13 @@ export type VincularContaRequest = EsquemasSprint3['VincularContaRequest']
 export type ContaVinculadaResponse = EsquemasSprint3['ContaVinculadaResponse']
 export type ContaParticipanteResponse = EsquemasSprint3['ContaParticipanteResponse']
 
+// Retirada de participante (Sprint 3, T101/T104)
+export type SituacaoParticipacao = EsquemasSprint3['SituacaoParticipacao']
+export type SolicitanteRetirada = EsquemasSprint3['SolicitanteRetirada']
+export type RetiradaRequest = EsquemasSprint3['RetiradaRequest']
+export type RetiradaResponse = EsquemasSprint3['RetiradaResponse']
+export type RetiradaDoHistorico = EsquemasSprint3['RetiradaDoHistorico']
+
 export const categoriasAcao: CategoriaAcao[] = [
   'AVALIACAO_CLINICA',
   'EXAME_LABORATORIAL',
@@ -96,4 +103,12 @@ export const rotulosSituacao: Record<SituacaoCandidato, string> = {
   NAO_ELEGIVEL: 'Não elegível',
   CONSENTIDO: 'Consentido',
   INCLUIDO: 'Incluído',
+}
+
+export const solicitantesRetirada: SolicitanteRetirada[] = ['PARTICIPANTE', 'PESQUISADOR', 'COORDENACAO']
+
+export const rotulosSolicitanteRetirada: Record<SolicitanteRetirada, string> = {
+  PARTICIPANTE: 'Participante',
+  PESQUISADOR: 'Pesquisador',
+  COORDENACAO: 'Coordenação',
 }

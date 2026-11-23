@@ -95,6 +95,12 @@ export const participanteDaAgenda: ParticipanteAgendaResponse = {
   dataInclusao: '2026-10-26',
   visitasPrevistas: 3,
   visitasAgendadas: 2,
+  situacaoParticipacao: 'ATIVO',
+}
+
+export const participanteRetiradoDaAgenda: ParticipanteAgendaResponse = {
+  ...participanteDaAgenda,
+  situacaoParticipacao: 'RETIRADO',
 }
 
 export function itemDaAgenda(sobrescrever: Partial<AgendaItemResponse> = {}): AgendaItemResponse {

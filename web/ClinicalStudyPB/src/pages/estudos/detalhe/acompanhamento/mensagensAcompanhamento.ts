@@ -67,6 +67,8 @@ const MENSAGENS_DESFECHO: Record<string, string> = {
     'Esta visita foi alterada por outra pessoa enquanto você registrava. Recarregue a página e confira a situação atual.',
   ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO:
     'O estudo não está em recrutamento ou execução: não é possível registrar o desfecho da visita.',
+  PARTICIPANTE_RETIRADO:
+    'O participante foi retirado do estudo: não é possível registrar o desfecho da visita.',
 }
 
 /** Mensagem para o código da regra do desfecho; sem código conhecido, cai na mensagem que o servidor enviou. */
@@ -83,6 +85,8 @@ const MENSAGENS_RESULTADOS: Record<string, string> = {
   ATIVIDADE_FORA_DA_CATEGORIA_AVALIACAO: 'Esta atividade não é da categoria avaliação e não recebe resultado.',
   ATIVIDADE_NAO_PERTENCE_A_VISITA: 'Esta atividade não pertence a esta visita.',
   ESTUDO_ENCERRADO: 'O estudo foi encerrado: os resultados não podem mais ser registrados nem editados.',
+  PARTICIPANTE_RETIRADO:
+    'O participante foi retirado do estudo: os resultados não podem mais ser registrados nem editados.',
   VALOR_OBRIGATORIO: 'Informe o valor do resultado.',
 }
 
@@ -128,4 +132,24 @@ const MENSAGENS_VINCULO: Record<string, string> = {
 /** Mensagem para o código da regra do vínculo; sem código conhecido, cai na mensagem que o servidor enviou. */
 export function mensagemDeVinculo(codigo: string | undefined, mensagemDoServidor: string): string {
   return (codigo && MENSAGENS_VINCULO[codigo]) || mensagemDoServidor
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Retirada de participante (T102/T103, tela da T104)
+// ---------------------------------------------------------------------------------------------------------------
+
+export const MENSAGEM_BLOQUEIO_PARTICIPANTE_RETIRADO =
+  'O participante foi retirado do estudo: os resultados ficam disponíveis somente para consulta e não podem mais ser registrados nem editados.'
+
+const MENSAGENS_RETIRADA: Record<string, string> = {
+  PARTICIPANTE_JA_RETIRADO: 'Este participante já foi retirado do estudo.',
+  ESTUDO_ENCERRADO: 'O estudo está encerrado: não é possível registrar retirada de participantes.',
+  MOTIVO_OBRIGATORIO: 'Informe o motivo da retirada, com ao menos 5 caracteres.',
+  DATA_RETIRADA_FUTURA: 'A data da retirada não pode estar no futuro.',
+  PARTICIPANTE_RETIRADO: 'O participante foi retirado do estudo: não é possível alterar o acompanhamento.',
+}
+
+/** Mensagem para o código da regra da retirada; sem código conhecido, cai na mensagem que o servidor enviou. */
+export function mensagemDeRetirada(codigo: string | undefined, mensagemDoServidor: string): string {
+  return (codigo && MENSAGENS_RETIRADA[codigo]) || mensagemDoServidor
 }

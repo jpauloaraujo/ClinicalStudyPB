@@ -718,6 +718,11 @@ export interface components {
              */
             dataInclusao: string;
             incluidoPor: string;
+            /**
+             * @description Situação da participação no estudo. Nasce ATIVO e passa a RETIRADO de forma irreversível (RF16, T101).
+             * @enum {string}
+             */
+            situacao: "ATIVO" | "RETIRADO";
         };
         /**
          * @description Resumo das vagas do estudo.

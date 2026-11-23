@@ -11,6 +11,8 @@ import {
   agendamentoDe,
   estudoEmPlanejamento,
   estudoEmRecrutamento,
+  participanteDaAgenda,
+  participanteRetiradoDaAgenda,
   visitasDoParticipante,
 } from './agendamentoFixture'
 import type { Estudo } from '../../../../types/estudo'
@@ -35,6 +37,7 @@ vi.mock('../../../../api/visitasAgendadas', () => ({
 }))
 
 const visitasApi = vi.mocked(agendamentoApi.visitasDoParticipante)
+const participantesDaAgenda = vi.mocked(agendamentoApi.participantesDaAgenda)
 const resultadosApi = vi.mocked(visitasAgendadasApi.resultados)
 const reagendar = vi.mocked(agendamentoApi.reagendar)
 
@@ -47,10 +50,11 @@ function renderizar(visitaAgendadaId: string, perfil: PerfilUsuario = 'COORDENAD
   })
 }
 
-describe('VisitaAgendadaPage (T77)', () => {
+describe('VisitaAgendadaPage (T77, T83, T91 e T104)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     visitasApi.mockResolvedValue(visitasDoParticipante)
+    participantesDaAgenda.mockResolvedValue([participanteDaAgenda])
   })
 
   it('mostra os dados da visita: participante, visita prevista, data e hora, situação, janela e auditoria', async () => {
@@ -199,5 +203,18 @@ describe('VisitaAgendadaPage (T77)', () => {
     renderizar('va-1')
 
     expect(await screen.findByText('Carregando visita…')).toBeInTheDocument()
+  })
+
+  it('participante retirado mostra selo Retirado e esconde Reagendar e Registrar desfecho (T104)', async () => {
+    participantesDaAgenda.mockResolvedValue([participanteRetiradoDaAgenda])
+    renderizar('va-1', 'COORDENADOR')
+
+    expect(await screen.findByRole('region', { name: 'Dados da visita' })).toBeInTheDocument()
+    expect(await screen.findByText('Retirado')).toHaveClass('selo--retirado')
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Participante retirado do estudo: as ações de edição desta visita estão indisponíveis.',
+    )
+    expect(screen.queryByRole('button', { name: /Reagendar/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Registrar desfecho' })).not.toBeInTheDocument()
   })
 })

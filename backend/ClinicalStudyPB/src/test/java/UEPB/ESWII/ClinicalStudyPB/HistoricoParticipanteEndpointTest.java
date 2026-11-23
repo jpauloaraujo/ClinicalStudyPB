@@ -158,6 +158,8 @@ class HistoricoParticipanteEndpointTest {
                 .andExpect(jsonPath("$.participante.codigo").value("CAND-901"))
                 .andExpect(jsonPath("$.participante.nomeFicticio").value("Pessoa Historico (Ficticia)"))
                 .andExpect(jsonPath("$.participante.dataInclusao").isNotEmpty())
+                .andExpect(jsonPath("$.participante.situacao").value("ATIVO"))
+                .andExpect(jsonPath("$.participante.retirada", nullValue()))
                 .andExpect(jsonPath("$.resumo.previstas").value(3))
                 .andExpect(jsonPath("$.resumo.realizadas").value(1))
                 .andExpect(jsonPath("$.resumo.ausentes").value(0))
@@ -188,6 +190,28 @@ class HistoricoParticipanteEndpointTest {
                 .andExpect(jsonPath("$.visitas[2].motivo", nullValue()))
                 .andExpect(jsonPath("$.visitas[2].observacao", nullValue()))
                 .andExpect(jsonPath("$.visitas[2].resultados", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("T104: participante retirado traz situacao RETIRADO e os dados da retirada no histórico preservado")
+    void participanteRetiradoTrazSituacaoEDadosDaRetirada() throws Exception {
+        UUID participacao = participacaoComTresVisitas("EXECUCAO");
+        jdbc.update("UPDATE participacoes SET situacao = 'RETIRADO' WHERE id = CAST(? AS UUID)",
+                participacao.toString());
+        Timestamp agora = Timestamp.valueOf(LocalDateTime.of(2026, 11, 18, 14, 0));
+        jdbc.update("INSERT INTO retiradas_participacao (id, participacao_id, data_retirada, motivo, solicitante, "
+                + "registrado_por_id, registrado_em) VALUES (CAST(? AS UUID), CAST(? AS UUID), DATE '2026-11-18', "
+                + "'Mudança de cidade', 'PARTICIPANTE', CAST(? AS UUID), ?)", UUID.randomUUID().toString(),
+                participacao.toString(), COORDENADOR_ID, agora);
+
+        enviar(mvc, "GET", "/api/participacoes/" + participacao + "/historico", coordenador, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.participante.situacao").value("RETIRADO"))
+                .andExpect(jsonPath("$.participante.retirada.dataRetirada").value("2026-11-18"))
+                .andExpect(jsonPath("$.participante.retirada.motivo").value("Mudança de cidade"))
+                .andExpect(jsonPath("$.participante.retirada.solicitante").value("PARTICIPANTE"))
+                .andExpect(jsonPath("$.visitas", hasSize(3)))
+                .andExpect(jsonPath("$.visitas[0].resultados", hasSize(2)));
     }
 
     @Test
