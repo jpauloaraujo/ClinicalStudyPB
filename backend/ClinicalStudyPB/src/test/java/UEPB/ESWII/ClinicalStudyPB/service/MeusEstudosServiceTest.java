@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -19,7 +20,9 @@ import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoParticipacao;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.StatusEstudo;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Estudo;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Participacao;
+import UEPB.ESWII.ClinicalStudyPB.domain.model.RetiradaParticipacao;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Usuario;
+import UEPB.ESWII.ClinicalStudyPB.repository.RetiradaParticipacaoRepository;
 
 /**
  * T113 (RQ-T113-01, 02, 03 e 05): {@link MeusEstudosService} isolado, com o {@link AcessoParticipante} simulado.
@@ -31,12 +34,14 @@ class MeusEstudosServiceTest {
     private static final UUID USUARIO = UUID.randomUUID();
 
     private AcessoParticipante acesso;
+    private RetiradaParticipacaoRepository retiradas;
     private MeusEstudosService servico;
 
     @BeforeEach
     void preparar() {
         acesso = mock(AcessoParticipante.class);
-        servico = new MeusEstudosService(acesso);
+        retiradas = mock(RetiradaParticipacaoRepository.class);
+        servico = new MeusEstudosService(acesso, retiradas);
     }
 
     private static Participacao participacao(String titulo, String objetivo, StatusEstudo status, LocalDate inclusao) {
@@ -100,7 +105,7 @@ class MeusEstudosServiceTest {
         assertThat(detalhe.objetivo()).isEqualTo(objetivo);
         assertThat(detalhe.resumo()).hasSizeLessThanOrEqualTo(160);
         assertThat(detalhe.responsavelNome()).isEqualTo("Dra. Responsavel (Ficticia)");
-        assertThat(detalhe.retirada()).as("sem retirada (TODO T101), nunca com motivo").isNull();
+        assertThat(detalhe.retirada()).as("participação ativa: sem retirada").isNull();
         assertThat(detalhe.situacaoParticipacao()).isEqualTo(SituacaoParticipacao.ATIVO);
     }
 
@@ -112,5 +117,41 @@ class MeusEstudosServiceTest {
 
         assertThatThrownBy(() -> servico.detalhar(USUARIO, estudoAlheio))
                 .isInstanceOf(RecursoNaoEncontradoException.class);
+    }
+
+    @Test
+    @DisplayName("T101: participação retirada vem RETIRADO e o detalhe traz só a data da retirada, nunca o motivo")
+    void participacaoRetiradaTrazSituacaoEDataSemMotivo() {
+        Participacao participacao = participacao("Estudo retirado", "Objetivo.", StatusEstudo.EXECUCAO,
+                LocalDate.of(2026, 10, 1));
+        participacao.retirar();
+        RetiradaParticipacao retirada = new RetiradaParticipacao();
+        retirada.setDataRetirada(LocalDate.of(2026, 11, 18));
+        retirada.setMotivo("Motivo sigiloso");
+        UUID estudoId = participacao.getEstudo().getId();
+        when(acesso.participacoesDe(USUARIO)).thenReturn(List.of(participacao));
+        when(acesso.participacaoDoEstudo(USUARIO, estudoId)).thenReturn(participacao);
+        when(retiradas.findByParticipacaoId(participacao.getId())).thenReturn(Optional.of(retirada));
+
+        assertThat(servico.listar(USUARIO).get(0).situacaoParticipacao()).isEqualTo(SituacaoParticipacao.RETIRADO);
+        MeuEstudoDetalheResponse detalhe = servico.detalhar(USUARIO, estudoId);
+
+        assertThat(detalhe.situacaoParticipacao()).isEqualTo(SituacaoParticipacao.RETIRADO);
+        assertThat(detalhe.retirada()).isNotNull();
+        assertThat(detalhe.retirada().dataRetirada()).isEqualTo(LocalDate.of(2026, 11, 18));
+        assertThat(detalhe.retirada().toString()).doesNotContain("sigiloso");
+    }
+
+    @Test
+    @DisplayName("T101: participação retirada sem registro de retirada devolve retirada nula (nunca erro)")
+    void retiradaSemRegistroDevolveNulo() {
+        Participacao participacao = participacao("Estudo sem registro", "Objetivo.", StatusEstudo.EXECUCAO,
+                LocalDate.of(2026, 10, 1));
+        participacao.retirar();
+        UUID estudoId = participacao.getEstudo().getId();
+        when(acesso.participacaoDoEstudo(USUARIO, estudoId)).thenReturn(participacao);
+        when(retiradas.findByParticipacaoId(participacao.getId())).thenReturn(Optional.empty());
+
+        assertThat(servico.detalhar(USUARIO, estudoId).retirada()).isNull();
     }
 }

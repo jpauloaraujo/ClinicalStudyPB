@@ -61,7 +61,7 @@ Nenhum teste foi excluído. Nenhum teste do app falhou (129 passando antes e dep
 ## 5. Lacunas e desvios
 
 1. **RQ-T113-02, "dois estudos" pelo endpoint:** o `UNIQUE (usuario_id)` da T111 impede uma conta ter dois candidatos; o caso está provado só no teste de serviço, com `AcessoParticipante` simulado. Depende da confirmação do PO (P27 da T109).
-2. **Retirado no `/me` (P5 da T109) e 409 `PARTICIPANTE_RETIRADO` de ponta a ponta (P24):** a T101 (#39) ainda não está na `develop`; `situacaoDe` e `retiradaDe` têm `TODO(T101)`. Caminho B do plano: ficam pendentes.
+2. **Retirado no `/me` (P5 da T109) e 409 `PARTICIPANTE_RETIRADO` de ponta a ponta (P24):** a T101 (#39) e a T102 (#40) já estão na `develop`, e `MeusEstudosService` lê a situação e a data da retirada. Cobertos no `MeusEstudosServiceTest` (retirado com data e sem motivo; retirado sem registro) e no `MeEndpointTest` (retirado na lista e no detalhe). O 409 `PARTICIPANTE_RETIRADO` do vínculo está no `VinculoContaServiceTest`; o de ponta a ponta pelo endpoint segue sem teste.
 3. **PostgreSQL:** a suíte desta task rodou só no H2. Os testes novos usam SQL portável (`CURRENT_DATE`, `CAST ... AS UUID`), mas a evidência no PostgreSQL é o job **Backend (PostgreSQL)** do CI do PR.
 4. **Ramo de `AcessoParticipante`** não coberto (1 de 10): ver seção 1.
 5. **Não feitos (opcionais do plano):** `support/CenarioParticipante` (P6) e o teste de contagem de consultas do `/me/estudos` (P7).

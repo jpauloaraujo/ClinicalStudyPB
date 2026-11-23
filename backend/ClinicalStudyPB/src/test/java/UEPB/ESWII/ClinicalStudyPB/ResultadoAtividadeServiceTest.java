@@ -27,6 +27,7 @@ import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoVisita;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.StatusEstudo;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Acao;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Estudo;
+import UEPB.ESWII.ClinicalStudyPB.domain.model.Participacao;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.ResultadoAtividade;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Usuario;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.VisitaAgendada;
@@ -361,6 +362,27 @@ class ResultadoAtividadeServiceTest {
 
         assertThat(consulta.bloqueio()).isEqualTo(BloqueioResultados.ESTUDO_ENCERRADO);
         assertThat(consulta.registrados()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("T102: participante retirado recusa registro e edição (409 PARTICIPANTE_RETIRADO) e consulta devolve bloqueio")
+    void participanteRetiradoBloqueiaResultados() {
+        Participacao participacao = new Participacao();
+        participacao.setEstudo(estudo);
+        participacao.retirar();
+        visita.setParticipacao(participacao);
+
+        esperaConflito("PARTICIPANTE_RETIRADO", () -> registrar(pressao, "120/80"));
+
+        when(acoes.findByVisitaIdAndCategoriaOrderByNomeAsc(triagem.getId(), CategoriaAcao.AVALIACAO_CLINICA))
+                .thenReturn(List.of(pressao));
+        when(resultados.findByVisitaAgendadaId(visita.getId())).thenReturn(List.of());
+        assertThat(service.consultar(visita.getId()).bloqueio()).isEqualTo(BloqueioResultados.PARTICIPANTE_RETIRADO);
+
+        // Prioridade: estudo encerrado vence participante retirado, tanto na escrita quanto na consulta
+        estudo.setStatus(StatusEstudo.ENCERRADO);
+        esperaConflito("ESTUDO_ENCERRADO", () -> registrar(pressao, "120/80"));
+        assertThat(service.consultar(visita.getId()).bloqueio()).isEqualTo(BloqueioResultados.ESTUDO_ENCERRADO);
     }
 
     @Test

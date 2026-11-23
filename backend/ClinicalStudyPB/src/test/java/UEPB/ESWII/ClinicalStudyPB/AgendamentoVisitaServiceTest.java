@@ -183,6 +183,23 @@ class AgendamentoVisitaServiceTest {
         assertThat(janela.dataFim()).isEqualTo(HOJE.plusDays(2));
     }
 
+    @Test
+    @DisplayName("T102: participante retirado não pode agendar nem reagendar (409 PARTICIPANTE_RETIRADO); estado do estudo vem antes")
+    void bloqueiaAgendamentoEReagendamentoDeParticipanteRetirado() {
+        participacao.retirar();
+
+        esperaConflito("PARTICIPANTE_RETIRADO",
+                () -> service.agendarVisita(participacao, visita, HOJE.atStartOfDay(), usuario));
+        esperaConflito("PARTICIPANTE_RETIRADO",
+                () -> service.reagendarVisita(visitaAgendada(SituacaoVisita.AGENDADA), HOJE.plusDays(1).atStartOfDay(), usuario));
+
+        participacao.getEstudo().setStatus(StatusEstudo.ENCERRADO);
+        esperaConflito("ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO",
+                () -> service.agendarVisita(participacao, visita, HOJE.atStartOfDay(), usuario));
+        esperaConflito("ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO",
+                () -> service.reagendarVisita(visitaAgendada(SituacaoVisita.AGENDADA), HOJE.plusDays(1).atStartOfDay(), usuario));
+    }
+
     private VisitaAgendada visitaAgendada(SituacaoVisita situacao) {
         VisitaAgendada agendada = new VisitaAgendada();
         agendada.setParticipacao(participacao);

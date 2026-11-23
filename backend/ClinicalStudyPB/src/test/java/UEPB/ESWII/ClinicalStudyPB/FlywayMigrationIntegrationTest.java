@@ -275,6 +275,60 @@ class FlywayMigrationIntegrationTest {
                 "Pessoa " + codigo + " (Ficticia)", conta == null ? null : conta.toString());
     }
 
+    @Test
+    @DisplayName("T101 - A coluna participacoes.situacao nasce com padrão ATIVO e o CHECK recusa situação inválida")
+    void participacaoNasceAtivaECheckRecusaInvalida() {
+        var ids = CenarioVisitaAgendada.criar(jdbc);
+
+        String situacao = jdbc.queryForObject(
+                "SELECT situacao FROM participacoes WHERE id = CAST(? AS UUID)",
+                String.class, ids.participacao().toString());
+        assertThat(situacao).isEqualTo("ATIVO");
+
+        jdbc.update("UPDATE participacoes SET situacao = 'RETIRADO' WHERE id = CAST(? AS UUID)",
+                ids.participacao().toString());
+        assertThat(jdbc.queryForObject("SELECT situacao FROM participacoes WHERE id = CAST(? AS UUID)",
+                String.class, ids.participacao().toString())).isEqualTo("RETIRADO");
+
+        recusadoPeloBanco(() -> jdbc.update("UPDATE participacoes SET situacao = 'SUSPENSO' WHERE id = CAST(? AS UUID)",
+                ids.participacao().toString()));
+    }
+
+    @Test
+    @DisplayName("T101 - A tabela retiradas_participacao aceita retirada válida e recusa duplicidade (UNIQUE)")
+    void retiradaUnicaPorParticipacao() {
+        var ids = CenarioVisitaAgendada.criar(jdbc);
+
+        inserirRetirada(ids.participacao(), "PARTICIPANTE", ids.usuario());
+
+        assertThat(jdbc.queryForObject(
+                "SELECT COUNT(*) FROM retiradas_participacao WHERE participacao_id = CAST(? AS UUID)",
+                Integer.class, ids.participacao().toString())).isEqualTo(1);
+
+        recusadoPeloBanco(() -> inserirRetirada(ids.participacao(), "COORDENACAO", ids.usuario()));
+    }
+
+    @Test
+    @DisplayName("T101 - O CHECK de solicitante recusa valor fora de PARTICIPANTE, PESQUISADOR e COORDENACAO")
+    void checkRecusaSolicitanteInvalido() {
+        var ids = CenarioVisitaAgendada.criar(jdbc);
+
+        recusadoPeloBanco(() -> inserirRetirada(ids.participacao(), "ADMINISTRADOR", ids.usuario()));
+    }
+
+    @Test
+    @DisplayName("T101 - Chaves estrangeiras da retirada recusam referências inexistentes e impedem apagar participação")
+    void fksDaRetiradaPreservamHistorico() {
+        var ids = CenarioVisitaAgendada.criar(jdbc);
+
+        recusadoPeloBanco(() -> inserirRetirada(UUID.randomUUID(), "PARTICIPANTE", ids.usuario()));
+        recusadoPeloBanco(() -> inserirRetirada(ids.participacao(), "PARTICIPANTE", UUID.randomUUID()));
+
+        inserirRetirada(ids.participacao(), "PESQUISADOR", ids.usuario());
+        recusadoPeloBanco(() -> jdbc.update("DELETE FROM participacoes WHERE id = CAST(? AS UUID)",
+                ids.participacao().toString()));
+    }
+
     /**
      * Confere que o banco recusa o comando com {@link DataIntegrityViolationException}, dentro de um savepoint: no
      * PostgreSQL um erro aborta a transação inteira do teste, e o savepoint deixa os comandos seguintes rodarem.
@@ -296,5 +350,13 @@ class FlywayMigrationIntegrationTest {
                 + "CAST(? AS UUID), ?, CAST(? AS UUID), ?)",
                 UUID.randomUUID().toString(), visitaAgendada.toString(), acao.toString(),
                 usuario.toString(), agora, usuario.toString(), agora);
+    }
+
+    private void inserirRetirada(UUID participacao, String solicitante, UUID usuario) {
+        java.sql.Timestamp agora = java.sql.Timestamp.valueOf(LocalDateTime.now());
+        jdbc.update("INSERT INTO retiradas_participacao (id, participacao_id, motivo, solicitante, data_retirada, "
+                + "registrado_por_id, registrado_em) "
+                + "VALUES (CAST(? AS UUID), CAST(? AS UUID), 'Mudança de cidade', ?, CURRENT_DATE, CAST(? AS UUID), ?)",
+                UUID.randomUUID().toString(), participacao.toString(), solicitante, usuario.toString(), agora);
     }
 }

@@ -123,9 +123,14 @@ class VinculoContaServiceTest {
     }
 
     @Test
-    @DisplayName("Sem a retirada (T101), toda participação conta como ativa: a pré-condição não bloqueia o vínculo")
-    void semRetiradaTodaParticipacaoEAtiva() {
+    @DisplayName("T101: participação ATIVO conta como ativa e a RETIRADO não (pela situação real da participação)")
+    void participacaoAtivaSegueASituacao() {
         assertThat(service.participacaoAtiva(participacao)).isTrue();
+
+        participacao.retirar();
+
+        assertThat(service.participacaoAtiva(participacao)).isFalse();
+        esperaConflito("PARTICIPANTE_RETIRADO");
     }
 
     @Test
