@@ -186,3 +186,18 @@ Resumo em 16/11/2026: **29 itens** registrados; **23 fechados**, **4 em verifica
 | **Determinístico?** | Sim |
 | **Correção** | Verificar a existência do índice pelo `DatabaseMetaData.getIndexInfo` do JDBC, que é portável, comparando o nome sem diferenciar maiúsculas; o resto do teste (aceita vários sem conta e recusa a mesma conta) não muda |
 | **Estado** | **Fechado** em 22/11/2026: com a consulta portável, a suíte completa do backend foi executada contra um **PostgreSQL 16 real** (mesmo setup do job do CI): 757 testes, 0 falhas, `BUILD SUCCESS`; no H2 o `FlywayMigrationIntegrationTest` também passa (14 de 14) |
+
+## 5. Falhas de teste da T113 (testes de backend e de componente do app)
+
+### D-T113-01 · Os quatro testes novos de `MeIsolamentoEndpointTest` receberam 401 no login
+
+| Campo | Valor |
+|---|---|
+| **Data e rodada** | 22/11/2026 · `./mvnw -B -q test -Dtest='MeIsolamentoEndpointTest,MeusEstudosServiceTest,MeEndpointTest'` (19 testes, 4 falhas) |
+| **Task e requisito** | T113, RQ-T113-01, 03, 05 e 06 |
+| **Teste** | `MeIsolamentoEndpointTest.aNuncaVeEstudoDeBENemBDeA:124`, `doisParticipantesNoMesmoEstudo:155`, `respostaNaoTrazDadosDoCandidato:171` e `depoisDeVincularAContaVeOEstudo:193`, escritos nesta task |
+| **Mensagem** | `AssertionError: Status expected:<200> but was:<401>` (no `POST /api/auth/login`, dentro de `TokenDeTeste.bearer`) |
+| **Causa (confirmada no código)** | Erro do **teste novo**: o `AuthService` procura o usuário por `UsuarioService.normalizarEmail(email)` (minúsculas), e o helper `criarConta` gravava o e-mail com maiúsculas (`t113.A.<uuid>@...`), então o login não achava a conta. O código de produção está certo |
+| **Determinístico?** | Sim |
+| **Correção prevista** | Gravar o e-mail em minúsculas no helper (`toLowerCase(Locale.ROOT)`); asserções inalteradas. Nenhum teste excluído |
+| **Estado** | **Fechado** em 22/11/2026: com o e-mail em minúsculas, os 4 testes passam (`MeIsolamentoEndpointTest` 4/4, `MeusEstudosServiceTest` 4/4, `MeEndpointTest` 11/11) |
