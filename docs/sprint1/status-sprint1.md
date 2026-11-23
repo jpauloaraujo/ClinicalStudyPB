@@ -25,7 +25,7 @@ Legenda: ✅ concluída · 🆕 concluída nesta branch · 🎨 fora do código
 | T01 | Definir e documentar a arquitetura | I1 | ✅ | [arquitetura.md](arquitetura.md) |
 | T02 | GitHub, branches e regras de PR | I1 | ✅ (configuração no GitHub) | — |
 | T03 | Diagrama inicial da arquitetura | I2 | ✅ | [arquitetura.md](arquitetura.md) (Mermaid) |
-| T04 | README com estrutura e instruções | I7 | ✅ | [README.md](../README.md) |
+| T04 | README com estrutura e instruções | I7 | ✅ | [README.md](../../README.md) |
 | T05 | GitHub Actions (build e verificações) | I1 | 🆕 | `.github/workflows/ci.yml` |
 
 ### PBI-02 — Spring Boot e PostgreSQL

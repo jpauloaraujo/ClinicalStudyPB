@@ -3,7 +3,7 @@
 > **Sprint 2** · PBI-17 · Qualidade, integração e dados de demonstração  
 > **Responsável:** I5 · **Estimativa:** 4h · **Prazo:** Sex 06/11  
 > **Depende de:** T52, T55, T58, T61  
-> **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
+> **Situação:** ✅ Implementada (`scripts/verificar-recrutamento.py`, 58 verificações; falta só registrar os bugs no Azure Boards; veja `docs/sprint2/T68 — Integração do recrutamento (roteiro e correções).md`)
 
 ## 1. Objetivo
 

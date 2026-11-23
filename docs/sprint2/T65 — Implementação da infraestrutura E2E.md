@@ -1,6 +1,6 @@
 # T65 — Implementação da infraestrutura E2E (Playwright)
 
-> Documento de referência de **como a T65 foi feita e como cada peça funciona**. Os requisitos e critérios de aceite estão em [T65 — Requisitos e critérios de aceite (E2E com Playwright)](T65%20—%20Requisitos%20e%20critérios%20de%20aceite%20(E2E%20com%20Playwright).md); o passo a passo de uso está na seção "Testes E2E" do [README](../../README.md). Responsável: I7.
+> Documento de referência de **como a T65 foi feita e como cada peça funciona**. Os requisitos e critérios de aceite estão em [T65 — Requisitos e critérios de aceite (E2E com Playwright)](<T65 — Requisitos e critérios de aceite (E2E com Playwright).md>).md); o passo a passo de uso está na seção "Testes E2E" do [README](../../README.md). Responsável: I7.
 
 ## 1. Visão geral
 

@@ -3,7 +3,7 @@
 > **Sprint 2** · PBI-18 · Documentação e entrega da Release 1  
 > **Responsável:** I2 · **Estimativa:** 4h · **Prazo:** Seg 09/11 (manhã)  
 > **Depende de:** T66, T70  
-> **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
+> **Situação:** 🟡 Implementada em `releases/release1/README.md`; faltam o burndown do Azure DevOps e a retrospectiva, que só o time tem
 
 ## 1. Objetivo
 

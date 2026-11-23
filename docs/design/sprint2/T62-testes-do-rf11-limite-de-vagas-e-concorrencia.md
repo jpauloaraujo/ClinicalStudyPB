@@ -3,7 +3,7 @@
 > **Sprint 2** · PBI-16 · RF11 Inclusão de participantes  
 > **Responsável:** I2 · **Estimativa:** 4h · **Prazo:** Sex 06/11  
 > **Depende de:** T60  
-> **Situação:** 🟡 Parcialmente implementada (o documento separa o que existe do que falta)
+> **Situação:** ✅ Implementada (`ParticipacaoEndpointTest` e `ParticipacaoConcorrenciaTest`, com limpeza dos dados no `@AfterEach`)
 
 ## 1. Objetivo
 
@@ -12,7 +12,7 @@ Provar que a inclusão cumpre cada regra e que, com uma só vaga e várias inclu
 ## 2. Contexto: o que já existe e deve ser reaproveitado
 
 - Já existe: `ParticipacaoServiceTest` (cada pré-condição isolada, a ordem das verificações e o limite exato) e `RecrutamentoIntegrationTest.vagasEsgotadas`.
-- Faltam: o teste de endpoint por código de erro e o teste de concorrência.
+- Foram acrescentados: o teste de endpoint por código de erro (`ParticipacaoEndpointTest`) e o teste de concorrência (`ParticipacaoConcorrenciaTest`).
 - Base de dados de teste: `EstudoTransicaoRf07Test` mostra como preparar um estudo em recrutamento pela transição.
 
 ## 3. Onde implementar

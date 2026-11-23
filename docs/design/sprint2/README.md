@@ -28,23 +28,23 @@ Cada task tem um documento que diz **o que implementar, em qual arquivo e em que
 | T53 | Testes do RF08 (candidatos) | I4 | ✅ | [Design da T53](T53-testes-do-rf08-candidatos.md) |
 | T54 | Backend de elegibilidade | I3 | ✅ | [Design da T54](T54-backend-de-elegibilidade.md) |
 | T55 | Tela de avaliação de elegibilidade | I7 | ✅ | [Design da T55](T55-tela-de-avaliacao-de-elegibilidade.md) |
-| T56 | Testes do RF09 (elegibilidade) | I2 | 🟡 | [Design da T56](T56-testes-do-rf09-elegibilidade.md) |
+| T56 | Testes do RF09 (elegibilidade) | I2 | ✅ | [Design da T56](T56-testes-do-rf09-elegibilidade.md) |
 | T57 | Backend de consentimento | I4 | ✅ | [Design da T57](T57-backend-de-consentimento.md) |
 | T58 | Tela de consentimento | I5 | ✅ | [Design da T58](T58-tela-de-consentimento.md) |
 | T59 | Testes do RF10 (consentimento) | I7 | ✅ | [Design da T59](T59-testes-do-rf10-consentimento.md) |
 | T60 | Backend de inclusão de participantes | I1 | ✅ | [Design da T60](T60-backend-de-inclusao-de-participantes.md) |
 | T61 | Tela de inclusão e lista de participantes | I6 | ✅ | [Design da T61](T61-tela-de-inclusao-e-lista-de-participantes.md) |
-| T62 | Testes do RF11 (limite de vagas e concorrência) | I2 | 🟡 | [Design da T62](T62-testes-do-rf11-limite-de-vagas-e-concorrencia.md) |
+| T62 | Testes do RF11 (limite de vagas e concorrência) | I2 | ✅ | [Design da T62](T62-testes-do-rf11-limite-de-vagas-e-concorrencia.md) |
 | T63 | Dados fictícios de demonstração | I4 | ✅ | [Design da T63](T63-dados-ficticios-de-demonstracao.md) |
 | T64 | Cobertura mínima de 80% no CI (JaCoCo) | I1 | ✅ | [Design da T64](T64-cobertura-minima-de-80-no-ci-jacoco.md) |
 | T65 | Infraestrutura de testes E2E (Playwright) | I7 | ✅ | [Design da T65](T65-infraestrutura-de-testes-e2e-playwright.md)<br>[Requisitos e critérios de aceite](../../sprint2/T65%20%E2%80%94%20Requisitos%20e%20crit%C3%A9rios%20de%20aceite%20%28E2E%20com%20Playwright%29.md) (já existia)<br>[Implementação da infraestrutura E2E](../../sprint2/T65%20%E2%80%94%20Implementa%C3%A7%C3%A3o%20da%20infraestrutura%20E2E.md) (já existia) |
 | T66 | E2E do fluxo completo da Release 1 | I7 | ✅ | [Design da T66](T66-e2e-do-fluxo-completo-da-release-1.md)<br>[Requisitos e critérios de aceite (checklist por dia)](../../sprint2/T66%20%E2%80%94%20Requisitos%20e%20crit%C3%A9rios%20de%20aceite%20%28E2E%20do%20fluxo%20completo%20da%20Release%201%29.md) (já existia) |
-| T67 | Integração e correções: planejamento do estudo | I6 | ⬜ | [Design da T67](T67-integracao-e-correcoes-planejamento-do-estudo.md) |
-| T68 | Integração e correções: recrutamento | I5 | ⬜ | [Design da T68](T68-integracao-e-correcoes-recrutamento.md) |
+| T67 | Integração e correções: planejamento do estudo | I6 | ✅ | [Design da T67](T67-integracao-e-correcoes-planejamento-do-estudo.md) |
+| T68 | Integração e correções: recrutamento | I5 | ✅ | [Design da T68](T68-integracao-e-correcoes-recrutamento.md) |
 | T69 | Diagramas: casos de uso, classes, sequência e arquitetura | I2 | ✅ | [Design da T69](T69-diagramas-casos-de-uso-classes-sequencia-e-arquitetura.md)<br>[Casos de uso](../../diagramas/casos-de-uso.md) (já existia)<br>[Classes (domínio)](../../diagramas/dominio.md) (já existia)<br>[Sequência: avançar o estado](../../diagramas/sequencia-avancar-estado.md) (já existia)<br>[Sequência: incluir participante](../../diagramas/sequencia-inclusao-participante.md) (já existia)<br>[Arquitetura](../../diagramas/arquitetura.md) (já existia) |
 | T70 | README principal | I2 | 🟡 | [Design da T70](T70-readme-principal.md) |
-| T71 | README da release e processo de desenvolvimento | I2 | ⬜ | [Design da T71](T71-readme-da-release-e-processo-de-desenvolvimento.md) |
-| T72 | Tag release1, GitHub Release e apresentação | I1 | ⬜ | [Design da T72](T72-tag-release1-github-release-e-apresentacao.md) |
+| T71 | README da release e processo de desenvolvimento | I2 | 🟡 | [Design da T71](T71-readme-da-release-e-processo-de-desenvolvimento.md) |
+| T72 | Tag release1, GitHub Release e apresentação | I1 | 🟡 | [Design da T72](T72-tag-release1-github-release-e-apresentacao.md) |
 
 ## Como usar
 

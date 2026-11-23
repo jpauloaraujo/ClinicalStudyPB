@@ -3,7 +3,7 @@
 > **Sprint 2** · PBI-17 · Qualidade, integração e dados de demonstração  
 > **Responsável:** I6 · **Estimativa:** 4h · **Prazo:** Qui 05/11  
 > **Depende de:** T43, T46, T49  
-> **Situação:** ⬜ A implementar (este documento é o guia para quem for fazer)
+> **Situação:** ✅ Implementada (ambiente Docker e roteiro `scripts/verificar-ambiente.py`; falta só ver o job do CI verde e registrar os bugs no Azure Boards)
 
 ## 1. Objetivo
 
