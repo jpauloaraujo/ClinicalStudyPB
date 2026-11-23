@@ -29,6 +29,16 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+      - name: Prepara o Maven do wrapper (com repetição e espelho)
+        run: |
+          chmod +x mvnw
+          for tentativa in 1 2 3; do
+            ./mvnw -B -v && exit 0
+            echo "Download do Maven falhou (tentativa $tentativa de 3); nova tentativa em $((tentativa * 20))s"
+            sleep $((tentativa * 20))
+          done
+          echo "Usando o espelho do Maven Central (D-S3-19)"
+          MVNW_REPOURL=https://maven-central.storage-download.googleapis.com/maven2 ./mvnw -B -v
       # Testes usam H2 em memória e segredo JWT fictício (src/test/resources), sem PostgreSQL
       - name: Testes
         run: |
@@ -87,6 +97,16 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+      - name: Prepara o Maven do wrapper (com repetição e espelho)
+        run: |
+          chmod +x mvnw
+          for tentativa in 1 2 3; do
+            ./mvnw -B -v && exit 0
+            echo "Download do Maven falhou (tentativa $tentativa de 3); nova tentativa em $((tentativa * 20))s"
+            sleep $((tentativa * 20))
+          done
+          echo "Usando o espelho do Maven Central (D-S3-19)"
+          MVNW_REPOURL=https://maven-central.storage-download.googleapis.com/maven2 ./mvnw -B -v
       - name: Testes no PostgreSQL
         run: |
           chmod +x mvnw
@@ -146,6 +166,20 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: web/ClinicalStudyPB/package-lock.json
+
+      # O wrapper baixa o Maven de repo.maven.apache.org, que às vezes recusa o runner (o mesmo limite do Docker,
+      # D-S3-14): este passo repete até 3 vezes e, se ainda falhar, baixa do espelho do Maven Central
+      - name: Prepara o Maven do wrapper (com repetição e espelho)
+        working-directory: backend/ClinicalStudyPB
+        run: |
+          chmod +x mvnw
+          for tentativa in 1 2 3; do
+            ./mvnw -B -v && exit 0
+            echo "Download do Maven falhou (tentativa $tentativa de 3); nova tentativa em $((tentativa * 20))s"
+            sleep $((tentativa * 20))
+          done
+          echo "Usando o espelho do Maven Central (D-S3-19)"
+          MVNW_REPOURL=https://maven-central.storage-download.googleapis.com/maven2 ./mvnw -B -v
 
       - name: Empacota e sobe o backend
         working-directory: backend/ClinicalStudyPB
@@ -262,3 +296,5 @@ jobs:
         run: npm run lint
       - name: Verificação de tipos
         run: npm run typecheck
+      - name: Testes (Jest)
+        run: npm test
