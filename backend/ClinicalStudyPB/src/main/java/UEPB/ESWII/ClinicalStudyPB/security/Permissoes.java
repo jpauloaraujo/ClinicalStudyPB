@@ -15,6 +15,8 @@ public final class Permissoes {
     public static final String ESCRITA_RECRUTAMENTO = "hasRole('COORDENADOR')";
     /** Mesma expressão de {@link #ESCRITA_PLANEJAMENTO}; o nome diz que é a escrita dos resultados (T90). */
     public static final String ESCRITA_RESULTADOS = "hasRole('PESQUISADOR')";
+    /** Endpoints do app do participante ({@code /api/me/**}, T109): só o perfil PARTICIPANTE. */
+    public static final String PARTICIPANTE = "hasRole('PARTICIPANTE')";
 
     private Permissoes() {
     }
