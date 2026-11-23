@@ -2,7 +2,13 @@ import { armazenamento } from './armazenamento';
 import { CODIGO_SEM_CONEXAO, ErroApi, erroDaResposta, type CorpoErroApi } from './erro';
 import { responderMock, usarMocks } from './mocks';
 
-export { ErroApi, mensagemDoErro, type ErroCampo } from './erro';
+export {
+  CODIGO_PERFIL_NAO_PARTICIPANTE,
+  ErroApi,
+  mensagemDoErro,
+  mensagemDoLogin,
+  type ErroCampo,
+} from './erro';
 
 // URL da API (EXPO_PUBLIC_API_URL). No emulador Android, "localhost" é o próprio emulador: use 10.0.2.2.
 export const URL_API = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8081';
