@@ -43,8 +43,13 @@ export class ApiE2E {
     await this.contexto.dispose()
   }
 
-  private async chamar(metodo: 'post' | 'get', url: string, dados?: Corpo, esperado = [200, 201]) {
-    const resposta = metodo === 'post' ? await this.contexto.post(url, { data: dados }) : await this.contexto.get(url)
+  private async chamar(metodo: 'post' | 'put' | 'get', url: string, dados?: Corpo, esperado = [200, 201]) {
+    const resposta =
+      metodo === 'post'
+        ? await this.contexto.post(url, { data: dados })
+        : metodo === 'put'
+          ? await this.contexto.put(url, { data: dados })
+          : await this.contexto.get(url)
     expect(esperado, `${metodo.toUpperCase()} ${url} respondeu HTTP ${resposta.status()}: ${await resposta.text()}`)
       .toContain(resposta.status())
     return resposta
@@ -120,5 +125,166 @@ export class ApiE2E {
     await this.avaliar(estudoId, id, true)
     await this.consentir(id)
     return id
+  }
+
+  async criarAtividade(visitaId: string, nome: string, categoria = 'AVALIACAO_CLINICA'): Promise<string> {
+    const resposta = await this.chamar('post', `/api/visitas/${visitaId}/acoes`, { nome, categoria })
+    return ((await resposta.json()) as { id: string }).id
+  }
+
+  /**
+   * (Como pesquisador) estudo já em recrutamento para o fluxo de acompanhamento (T99): um critério de inclusão, um de
+   * exclusão e UMA visita prevista (dia 0, tolerância 0, então a janela é o dia da inclusão) com uma atividade de avaliação.
+   */
+  async estudoParaAcompanhamento(titulo: string, limite = 5) {
+    const estudoId = await this.criarEstudo(titulo, limite)
+    await this.criarCriterio(estudoId, 'INCLUSAO', 'Idade adulta', 'Candidato com 18 anos ou mais')
+    await this.criarCriterio(estudoId, 'EXCLUSAO', 'Gestante', 'Candidata em gestação confirmada')
+    const visitaId = await this.criarVisita(estudoId, 'Triagem', 0)
+    const acaoId = await this.criarAtividade(visitaId, 'Pressão arterial')
+    await this.avancar(estudoId, 'RECRUTAMENTO')
+    return { estudoId, visitaId, acaoId }
+  }
+
+  /**
+   * Estudo em recrutamento para o agendamento (T79): critérios, a triagem (dia 0, tolerância 0) e o retorno (dia 5,
+   * tolerância 2). Para um participante incluído hoje, a janela do retorno vai de hoje + 3 a hoje + 7.
+   */
+  async estudoParaAgendamento(titulo: string, limite = 5) {
+    const estudoId = await this.criarEstudo(titulo, limite)
+    await this.criarCriterio(estudoId, 'INCLUSAO', 'Idade adulta', 'Candidato com 18 anos ou mais')
+    await this.criarCriterio(estudoId, 'EXCLUSAO', 'Gestante', 'Candidata em gestação confirmada')
+    const triagemId = await this.criarVisita(estudoId, 'Triagem', 0)
+    const retornoId = await this.criarVisita(estudoId, 'Retorno', 5, 2)
+    await this.avancar(estudoId, 'RECRUTAMENTO')
+    return { estudoId, triagemId, retornoId }
+  }
+
+  /** (Como coordenador) candidato pronto e incluído no estudo; devolve o id da participação e o código do candidato. */
+  async participanteIncluido(estudoId: string, nomeFicticio: string) {
+    const candidatoId = await this.candidatoPronto(estudoId, nomeFicticio)
+    await this.incluir(estudoId, candidatoId)
+    const lista = (await (await this.chamar('get', `/api/estudos/${estudoId}/participantes`)).json()) as {
+      id: string
+      candidatoId: string
+      codigo: string
+    }[]
+    const participacao = lista.find((p) => p.candidatoId === candidatoId)
+    expect(participacao, 'a participação recém-criada deve aparecer na lista do estudo').toBeDefined()
+    return { participacaoId: participacao!.id, codigo: participacao!.codigo }
+  }
+
+  /** (Como coordenador) agenda a visita prevista; devolve o id da visita agendada. */
+  async agendar(participacaoId: string, visitaPlanejadaId: string, dataHora: string): Promise<string> {
+    const resposta = await this.chamar('post', `/api/participacoes/${participacaoId}/visitas-agendadas`, {
+      visitaPlanejadaId,
+      dataHora,
+    })
+    return ((await resposta.json()) as { id: string }).id
+  }
+
+  /** (Como coordenador) registra o desfecho da visita agendada. */
+  async registrarDesfecho(visitaAgendadaId: string, corpo: Corpo) {
+    await this.chamar('post', `/api/visitas-agendadas/${visitaAgendadaId}/desfecho`, corpo)
+  }
+
+  /** (Como pesquisador) registra o resultado de uma atividade de avaliação de uma visita realizada. */
+  async registrarResultado(visitaAgendadaId: string, acaoId: string, valor: string, unidade?: string) {
+    await this.chamar('put', `/api/visitas-agendadas/${visitaAgendadaId}/resultados/${acaoId}`, { valor, unidade })
+  }
+
+  /** Consulta os resultados de uma visita agendada (RF14), para conferir pela API o que foi ou não gravado. */
+  async resultados(visitaAgendadaId: string) {
+    const resposta = await this.chamar('get', `/api/visitas-agendadas/${visitaAgendadaId}/resultados`)
+    return (await resposta.json()) as {
+      total: number
+      registrados: number
+      pendentes: number
+      atividades: { acaoId: string; nome: string; resultado: { valor: string; unidade: string | null } | null }[]
+    }
+  }
+
+  /**
+   * (Como pesquisador) estudo em recrutamento para os cenários de resultados (T93, RF14): Triagem (dia 0, tolerância
+   * 0, então a janela é o dia da inclusão) com duas atividades de avaliação e uma coleta de sangue, que é de outra
+   * categoria e por isso não deve aparecer na aba Avaliações.
+   */
+  async estudoParaResultados(titulo: string, limite = 5) {
+    const estudoId = await this.criarEstudo(titulo, limite)
+    await this.criarCriterio(estudoId, 'INCLUSAO', 'Idade adulta', 'Candidato com 18 anos ou mais')
+    await this.criarCriterio(estudoId, 'EXCLUSAO', 'Gestante', 'Candidata em gestação confirmada')
+    const triagemId = await this.criarVisita(estudoId, 'Triagem', 0)
+    const pressaoId = await this.criarAtividade(triagemId, 'Pressão arterial')
+    const dorId = await this.criarAtividade(triagemId, 'Escala de dor')
+    await this.criarAtividade(triagemId, 'Coleta de sangue', 'EXAME_LABORATORIAL')
+    await this.avancar(estudoId, 'RECRUTAMENTO')
+    return { estudoId, triagemId, pressaoId, dorId }
+  }
+
+  /**
+   * (Como coordenador) agenda a visita prevista na data sugerida pelo servidor (para a Triagem do dia 0, o dia da
+   * inclusão, ou seja, hoje no fuso do servidor) e registra que foi realizada; devolve o id da visita agendada.
+   */
+  async visitaRealizada(participacaoId: string, visitaPlanejadaId: string): Promise<string> {
+    const visitas = await this.visitasDoParticipante(participacaoId)
+    const prevista = visitas.find((v) => v.visitaPlanejadaId === visitaPlanejadaId)
+    expect(prevista, `visita prevista ${visitaPlanejadaId} deve aparecer na agenda do participante`).toBeDefined()
+    const visitaAgendadaId = await this.agendar(participacaoId, visitaPlanejadaId, `${prevista!.dataSugerida}T09:00`)
+    await this.registrarDesfecho(visitaAgendadaId, { tipo: 'REALIZADA' })
+    return visitaAgendadaId
+  }
+
+  /**
+   * (Como pesquisador) estudo em recrutamento preparado para os cenários de retirada (T107): Triagem (dia 0, com
+   * atividade de avaliação), duas visitas futuras (Retorno 15 e Retorno 30) e uma visita adicional (Retorno 60).
+   */
+  async estudoParaRetirada(titulo: string, limite = 2) {
+    const estudoId = await this.criarEstudo(titulo, limite)
+    await this.criarCriterio(estudoId, 'INCLUSAO', 'Idade adulta', 'Candidato com 18 anos ou mais')
+    await this.criarCriterio(estudoId, 'EXCLUSAO', 'Gestante', 'Candidata em gestação confirmada')
+    const triagemId = await this.criarVisita(estudoId, 'Triagem', 0, 0)
+    const acaoId = await this.criarAtividade(triagemId, 'Pressão arterial')
+    const retorno15Id = await this.criarVisita(estudoId, 'Retorno 15', 15, 3)
+    const retorno30Id = await this.criarVisita(estudoId, 'Retorno 30', 30, 5)
+    const retorno60Id = await this.criarVisita(estudoId, 'Retorno 60', 60, 5)
+    await this.avancar(estudoId, 'RECRUTAMENTO')
+    return { estudoId, triagemId, retorno15Id, retorno30Id, retorno60Id, acaoId }
+  }
+
+  /** Consulta as visitas previstas do participante com as datas sugeridas calculadas pelo servidor. */
+  async visitasDoParticipante(participacaoId: string) {
+    const resposta = await this.chamar('get', `/api/participacoes/${participacaoId}/visitas`)
+    return (await resposta.json()) as {
+      visitaPlanejadaId: string
+      nome: string
+      dataSugerida: string
+      agendamento: { id: string; situacao: string } | null
+    }[]
+  }
+
+  /** (Como coordenador) registra a retirada do participante (RF16). */
+  async retirar(
+    participacaoId: string,
+    dados: {
+      motivo: string
+      solicitante: 'PARTICIPANTE' | 'PESQUISADOR' | 'COORDENACAO'
+      dataRetirada: string
+    },
+  ) {
+    const resposta = await this.chamar('post', `/api/participacoes/${participacaoId}/retirada`, dados)
+    return (await resposta.json()) as {
+      id: string
+      participacaoId: string
+      motivo: string
+      solicitante: string
+      dataRetirada: string
+      visitasCanceladas: number
+    }
+  }
+
+  /** Consulta o status HTTP de GET /api/participacoes/{id}/retirada (útil para provar 404 quando não foi gravada). */
+  async statusDaRetirada(participacaoId: string): Promise<number> {
+    const resposta = await this.contexto.get(`/api/participacoes/${participacaoId}/retirada`)
+    return resposta.status()
   }
 }

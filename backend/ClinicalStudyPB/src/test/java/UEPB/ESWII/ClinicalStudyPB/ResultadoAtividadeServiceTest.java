@@ -12,6 +12,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,6 +21,8 @@ import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.BloqueioResultados;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.CategoriaAcao;
@@ -27,6 +30,7 @@ import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoVisita;
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.StatusEstudo;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Acao;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Estudo;
+import UEPB.ESWII.ClinicalStudyPB.domain.model.Participacao;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.ResultadoAtividade;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.Usuario;
 import UEPB.ESWII.ClinicalStudyPB.domain.model.VisitaAgendada;
@@ -44,8 +48,10 @@ import UEPB.ESWII.ClinicalStudyPB.service.ResultadoAtividadeService.ResultadosDa
 import UEPB.ESWII.ClinicalStudyPB.service.ValidacaoRegraException;
 
 /**
- * T89: regras do serviço de resultados fictícios das avaliações, com repositórios simulados e relógio fixo. A matriz
- * completa por endpoint fica na T92.
+ * T89 e T92: regras do serviço de resultados fictícios das avaliações, com repositórios simulados e relógio fixo. A
+ * T92 completa as regras isoladas (todas as categorias, estudo encerrado no primeiro registro, valor de 200
+ * caracteres), as contagens a cada passo do resultado parcial e a edição de unidade e observação. A matriz por
+ * endpoint, com PostgreSQL real, está em {@link ResultadoAtividadeEndpointTest}.
  */
 class ResultadoAtividadeServiceTest {
 
@@ -364,12 +370,173 @@ class ResultadoAtividadeServiceTest {
     }
 
     @Test
+    @DisplayName("T102: participante retirado recusa registro e edição (409 PARTICIPANTE_RETIRADO) e consulta devolve bloqueio")
+    void participanteRetiradoBloqueiaResultados() {
+        Participacao participacao = new Participacao();
+        participacao.setEstudo(estudo);
+        participacao.retirar();
+        visita.setParticipacao(participacao);
+
+        esperaConflito("PARTICIPANTE_RETIRADO", () -> registrar(pressao, "120/80"));
+
+        when(acoes.findByVisitaIdAndCategoriaOrderByNomeAsc(triagem.getId(), CategoriaAcao.AVALIACAO_CLINICA))
+                .thenReturn(List.of(pressao));
+        when(resultados.findByVisitaAgendadaId(visita.getId())).thenReturn(List.of());
+        assertThat(service.consultar(visita.getId()).bloqueio()).isEqualTo(BloqueioResultados.PARTICIPANTE_RETIRADO);
+
+        // Prioridade: estudo encerrado vence participante retirado, tanto na escrita quanto na consulta
+        estudo.setStatus(StatusEstudo.ENCERRADO);
+        esperaConflito("ESTUDO_ENCERRADO", () -> registrar(pressao, "120/80"));
+        assertThat(service.consultar(visita.getId()).bloqueio()).isEqualTo(BloqueioResultados.ESTUDO_ENCERRADO);
+    }
+
+    @Test
     @DisplayName("Consulta de visita agendada inexistente: 404")
     void consultaDeVisitaInexistente() {
         UUID inexistente = UUID.randomUUID();
         when(visitasAgendadas.findById(inexistente)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.consultar(inexistente)).isInstanceOf(RecursoNaoEncontradoException.class);
+    }
+
+    // ---------------------------------------------------------------- T92: regras isoladas que faltavam
+
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(value = CategoriaAcao.class, names = "AVALIACAO_CLINICA", mode = EnumSource.Mode.EXCLUDE)
+    @DisplayName("RQ-T92-02: toda categoria que não é avaliação clínica recebe 409 ATIVIDADE_FORA_DA_CATEGORIA_AVALIACAO")
+    void todaCategoriaForaDaAvaliacaoERecusada(CategoriaAcao categoria) {
+        Acao atividade = acao(triagem, "Atividade " + categoria, categoria);
+
+        esperaConflito("ATIVIDADE_FORA_DA_CATEGORIA_AVALIACAO", () -> registrar(atividade, "Feito"));
+    }
+
+    @Test
+    @DisplayName("RQ-T92-03: estudo encerrado recusa também o primeiro registro (sem resultado anterior)")
+    void estudoEncerradoRecusaOPrimeiroRegistro() {
+        estudo.setStatus(StatusEstudo.ENCERRADO);
+
+        esperaConflito("ESTUDO_ENCERRADO", () -> registrar(pressao, "120/80"));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(value = StatusEstudo.class, names = {"RECRUTAMENTO", "EXECUCAO"})
+    @DisplayName("RQ-T92-03: estudo em recrutamento ou em execução aceita o registro")
+    void estudoEmAndamentoAceita(StatusEstudo status) {
+        estudo.setStatus(status);
+
+        assertThat(registrar(pressao, "120/80").criado()).isTrue();
+    }
+
+    @Test
+    @DisplayName("RQ-T92-04: valor com exatamente 200 caracteres é aceito e gravado inteiro")
+    void valorDe200CaracteresEAceito() {
+        String valor = "9".repeat(200);
+
+        assertThat(registrar(pressao, valor).resultado().getValor()).isEqualTo(valor).hasSize(200);
+    }
+
+    @Test
+    @DisplayName("RQ-T92-05: valor vazio só é apontado depois de todas as regras de negócio passarem")
+    void valorVazioEAUltimaVerificacao() {
+        // Sem nenhuma regra violada, o vazio é o que sobra
+        assertThatThrownBy(() -> registrar(pressao, " ")).isInstanceOf(ValidacaoRegraException.class);
+
+        // A categoria vence o estudo encerrado e o valor vazio
+        Acao coleta = acao(triagem, "Coletar sangue", CategoriaAcao.EXAME_LABORATORIAL);
+        estudo.setStatus(StatusEstudo.ENCERRADO);
+        esperaConflito("ATIVIDADE_FORA_DA_CATEGORIA_AVALIACAO", () -> registrar(coleta, " "));
+    }
+
+    @Test
+    @DisplayName("RQ-T92-06: resultado parcial, com registrados, pendentes e total corretos a cada passo")
+    void contagensACadaPasso() {
+        Acao exame = acao(triagem, "Exame físico", CategoriaAcao.AVALIACAO_CLINICA);
+        when(acoes.findByVisitaIdAndCategoriaOrderByNomeAsc(triagem.getId(), CategoriaAcao.AVALIACAO_CLINICA))
+                .thenReturn(List.of(pressao, dor, exame));
+        // Repositório em memória: o que o serviço salva passa a aparecer nas consultas seguintes
+        List<ResultadoAtividade> gravados = new ArrayList<>();
+        when(resultados.save(any(ResultadoAtividade.class))).thenAnswer(chamada -> {
+            ResultadoAtividade r = chamada.getArgument(0);
+            if (!gravados.contains(r)) {
+                gravados.add(r);
+            }
+            return r;
+        });
+        when(resultados.findByVisitaAgendadaId(visita.getId())).thenAnswer(chamada -> List.copyOf(gravados));
+        when(resultados.findByVisitaAgendadaIdAndAcaoId(any(), any())).thenAnswer(chamada -> gravados.stream()
+                .filter(r -> r.getAcao().getId().equals(chamada.getArgument(1))).findFirst());
+
+        assertContagens(3, 0, 3);
+
+        assertThat(registrar(dor, "3").criado()).isTrue();
+        assertContagens(3, 1, 2);
+
+        assertThat(registrar(pressao, "120/80").criado()).isTrue();
+        assertContagens(3, 2, 1);
+
+        // Editar não muda as contagens
+        assertThat(registrar(pressao, "130/85").criado()).isFalse();
+        assertContagens(3, 2, 1);
+
+        assertThat(registrar(exame, "Normal").criado()).isTrue();
+        assertContagens(3, 3, 0);
+        assertThat(gravados).hasSize(3);
+    }
+
+    private void assertContagens(int total, int registrados, int pendentes) {
+        ResultadosDaVisita consulta = service.consultar(visita.getId());
+        assertThat(consulta.total()).as("total").isEqualTo(total);
+        assertThat(consulta.registrados()).as("registrados").isEqualTo(registrados);
+        assertThat(consulta.pendentes()).as("pendentes").isEqualTo(pendentes);
+    }
+
+    @Test
+    @DisplayName("RQ-T92-07: a edição também troca unidade e observação (em branco vira nulo)")
+    void edicaoTrocaUnidadeEObservacao() {
+        ResultadoAtividade existente = resultadoExistente(pressao, "120/80", outroPesquisador, AGORA.minusDays(1));
+        existente.setUnidade("mmHg");
+        existente.setObservacao("Sentado");
+        when(resultados.findByVisitaAgendadaIdAndAcaoId(visita.getId(), pressao.getId()))
+                .thenReturn(Optional.of(existente));
+
+        service.registrar(visita.getId(), pressao.getId(), new ComandoResultado("13/8", "cmHg", "  "),
+                pesquisador.getId());
+
+        assertThat(existente.getValor()).isEqualTo("13/8");
+        assertThat(existente.getUnidade()).isEqualTo("cmHg");
+        assertThat(existente.getObservacao()).isNull();
+        assertThat(existente.getRegistradoPor()).isSameAs(outroPesquisador);
+        assertThat(existente.getAlteradoPor()).isSameAs(pesquisador);
+    }
+
+    @Test
+    @DisplayName("RQ-T92-08: visita realizada, estudo ativo e participante ativo: a consulta não tem bloqueio")
+    void consultaSemBloqueioComParticipanteAtivo() {
+        Participacao participacao = new Participacao();
+        participacao.setEstudo(estudo);
+        visita.setParticipacao(participacao);
+        when(acoes.findByVisitaIdAndCategoriaOrderByNomeAsc(triagem.getId(), CategoriaAcao.AVALIACAO_CLINICA))
+                .thenReturn(List.of(pressao));
+        when(resultados.findByVisitaAgendadaId(visita.getId())).thenReturn(List.of());
+
+        assertThat(service.consultar(visita.getId()).bloqueio()).isNull();
+        assertThat(registrar(pressao, "120/80").criado()).isTrue();
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(value = SituacaoVisita.class, names = {"AUSENTE", "CANCELADA"})
+    @DisplayName("RQ-T92-08: visita ausente ou cancelada também é consultada com bloqueio VISITA_NAO_REALIZADA")
+    void consultaDeVisitaAusenteOuCancelada(SituacaoVisita situacao) {
+        visita.setSituacao(situacao);
+        when(acoes.findByVisitaIdAndCategoriaOrderByNomeAsc(triagem.getId(), CategoriaAcao.AVALIACAO_CLINICA))
+                .thenReturn(List.of(pressao, dor));
+        when(resultados.findByVisitaAgendadaId(visita.getId())).thenReturn(List.of());
+
+        ResultadosDaVisita consulta = service.consultar(visita.getId());
+
+        assertThat(consulta.bloqueio()).isEqualTo(BloqueioResultados.VISITA_NAO_REALIZADA);
+        assertThat(consulta.atividades()).allSatisfy(a -> assertThat(a.registrado()).isFalse());
+        assertThat(consulta.pendentes()).isEqualTo(2);
     }
 
     @Test

@@ -275,3 +275,113 @@ button.abas__link {
   flex-wrap: wrap;
   gap: var(--espaco-2);
 }
+
+/* RF14 (T91): aba Avaliações da visita */
+.selo--pendente {
+  border-color: #b54708;
+  background: #fffaeb;
+  color: #93370d;
+}
+
+.selo--registrado {
+  border-color: var(--cor-sucesso);
+  background: var(--cor-sucesso-fundo);
+  color: var(--cor-sucesso);
+}
+
+.avaliacoes__contador {
+  margin: 0;
+}
+
+.avaliacoes {
+  display: grid;
+  gap: var(--espaco-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.avaliacao {
+  padding: var(--espaco-3);
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+}
+
+.avaliacao__cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-2);
+}
+
+.avaliacao__cabecalho h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.avaliacao__campos {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--espaco-3);
+}
+
+.avaliacao__contador {
+  justify-self: end;
+  color: var(--cor-texto-suave);
+  font-size: 0.8125rem;
+}
+
+.avaliacao__autoria {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 600px) {
+  .avaliacao__campos {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* RF16 (T104): marca RETIRADO, bloco de dados da retirada e diálogo de retirada */
+.selo--retirado {
+  border-color: var(--cor-perigo);
+  background: var(--cor-perigo-fundo);
+  color: var(--cor-perigo);
+}
+
+.selo--ativo {
+  border-color: var(--cor-sucesso);
+  background: var(--cor-sucesso-fundo);
+  color: var(--cor-sucesso);
+}
+
+.titulo-com-selo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-2);
+}
+
+.dialogo--retirada {
+  display: grid;
+  gap: var(--espaco-4);
+  max-width: 36rem;
+  width: 100%;
+}
+
+.retirada__aviso {
+  margin: 0;
+  color: var(--cor-texto-suave);
+  font-size: 0.875rem;
+}
+
+.retirada__alerta-vencidas {
+  border-color: #b54708;
+  background: #fffaeb;
+  color: #93370d;
+}
+
+.bloco-retirada {
+  border-color: var(--cor-perigo);
+  background: var(--cor-perigo-fundo);
+}

@@ -1,4 +1,6 @@
 import { test as base } from '@playwright/test'
+import { AgendaPage } from '../pages/AgendaPage'
+import { AgendamentoParticipantePage } from '../pages/AgendamentoParticipantePage'
 import { BarraNavegacao } from '../pages/BarraNavegacao'
 import { CandidatosPage } from '../pages/CandidatosPage'
 import { CriteriosPage } from '../pages/CriteriosPage'
@@ -9,6 +11,7 @@ import { InicioPage } from '../pages/InicioPage'
 import { LoginPage } from '../pages/LoginPage'
 import { ParticipantesPage } from '../pages/ParticipantesPage'
 import { UsuariosPage } from '../pages/UsuariosPage'
+import { VisitaAgendadaPage } from '../pages/VisitaAgendadaPage'
 import { VisitasPage } from '../pages/VisitasPage'
 import type { PerfilE2E } from '../support/env'
 import { caminhoSessao } from '../support/sessao'
@@ -28,6 +31,9 @@ type Fixtures = {
   paginaCandidatos: CandidatosPage
   paginaFicha: FichaCandidatoPage
   paginaParticipantes: ParticipantesPage
+  paginaVisitaAgendada: VisitaAgendadaPage
+  paginaAgendamento: AgendamentoParticipantePage
+  paginaAgenda: AgendaPage
 }
 
 // `test` da aplicação: acrescenta os page objects. Novos page objects entram aqui.
@@ -64,6 +70,15 @@ export const test = base.extend<Fixtures>({
   },
   paginaParticipantes: async ({ page }, usar) => {
     await usar(new ParticipantesPage(page))
+  },
+  paginaAgendamento: async ({ page }, usar) => {
+    await usar(new AgendamentoParticipantePage(page))
+  },
+  paginaAgenda: async ({ page }, usar) => {
+    await usar(new AgendaPage(page))
+  },
+  paginaVisitaAgendada: async ({ page }, usar) => {
+    await usar(new VisitaAgendadaPage(page))
   },
 })
 

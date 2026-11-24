@@ -96,7 +96,7 @@ export function criarEstadoInicial(): EstadoMock {
   ]
 
   const participantes: ParticipacaoResponse[] = [
-    { id: 'b0000002-0000-4000-8000-000000000001', candidatoId: 'e0000002-0000-4000-8000-000000000003', codigo: 'CAND-003', nomeFicticio: 'A. B.', estudoId: ESTUDO_RECRUTAMENTO, dataInclusao: '2026-10-27', incluidoPor: 'Coordenador Fictício' },
+    { id: 'b0000002-0000-4000-8000-000000000001', candidatoId: 'e0000002-0000-4000-8000-000000000003', codigo: 'CAND-003', nomeFicticio: 'A. B.', estudoId: ESTUDO_RECRUTAMENTO, dataInclusao: '2026-10-27', incluidoPor: 'Coordenador Fictício', situacao: 'ATIVO' },
   ]
 
   const consentimentos: ConsentimentoResponse[] = [

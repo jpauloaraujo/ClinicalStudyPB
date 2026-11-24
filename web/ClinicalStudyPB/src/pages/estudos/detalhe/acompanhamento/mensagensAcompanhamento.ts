@@ -67,9 +67,89 @@ const MENSAGENS_DESFECHO: Record<string, string> = {
     'Esta visita foi alterada por outra pessoa enquanto você registrava. Recarregue a página e confira a situação atual.',
   ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO:
     'O estudo não está em recrutamento ou execução: não é possível registrar o desfecho da visita.',
+  PARTICIPANTE_RETIRADO:
+    'O participante foi retirado do estudo: não é possível registrar o desfecho da visita.',
 }
 
 /** Mensagem para o código da regra do desfecho; sem código conhecido, cai na mensagem que o servidor enviou. */
 export function mensagemDeAcompanhamento(codigo: string | undefined, mensagemDoServidor: string): string {
   return (codigo && MENSAGENS_DESFECHO[codigo]) || mensagemDoServidor
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Resultados das avaliações (T89/T90, tela da T91)
+// ---------------------------------------------------------------------------------------------------------------
+
+const MENSAGENS_RESULTADOS: Record<string, string> = {
+  VISITA_NAO_REALIZADA: 'Os resultados só podem ser registrados em visitas realizadas.',
+  ATIVIDADE_FORA_DA_CATEGORIA_AVALIACAO: 'Esta atividade não é da categoria avaliação e não recebe resultado.',
+  ATIVIDADE_NAO_PERTENCE_A_VISITA: 'Esta atividade não pertence a esta visita.',
+  ESTUDO_ENCERRADO: 'O estudo foi encerrado: os resultados não podem mais ser registrados nem editados.',
+  PARTICIPANTE_RETIRADO:
+    'O participante foi retirado do estudo: os resultados não podem mais ser registrados nem editados.',
+  VALOR_OBRIGATORIO: 'Informe o valor do resultado.',
+}
+
+// Erros de regra que pertencem a um campo do formulário; os demais vão no alerta da atividade
+const CAMPO_DO_CODIGO_RESULTADO: Record<string, string> = {
+  VALOR_OBRIGATORIO: 'valor',
+}
+
+/** Mensagem para o código da regra dos resultados; sem código conhecido, cai na mensagem que o servidor enviou. */
+export function mensagemDeResultado(codigo: string | undefined, mensagemDoServidor: string): string {
+  return (codigo && MENSAGENS_RESULTADOS[codigo]) || mensagemDoServidor
+}
+
+/**
+ * Converte a falha ao salvar um resultado em mensagens para o formulário da atividade: erros por campo (valor,
+ * unidade, observação) ficam junto do campo; erros de regra, traduzidos pelo código, vão no alerta.
+ */
+export function interpretarErroDeResultado(falha: unknown): { geral: string | null; campos: Record<string, string> } {
+  const convertido = converterErro(falha)
+  const mensagem = mensagemDeResultado(convertido.codigo, convertido.mensagem)
+  const campoDoCodigo = convertido.codigo ? CAMPO_DO_CODIGO_RESULTADO[convertido.codigo] : undefined
+  if (campoDoCodigo) {
+    return { geral: null, campos: { ...convertido.campos, [campoDoCodigo]: mensagem } }
+  }
+  if (Object.keys(convertido.campos).length > 0) {
+    return { geral: null, campos: convertido.campos }
+  }
+  return { geral: mensagem, campos: {} }
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Vínculo da conta do participante (T111, diálogo DialogoVincularConta)
+// ---------------------------------------------------------------------------------------------------------------
+
+const MENSAGENS_VINCULO: Record<string, string> = {
+  CONTA_JA_VINCULADA: 'Esta conta já está vinculada a outro participante. Escolha outra conta.',
+  CONTA_INATIVA: 'Esta conta está desativada. Escolha outra conta ou peça ao administrador para reativá-la.',
+  CONTA_NAO_E_PARTICIPANTE: 'Esta conta não é de um participante. Escolha uma conta de perfil participante.',
+  PARTICIPACAO_JA_TEM_CONTA: 'Este participante já tem uma conta vinculada.',
+  PARTICIPANTE_RETIRADO: 'O participante foi retirado do estudo e não pode receber uma conta.',
+}
+
+/** Mensagem para o código da regra do vínculo; sem código conhecido, cai na mensagem que o servidor enviou. */
+export function mensagemDeVinculo(codigo: string | undefined, mensagemDoServidor: string): string {
+  return (codigo && MENSAGENS_VINCULO[codigo]) || mensagemDoServidor
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Retirada de participante (T102/T103, tela da T104)
+// ---------------------------------------------------------------------------------------------------------------
+
+export const MENSAGEM_BLOQUEIO_PARTICIPANTE_RETIRADO =
+  'O participante foi retirado do estudo: os resultados ficam disponíveis somente para consulta e não podem mais ser registrados nem editados.'
+
+const MENSAGENS_RETIRADA: Record<string, string> = {
+  PARTICIPANTE_JA_RETIRADO: 'Este participante já foi retirado do estudo.',
+  ESTUDO_ENCERRADO: 'O estudo está encerrado: não é possível registrar retirada de participantes.',
+  MOTIVO_OBRIGATORIO: 'Informe o motivo da retirada, com ao menos 5 caracteres.',
+  DATA_RETIRADA_FUTURA: 'A data da retirada não pode estar no futuro.',
+  PARTICIPANTE_RETIRADO: 'O participante foi retirado do estudo: não é possível alterar o acompanhamento.',
+}
+
+/** Mensagem para o código da regra da retirada; sem código conhecido, cai na mensagem que o servidor enviou. */
+export function mensagemDeRetirada(codigo: string | undefined, mensagemDoServidor: string): string {
+  return (codigo && MENSAGENS_RETIRADA[codigo]) || mensagemDoServidor
 }

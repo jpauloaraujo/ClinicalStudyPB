@@ -158,6 +158,8 @@ class HistoricoParticipanteEndpointTest {
                 .andExpect(jsonPath("$.participante.codigo").value("CAND-901"))
                 .andExpect(jsonPath("$.participante.nomeFicticio").value("Pessoa Historico (Ficticia)"))
                 .andExpect(jsonPath("$.participante.dataInclusao").isNotEmpty())
+                .andExpect(jsonPath("$.participante.situacao").value("ATIVO"))
+                .andExpect(jsonPath("$.participante.retirada", nullValue()))
                 .andExpect(jsonPath("$.resumo.previstas").value(3))
                 .andExpect(jsonPath("$.resumo.realizadas").value(1))
                 .andExpect(jsonPath("$.resumo.ausentes").value(0))
@@ -188,6 +190,28 @@ class HistoricoParticipanteEndpointTest {
                 .andExpect(jsonPath("$.visitas[2].motivo", nullValue()))
                 .andExpect(jsonPath("$.visitas[2].observacao", nullValue()))
                 .andExpect(jsonPath("$.visitas[2].resultados", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("T104: participante retirado traz situacao RETIRADO e os dados da retirada no histórico preservado")
+    void participanteRetiradoTrazSituacaoEDadosDaRetirada() throws Exception {
+        UUID participacao = participacaoComTresVisitas("EXECUCAO");
+        jdbc.update("UPDATE participacoes SET situacao = 'RETIRADO' WHERE id = CAST(? AS UUID)",
+                participacao.toString());
+        Timestamp agora = Timestamp.valueOf(LocalDateTime.of(2026, 11, 18, 14, 0));
+        jdbc.update("INSERT INTO retiradas_participacao (id, participacao_id, data_retirada, motivo, solicitante, "
+                + "registrado_por_id, registrado_em) VALUES (CAST(? AS UUID), CAST(? AS UUID), DATE '2026-11-18', "
+                + "'Mudança de cidade', 'PARTICIPANTE', CAST(? AS UUID), ?)", UUID.randomUUID().toString(),
+                participacao.toString(), COORDENADOR_ID, agora);
+
+        enviar(mvc, "GET", "/api/participacoes/" + participacao + "/historico", coordenador, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.participante.situacao").value("RETIRADO"))
+                .andExpect(jsonPath("$.participante.retirada.dataRetirada").value("2026-11-18"))
+                .andExpect(jsonPath("$.participante.retirada.motivo").value("Mudança de cidade"))
+                .andExpect(jsonPath("$.participante.retirada.solicitante").value("PARTICIPANTE"))
+                .andExpect(jsonPath("$.visitas", hasSize(3)))
+                .andExpect(jsonPath("$.visitas[0].resultados", hasSize(2)));
     }
 
     @Test
@@ -243,6 +267,85 @@ class HistoricoParticipanteEndpointTest {
         }
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM visitas_agendadas WHERE participacao_id = CAST(? AS UUID)",
                 Integer.class, participacao.toString())).isEqualTo(2);
+    }
+
+    // ---- T98: casos de borda do histórico (RQ-T98-01, 02 e 04) ----
+
+    @Test
+    @DisplayName("RQ-T98-01: sem nenhuma visita agendada, todas as previstas saem NAO_AGENDADA e pendentes = previstas")
+    void semNenhumaVisitaAgendada() throws Exception {
+        UUID estudo = criarEstudo("Historico sem agenda " + UUID.randomUUID(), "EXECUCAO");
+        criarVisitaPlanejada(estudo, "Retorno 60 dias", 60, 3);
+        criarVisitaPlanejada(estudo, "Triagem", 0, 1);
+        criarVisitaPlanejada(estudo, "Retorno 30 dias", 30, 2);
+        UUID participacao = incluirParticipante(estudo, "CAND-T98A", "Pessoa Sem Agenda (Ficticia)", 5);
+
+        enviar(mvc, "GET", "/api/participacoes/" + participacao + "/historico", pesquisador, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resumo.previstas").value(3))
+                .andExpect(jsonPath("$.resumo.naoAgendadas").value(3))
+                .andExpect(jsonPath("$.resumo.pendentes").value(3))
+                .andExpect(jsonPath("$.resumo.realizadas").value(0))
+                .andExpect(jsonPath("$.resumo.ausentes").value(0))
+                .andExpect(jsonPath("$.resumo.canceladas").value(0))
+                .andExpect(jsonPath("$.resumo.agendadas").value(0))
+                .andExpect(jsonPath("$.visitas[0].nome").value("Triagem"))
+                .andExpect(jsonPath("$.visitas[1].nome").value("Retorno 30 dias"))
+                .andExpect(jsonPath("$.visitas[2].nome").value("Retorno 60 dias"))
+                .andExpect(jsonPath("$.visitas[*].situacao", org.hamcrest.Matchers.everyItem(
+                        org.hamcrest.Matchers.is("NAO_AGENDADA"))));
+    }
+
+    @Test
+    @DisplayName("RQ-T98-02: com visitas em todas as situações, cada uma sai certa e o invariante do resumo vale")
+    void todasAsSituacoesEInvariante() throws Exception {
+        UUID estudo = criarEstudo("Historico todas as situacoes " + UUID.randomUUID(), "EXECUCAO");
+        UUID v1 = criarVisitaPlanejada(estudo, "V1 realizada", 0, 1);
+        UUID v2 = criarVisitaPlanejada(estudo, "V2 ausente", 10, 2);
+        UUID v3 = criarVisitaPlanejada(estudo, "V3 cancelada", 20, 3);
+        UUID v4 = criarVisitaPlanejada(estudo, "V4 agendada", 30, 4);
+        criarVisitaPlanejada(estudo, "V5 sem agenda", 40, 5);
+        UUID participacao = incluirParticipante(estudo, "CAND-T98B", "Pessoa Todas (Ficticia)", 50);
+        UUID realizada = agendar(participacao, v1, "REALIZADA", LocalDateTime.of(2026, 11, 20, 10, 5), null, "Ok");
+        registrarResultado(v1, realizada, "Escala de dor", "2");
+        agendar(participacao, v2, "AUSENTE", null, "Nao compareceu", null);
+        agendar(participacao, v3, "CANCELADA", null, "Participante em viagem", null);
+        agendar(participacao, v4, "AGENDADA", null, null, null);
+
+        enviar(mvc, "GET", "/api/participacoes/" + participacao + "/historico", coordenador, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.visitas", hasSize(5)))
+                .andExpect(jsonPath("$.visitas[0].situacao").value("REALIZADA"))
+                .andExpect(jsonPath("$.visitas[0].dataHoraAgendada").isNotEmpty())
+                .andExpect(jsonPath("$.visitas[0].dataHoraRealizada").isNotEmpty())
+                .andExpect(jsonPath("$.visitas[0].resultados", hasSize(1)))
+                .andExpect(jsonPath("$.visitas[1].situacao").value("AUSENTE"))
+                .andExpect(jsonPath("$.visitas[1].motivo").value("Nao compareceu"))
+                .andExpect(jsonPath("$.visitas[2].situacao").value("CANCELADA"))
+                .andExpect(jsonPath("$.visitas[2].motivo").value("Participante em viagem"))
+                .andExpect(jsonPath("$.visitas[3].situacao").value("AGENDADA"))
+                .andExpect(jsonPath("$.visitas[4].situacao").value("NAO_AGENDADA"))
+                .andExpect(jsonPath("$.resumo.previstas").value(5))
+                .andExpect(jsonPath("$.resumo.realizadas").value(1))
+                .andExpect(jsonPath("$.resumo.ausentes").value(1))
+                .andExpect(jsonPath("$.resumo.canceladas").value(1))
+                .andExpect(jsonPath("$.resumo.agendadas").value(1))
+                .andExpect(jsonPath("$.resumo.naoAgendadas").value(1))
+                .andExpect(jsonPath("$.resumo.pendentes").value(2));
+    }
+
+    @Test
+    @DisplayName("RQ-T98-04: estudo sem visitas previstas devolve 200 com lista vazia e resumo zerado")
+    void estudoSemVisitasPrevistas() throws Exception {
+        UUID estudo = criarEstudo("Historico sem previstas " + UUID.randomUUID(), "RECRUTAMENTO");
+        UUID participacao = incluirParticipante(estudo, "CAND-T98C", "Pessoa Vazia (Ficticia)", 1);
+
+        enviar(mvc, "GET", "/api/participacoes/" + participacao + "/historico", pesquisador, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.visitas", hasSize(0)))
+                .andExpect(jsonPath("$.resumo.previstas").value(0))
+                .andExpect(jsonPath("$.resumo.pendentes").value(0))
+                .andExpect(jsonPath("$.resumo.realizadas").value(0));
     }
 
     // ---- demonstração: P4 e P3 ----

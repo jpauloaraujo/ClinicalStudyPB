@@ -10,14 +10,15 @@ type Props = {
   visitas: VisitaDoHistorico[]
   estudoId: string
   participacaoId: string
+  participanteRetirado?: boolean
 }
 
 type Filtro = SituacaoNoHistorico | 'TODAS'
 
-// Linha do tempo das visitas previstas do participante (RF15, T97): todas, na ordem recebida do servidor (dia previsto),
-// cada uma expansível para mostrar datas, motivo, observação e resultados. O filtro por situação só esconde linhas;
-// não recalcula nada: o resumo do servidor continua valendo para o total.
-export function LinhaDoTempoVisitas({ visitas, estudoId, participacaoId }: Props) {
+// Linha do tempo das visitas previstas do participante (RF15, T97; RF16, T104): todas, na ordem recebida do servidor
+// (dia previsto), cada uma expansível para mostrar datas, motivo, observação e resultados. O filtro por situação só
+// esconde linhas; não recalcula nada: o resumo do servidor continua valendo para o total.
+export function LinhaDoTempoVisitas({ visitas, estudoId, participacaoId, participanteRetirado = false }: Props) {
   const [filtro, setFiltro] = useState<Filtro>('TODAS')
   const [abertas, setAbertas] = useState<ReadonlySet<string>>(new Set())
   const idFiltro = useId()
@@ -37,6 +38,12 @@ export function LinhaDoTempoVisitas({ visitas, estudoId, participacaoId }: Props
 
   return (
     <div>
+      {participanteRetirado && (
+        <p className="alerta alerta--info" role="status">
+          <span className="selo selo--retirado">Retirado</span> Histórico preservado em modo somente leitura após a
+          retirada do estudo.
+        </p>
+      )}
       <div className="filtro-visitas">
         <label htmlFor={idFiltro}>Filtrar por situação</label>
         <select id={idFiltro} value={filtro} onChange={(evento) => setFiltro(evento.target.value as Filtro)}>

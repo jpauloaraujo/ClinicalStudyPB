@@ -17,4 +17,13 @@ export class ParticipantesPage {
     const linha = this.page.getByRole('row').filter({ hasText: codigo })
     await expect(linha).toContainText(nomeFicticio)
   }
+
+  async expectSituacao(codigo: string, situacao: 'Ativo' | 'Retirado') {
+    const linha = this.page.getByRole('row').filter({ hasText: codigo })
+    await expect(linha.locator('.selo')).toHaveText(situacao)
+    if (situacao === 'Retirado') {
+      await expect(linha.getByRole('link', { name: `Ver histórico de ${codigo}` })).toBeVisible()
+      await expect(linha.getByRole('link', { name: `Agendamento de ${codigo}` })).toHaveCount(0)
+    }
+  }
 }

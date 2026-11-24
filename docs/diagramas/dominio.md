@@ -1,6 +1,6 @@
-# Modelo de domínio das Sprints 2 e 3 (T36, T73 e T87)
+# Modelo de domínio das Sprints 2 e 3 (T36, T73, T87 e T101)
 
-> Diagrama de classes, matriz de estados, pré-condições e regras de negócio do recrutamento (RF05 a RF11), **como estão implementados** no backend. É o produto da T36 e a base do diagrama atualizado da T69. Código em `backend/ClinicalStudyPB/src/main/java/UEPB/ESWII/ClinicalStudyPB/domain`; migrations `V4` e `V5`. A **seção 5** acrescenta a **visita agendada** da Sprint 3 (T73, migration `V6_19_1`): é o diagrama de projeto dessa task, a ser mantido conforme o código for implementado. A **seção 6** acrescenta o **resultado das avaliações** (T87, migration `V6_21_1`).
+> Diagrama de classes, matriz de estados, pré-condições e regras de negócio do recrutamento (RF05 a RF11), **como estão implementados** no backend. É o produto da T36 e a base do diagrama atualizado da T69. Código em `backend/ClinicalStudyPB/src/main/java/UEPB/ESWII/ClinicalStudyPB/domain`; migrations `V4` e `V5`. A **seção 5** acrescenta a **visita agendada** da Sprint 3 (T73, migration `V6_19_1`): é o diagrama de projeto dessa task, a ser mantido conforme o código for implementado. A **seção 6** acrescenta o **resultado das avaliações** (T87, migration `V6_21_1`). A **seção 7** acrescenta a **retirada de participante** (T101, migration `V6_23_1`).
 
 ## 1. Diagrama de classes
 
@@ -83,6 +83,27 @@ classDiagram
     class Participacao {
         UUID id
         LocalDate dataInclusao
+        SituacaoParticipacao situacao
+        boolean estaRetirada()
+        void retirar()
+    }
+    class SituacaoParticipacao {
+        <<enumeration>>
+        ATIVO
+        RETIRADO
+    }
+    class SolicitanteRetirada {
+        <<enumeration>>
+        PARTICIPANTE
+        PESQUISADOR
+        COORDENACAO
+    }
+    class RetiradaParticipacao {
+        UUID id
+        String motivo
+        SolicitanteRetirada solicitante
+        LocalDate dataRetirada
+        LocalDateTime registradoEm
     }
     class HistoricoStatusEstudo {
         UUID id
@@ -145,6 +166,10 @@ classDiagram
     VisitaAgendada "1" *-- "0..*" ResultadoAtividade : resultados
     Acao "1" <-- "0..*" ResultadoAtividade : atividade avaliada
     Usuario "1" <-- "0..*" ResultadoAtividade : registrado e alterado por
+    Participacao --> SituacaoParticipacao
+    Participacao "1" *-- "0..1" RetiradaParticipacao : retirada
+    RetiradaParticipacao --> SolicitanteRetirada
+    Usuario "1" <-- "0..*" RetiradaParticipacao : registrado por
 ```
 
 Regras de domínio puras, sem banco nem Spring: `domain/regra/RegraElegibilidade` (elegibilidade) e `domain/regra/MaquinaEstadosEstudo` (estados do estudo).
@@ -160,10 +185,11 @@ Regras de domínio puras, sem banco nem Spring: `domain/regra/RegraElegibilidade
 | EligibilityEvaluation | `AvaliacaoElegibilidade` | `avaliacoes_elegibilidade` | candidato, data, avaliador, resultado, pontuação, vigente |
 | EligibilityAnswer | `RespostaAvaliacao` | `respostas_avaliacao` | avaliação, critério, se aplica, observação |
 | Consent | `Consentimento` | `consentimentos` | candidato (único), data e hora, responsável, versão do termo |
-| Participation | `Participacao` | `participacoes` | candidato (único), estudo, data de inclusão, quem incluiu |
+| Participation | `Participacao` | `participacoes` | candidato (único), estudo, data de inclusão, quem incluiu, situação (`ATIVO` ou `RETIRADO`, T101) |
 | study_status_history | `HistoricoStatusEstudo` | `historico_status_estudo` | estudo, estado anterior, novo estado, usuário, data e hora |
 | ScheduledVisit (Sprint 3, T73) | `VisitaAgendada` | `visitas_agendadas` | participação, visita prevista, data e hora agendadas, situação, data e hora reais, motivo, observação, versão, quem criou e alterou e quando |
 | EvaluationResult (Sprint 3, T87) | `ResultadoAtividade` | `resultados_atividade` | visita agendada, atividade, valor (texto curto), unidade, observação, quem registrou e alterou e quando |
+| ParticipantWithdrawal (Sprint 3, T101) | `RetiradaParticipacao` | `retiradas_participacao` | participação (única), motivo, solicitante, data da retirada, quem registrou e quando |
 
 Diferenças dos nomes do planejamento: as tabelas seguem o português já usado na Sprint 1 (`usuarios`, `estudos`). Os critérios ficam em uma tabela só (herança de tabela única), e a `ordem` do critério do planejamento não foi criada (os critérios saem ordenados por título).
 
@@ -471,4 +497,87 @@ erDiagram
 | `uk_resultados_atividade_visita_acao` | Um resultado por atividade e por visita agendada (regra 4) |
 | `idx_resultados_atividade_visita_agendada` | Consulta dos resultados de uma visita (tela da T91 e histórico da T96) |
 | Chaves estrangeiras | Para `visitas_agendadas`, `acoes` e, duas vezes, `usuarios`; todas `ON DELETE RESTRICT`, nenhuma cascata |
+
+## 7. Retirada de participante (Sprint 3 · T101)
+
+A **retirada** (`RetiradaParticipacao`) formaliza a saída de um participante incluído (`Participacao`) do estudo (RF16, regra 6). Toda participação nasce `ATIVO`; ao registrar a retirada, passa para `RETIRADO` de forma **irreversível** (sem reativação), as visitas futuras `AGENDADA` são canceladas com o motivo `"retirada do estudo"`, o histórico permanece intacto e a vaga continua ocupada.
+
+### 7.1 Classes e relacionamentos
+
+```mermaid
+classDiagram
+    direction LR
+    class Participacao {
+        UUID id
+        LocalDate dataInclusao
+        SituacaoParticipacao situacao
+        boolean estaRetirada()
+        void retirar()
+    }
+    class SituacaoParticipacao {
+        <<enumeration>>
+        ATIVO
+        RETIRADO
+    }
+    class SolicitanteRetirada {
+        <<enumeration>>
+        PARTICIPANTE
+        PESQUISADOR
+        COORDENACAO
+    }
+    class RetiradaParticipacao {
+        UUID id
+        String motivo
+        SolicitanteRetirada solicitante
+        LocalDate dataRetirada
+        LocalDateTime registradoEm
+    }
+    class Usuario {
+        UUID id
+        String nome
+        PerfilUsuario perfil
+    }
+
+    Participacao --> SituacaoParticipacao : situacao
+    Participacao "1" *-- "0..1" RetiradaParticipacao : participacao
+    RetiradaParticipacao --> SolicitanteRetirada : solicitante
+    RetiradaParticipacao "0..*" --> "1" Usuario : registradoPor
+```
+
+Regras de leitura:
+
+- A participação expõe apenas `estaRetirada()` e `retirar()` — não existe setter público nem operação de reativação.
+- Há no máximo uma `RetiradaParticipacao` por `Participacao` (`uk_retiradas_participacao`).
+- `SolicitanteRetirada` aceita `PARTICIPANTE`, `PESQUISADOR` ou `COORDENACAO`; o valor `PARTICIPANTE` será reaproveitado pelo pedido de retirada no app (RF20, Sprint 4).
+
+### 7.2 Alteração em `participacoes` e tabela `retiradas_participacao` (migration `V6_23_1__participant_withdrawal.sql`)
+
+```mermaid
+erDiagram
+    PARTICIPACOES ||--o| RETIRADAS_PARTICIPACAO : "pode ter"
+    USUARIOS ||--o{ RETIRADAS_PARTICIPACAO : "registrado por"
+
+    PARTICIPACOES {
+        uuid id PK
+        date data_inclusao
+        varchar situacao "NOT NULL, padrao ATIVO, 20"
+    }
+    RETIRADAS_PARTICIPACAO {
+        uuid id PK
+        uuid participacao_id FK "UNIQUE"
+        varchar motivo "NOT NULL, 500"
+        varchar solicitante "NOT NULL, 20"
+        date data_retirada "NOT NULL"
+        uuid registrado_por_id FK "usuarios"
+        timestamp registrado_em "NOT NULL"
+    }
+```
+
+| Constraint | O que garante |
+|---|---|
+| `chk_participacoes_situacao` | `participacoes.situacao` só aceita `ATIVO` ou `RETIRADO` (padrão `ATIVO` para participantes existentes) |
+| `pk_retiradas_participacao` | Chave primária (`id`) |
+| `uk_retiradas_participacao` | No máximo uma retirada por participação (irreversibilidade garantida no banco) |
+| `chk_retiradas_participacao_solicitante` | `solicitante` só aceita `PARTICIPANTE`, `PESQUISADOR` ou `COORDENACAO` |
+| Chaves estrangeiras | Para `participacoes` e `usuarios`, ambas `ON DELETE RESTRICT`, preservando o histórico |
 

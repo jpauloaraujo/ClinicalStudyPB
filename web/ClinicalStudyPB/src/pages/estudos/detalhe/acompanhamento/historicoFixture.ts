@@ -73,7 +73,27 @@ export const historicoBase: HistoricoParticipanteResponse = {
     codigo: 'CAND-001',
     nomeFicticio: 'Pessoa Teta (Ficticia)',
     dataInclusao: '2026-10-20',
+    situacao: 'ATIVO',
+    retirada: null,
   },
   resumo: { previstas: 3, realizadas: 1, ausentes: 0, canceladas: 0, agendadas: 1, naoAgendadas: 1, pendentes: 2 },
   visitas: [triagem, retorno30, retorno60],
+}
+
+export const historicoRetirado: HistoricoParticipanteResponse = {
+  participante: {
+    ...historicoBase.participante,
+    situacao: 'RETIRADO',
+    retirada: {
+      dataRetirada: '2026-11-18',
+      motivo: 'Mudança de cidade',
+      solicitante: 'PARTICIPANTE',
+    },
+  },
+  resumo: { previstas: 3, realizadas: 1, ausentes: 0, canceladas: 1, agendadas: 0, naoAgendadas: 1, pendentes: 1 },
+  visitas: [
+    triagem,
+    { ...retorno30, situacao: 'CANCELADA', motivo: 'retirada do estudo' },
+    retorno60,
+  ],
 }

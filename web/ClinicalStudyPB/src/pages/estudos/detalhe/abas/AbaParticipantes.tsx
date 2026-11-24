@@ -7,6 +7,7 @@ import { useCarregamento } from '../../../../hooks/useCarregamento'
 import { formatarData } from '../../../../utils/datas'
 import { useEstudoDetalhe } from '../contexto'
 import '../recrutamento.css'
+import '../acompanhamento/acompanhamento.css'
 
 // RF11 (T61), RF12 (T77) e RF15 (T97): participantes incluídos no estudo, o contador de vagas e o progresso de
 // agendamento de cada um ("X de N visitas agendadas"). A aba é recarregada sempre que é aberta, então mostra a
@@ -55,6 +56,7 @@ export function AbaParticipantes() {
               <tr>
                 <th>Código</th>
                 <th>Nome fictício</th>
+                <th>Situação</th>
                 <th>Data de inclusão</th>
                 <th>Incluído por</th>
                 <th>Visitas</th>
@@ -64,17 +66,21 @@ export function AbaParticipantes() {
             <tbody>
               {participantes.map((participante) => {
                 const andamento = progressoPorParticipacao.get(participante.id)
+                const retirado = participante.situacao === 'RETIRADO'
+                const rotaDaFicha = `/estudos/${estudo.id}/participantes/${participante.id}`
                 const rotaDoAgendamento = `/estudos/${estudo.id}/participantes/${participante.id}/agendamento`
                 return (
                   <tr key={participante.id}>
                     <td>{participante.codigo}</td>
                     <td>
-                      <Link
-                        to={`/estudos/${estudo.id}/participantes/${participante.id}`}
-                        aria-label={`Abrir a ficha de ${participante.nomeFicticio}`}
-                      >
+                      <Link to={rotaDaFicha} aria-label={`Abrir a ficha de ${participante.nomeFicticio}`}>
                         {participante.nomeFicticio}
                       </Link>
+                    </td>
+                    <td>
+                      <span className={retirado ? 'selo selo--retirado' : 'selo selo--ativo'}>
+                        {retirado ? 'Retirado' : 'Ativo'}
+                      </span>
                     </td>
                     <td>{formatarData(participante.dataInclusao)}</td>
                     <td>{participante.incluidoPor}</td>
@@ -82,13 +88,23 @@ export function AbaParticipantes() {
                       {andamento ? `${andamento.visitasAgendadas} de ${andamento.visitasPrevistas} visitas agendadas` : '—'}
                     </td>
                     <td className="tabela__acoes">
-                      <Link
-                        to={rotaDoAgendamento}
-                        className={ehCoordenador ? 'botao botao--pequeno' : 'botao botao--secundario botao--pequeno'}
-                        aria-label={`${ehCoordenador ? 'Agendamento' : 'Ver agendamento'} de ${participante.codigo}`}
-                      >
-                        {ehCoordenador ? 'Agendamento' : 'Ver agendamento'}
-                      </Link>
+                      {retirado ? (
+                        <Link
+                          to={rotaDaFicha}
+                          className="botao botao--secundario botao--pequeno"
+                          aria-label={`Ver histórico de ${participante.codigo}`}
+                        >
+                          Ver histórico
+                        </Link>
+                      ) : (
+                        <Link
+                          to={rotaDoAgendamento}
+                          className={ehCoordenador ? 'botao botao--pequeno' : 'botao botao--secundario botao--pequeno'}
+                          aria-label={`${ehCoordenador ? 'Agendamento' : 'Ver agendamento'} de ${participante.codigo}`}
+                        >
+                          {ehCoordenador ? 'Agendamento' : 'Ver agendamento'}
+                        </Link>
+                      )}
                     </td>
                   </tr>
                 )

@@ -489,7 +489,7 @@ export const handlers = [
     }
     const criado = {
       id: novoId('b'), candidatoId: candidato.id, codigo: candidato.codigo, nomeFicticio: candidato.nomeFicticio, estudoId: estudo.id,
-      dataInclusao: new Date().toISOString().slice(0, 10), incluidoPor: 'Coordenador Fictício',
+      dataInclusao: new Date().toISOString().slice(0, 10), incluidoPor: 'Coordenador Fictício', situacao: 'ATIVO' as const,
     }
     mock.estado.participantes.push(criado)
     candidato.situacao = 'INCLUIDO'

@@ -12,6 +12,7 @@ import {
   estudoEmPlanejamento,
   estudoEmRecrutamento,
   participanteDaAgenda,
+  participanteRetiradoDaAgenda,
   retornoAgendado,
   retornoSemAgendamento,
   visitasDoParticipante,
@@ -262,5 +263,18 @@ describe('AgendamentoParticipantePage (T77)', () => {
 
     expect(await screen.findByText(/Este estudo ainda não tem visitas previstas/)).toBeInTheDocument()
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
+  })
+
+  it('participante retirado mostra a marca Retirado e esconde os botões Agendar e Reagendar (T104)', async () => {
+    participantesDaAgenda.mockResolvedValue([participanteRetiradoDaAgenda])
+    renderizar('COORDENADOR')
+
+    expect(await linha('Retorno 30 dias')).toBeInTheDocument()
+    expect(screen.getByText('Retirado')).toHaveClass('selo--retirado')
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Participante retirado do estudo: não é possível agendar nem reagendar visitas.',
+    )
+    expect(screen.queryByRole('button', { name: /Agendar|Reagendar/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Abrir a visita Triagem' })).toBeInTheDocument()
   })
 })

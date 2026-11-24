@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { erroHttp } from '../../../../test/ambiente'
-import { interpretarErroDeAgendamento, mensagemDeAgendamento } from './mensagensAcompanhamento'
+import {
+  interpretarErroDeAgendamento,
+  mensagemDeAcompanhamento,
+  mensagemDeAgendamento,
+  mensagemDeResultado,
+  mensagemDeRetirada,
+  mensagemDeVinculo,
+} from './mensagensAcompanhamento'
 
 const janela = { inicio: '2026-11-20', fim: '2026-11-30' }
 
@@ -45,5 +52,50 @@ describe('mensagensAcompanhamento (T77)', () => {
   it('erro por campo dataHora do servidor vai para o campo de data', () => {
     const falha = erroHttp(400, 'dataHora: A data e hora são obrigatórias', 'VALIDACAO_CAMPOS')
     expect(interpretarErroDeAgendamento(falha)).toEqual({ geral: null, data: 'A data e hora são obrigatórias' })
+  })
+})
+
+describe('mensagemDeVinculo (T111, RQ-T111-11)', () => {
+  it.each([
+    ['CONTA_JA_VINCULADA', /já está vinculada a outro participante/],
+    ['CONTA_INATIVA', /desativada/],
+    ['CONTA_NAO_E_PARTICIPANTE', /não é de um participante/],
+    ['PARTICIPACAO_JA_TEM_CONTA', /já tem uma conta vinculada/],
+    ['PARTICIPANTE_RETIRADO', /foi retirado do estudo/],
+  ])('traduz %s', (codigo, esperado) => {
+    expect(mensagemDeVinculo(codigo, 'servidor')).toMatch(esperado)
+  })
+
+  it('PARTICIPANTE_RETIRADO tem texto próprio do vínculo, diferente do agendamento', () => {
+    expect(mensagemDeVinculo('PARTICIPANTE_RETIRADO', 'servidor')).not.toBe(
+      mensagemDeAgendamento('PARTICIPANTE_RETIRADO', 'servidor'),
+    )
+  })
+
+  it('código desconhecido ou ausente cai na mensagem do servidor', () => {
+    expect(mensagemDeVinculo('NOVO_CODIGO', 'Mensagem do servidor')).toBe('Mensagem do servidor')
+    expect(mensagemDeVinculo(undefined, 'Mensagem do servidor')).toBe('Mensagem do servidor')
+  })
+})
+
+describe('mensagemDeRetirada e bloqueios por participante retirado (T104)', () => {
+  it.each([
+    ['PARTICIPANTE_JA_RETIRADO', /já foi retirado/],
+    ['ESTUDO_ENCERRADO', /estudo está encerrado/],
+    ['MOTIVO_OBRIGATORIO', /ao menos 5 caracteres/],
+    ['DATA_RETIRADA_FUTURA', /não pode estar no futuro/],
+    ['PARTICIPANTE_RETIRADO', /retirado do estudo/],
+  ])('mensagemDeRetirada traduz %s', (codigo, esperado) => {
+    expect(mensagemDeRetirada(codigo, 'servidor')).toMatch(esperado)
+  })
+
+  it('mensagemDeRetirada cai na mensagem do servidor quando o código é desconhecido ou ausente', () => {
+    expect(mensagemDeRetirada('DESCONHECIDO', 'Mensagem do servidor')).toBe('Mensagem do servidor')
+    expect(mensagemDeRetirada(undefined, 'Mensagem do servidor')).toBe('Mensagem do servidor')
+  })
+
+  it('desfecho e resultados traduzem PARTICIPANTE_RETIRADO', () => {
+    expect(mensagemDeAcompanhamento('PARTICIPANTE_RETIRADO', 'servidor')).toMatch(/retirado do estudo/)
+    expect(mensagemDeResultado('PARTICIPANTE_RETIRADO', 'servidor')).toMatch(/retirado do estudo/)
   })
 })

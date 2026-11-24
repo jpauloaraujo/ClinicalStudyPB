@@ -150,7 +150,13 @@ Diagramas de arquitetura (Mermaid) — T01 / T03 (ver [docs/sprint1/arquitetura.
 | RF09 | Avaliação de elegibilidade | Web | ✅ Concluído (Sprint 2) |
 | RF10 | Consentimento simulado | Web | ✅ Concluído (Sprint 2) |
 | RF11 | Inclusão de participantes e limite de vagas | Web | ✅ Concluído (Sprint 2) |
-| RF12 – RF22 | Acompanhamento, app do participante e monitoramento | Web/Mobile | ⏳ Release 2 e 3 |
+| RF12 | Agendamento e reagendamento de visitas do participante (janela válida, data sugerida) e **Agenda** do estudo | Web | ✅ Concluído (Sprint 3; testes de backend na T78 e E2E na T79) |
+| RF14 | Resultados fictícios das avaliações previstas (aba **Avaliações** da visita) | Web | ✅ Concluído (Sprint 3; T87 a T93) |
+| RF15 | Histórico do participante (ficha com resumo e visitas) e fluxo de acompanhamento | Web | ✅ Concluído (Sprint 3; E2E do fluxo na T99) |
+| RF16 | Retirada de participante do estudo (irreversível, com cancelamento em cascata das visitas futuras) | Web | ✅ Concluído (Sprint 3; T101 a T107) |
+| RF17 | App do participante: login, vínculo da conta pelo coordenador e **Meus estudos** (lista e detalhe) | Mobile (e web para o vínculo) | 🟡 Sprint 3: código e testes prontos; falta rodar o E2E Maestro em emulador (T114) |
+| RF18 | App do participante: **próximas visitas** e **histórico de comparecimento** (com resumo) | Mobile | 🟡 Sprint 3: código e testes prontos (backend T116 e T120, app T117 a T120); falta rodar o fluxo Maestro em emulador e salvar as capturas (T121) |
+| RF13, RF19 – RF22 | Acompanhamento, app do participante e monitoramento | Web/Mobile | ⏳ Release 2 e 3 (RF13 em andamento na Sprint 3) |
 
 | RF | Comportamento | Casos de erro e validação |
 |---|---|---|
@@ -165,12 +171,18 @@ Diagramas de arquitetura (Mermaid) — T01 / T03 (ver [docs/sprint1/arquitetura.
 | RF09 | Na ficha, o coordenador responde a todos os critérios; o sistema calcula elegível ou não elegível, a pontuação e os critérios reprovadores, e guarda o histórico de reavaliações | "Salvar avaliação" só com todas as respostas; critério de exclusão "se aplica" reprova; candidato já incluído não é reavaliado (`CANDIDATO_JA_INCLUIDO`) |
 | RF10 | Na ficha, o coordenador lê o termo simulado (TCLE-SIMULADO), confirma e registra; depois só o comprovante (data, responsável e versão do termo) é exibido | Botão desabilitado até confirmar; segundo registro → `CONSENTIMENTO_DUPLICADO`; data futura recusada; fora do recrutamento ou para candidato incluído o formulário não aparece |
 | RF11 | A seção **Inclusão** mostra as quatro pré-condições (estudo em recrutamento, elegível, consentido e vaga disponível) e inclui com confirmação; a aba **Participantes** lista os incluídos e o contador "X de N vagas" | Cada pré-condição pendente explica o motivo e mantém o botão desabilitado; o servidor ainda valida: `CANDIDATO_NAO_ELEGIVEL`, `CONSENTIMENTO_AUSENTE`, `VAGAS_ESGOTADAS` (inclusive sob requisições simultâneas, pelo bloqueio do estudo) |
+| RF12 | Na aba **Participantes**, o coordenador abre o **Agendamento** do participante e vê todas as visitas previstas do estudo com a **janela válida** (dia previsto contado da inclusão, mais ou menos a tolerância) e a **data sugerida**; agenda com a data sugerida ou outra dentro da janela, e **reagenda** uma visita ainda agendada. A aba **Agenda** do estudo lista as visitas de todos os participantes por data, com filtros de período e de situação e paginação. O pesquisador abre as mesmas telas só para **consulta** (sem os botões Agendar e Reagendar) | Data **fora da janela** → 409 `DATA_FORA_DA_JANELA`, com a janela válida na mensagem e nada gravado; data **no passado** → 400 `DATA_NO_PASSADO`; visita já agendada → 409 `VISITA_JA_AGENDADA`; reagendar visita que já tem desfecho → 409 `VISITA_NAO_ESTA_AGENDADA`; estudo fora de recrutamento ou execução → 409 `ESTUDO_FORA_DE_RECRUTAMENTO_OU_EXECUCAO`; participante retirado → 409 `PARTICIPANTE_RETIRADO`; escrita só do coordenador (403 para os demais); leitura de coordenador e pesquisador (403 para administrador e participante); `de` maior que `ate`, situação inválida ou página fora dos limites na agenda → 400 `PARAMETRO_INVALIDO` |
+| RF14 | Na tela de uma visita **realizada** (aberta pela aba **Agenda**, pelo agendamento ou pela ficha do participante), a aba **Avaliações** lista só as atividades da categoria avaliação clínica, em ordem de nome, com o contador "X de N avaliações registradas" e o selo **pendente** ou **registrado** em cada uma. O pesquisador informa valor (obrigatório, até 200 caracteres), unidade (até 30) e observação (até 500) e salva **uma atividade por vez** (resultado parcial); pode editar depois, e a tela mostra quem fez a última alteração e quando (`PUT /api/visitas-agendadas/{id}/resultados/{acaoId}`: `201` no primeiro registro, `200` na edição, sem trocar o autor do registro). O coordenador vê a mesma aba **somente leitura**, com o aviso "Somente o pesquisador registra resultados.". Os resultados são fictícios | Valor vazio ou só com espaços → "Informe o valor do resultado." no campo, **Salvar** desabilitado e nada gravado (no servidor, `400 VALOR_OBRIGATORIO`); tamanhos acima do limite → `400 VALIDACAO_CAMPOS`; visita agendada, ausente ou cancelada → formulário desabilitado com o aviso e `409 VISITA_NAO_REALIZADA`; atividade de outra categoria ou de outra visita → `409 ATIVIDADE_FORA_DA_CATEGORIA_AVALIACAO` / `ATIVIDADE_NAO_PERTENCE_A_VISITA`; estudo encerrado ou participante retirado → aba somente leitura com o aviso e `409 ESTUDO_ENCERRADO` / `PARTICIPANTE_RETIRADO`; coordenador, administrador e participante recebem `403` na escrita (administrador e participante também na leitura) |
+| RF15 | Na ficha do participante (aba **Participantes**), o pesquisador e o coordenador veem o resumo (realizadas, ausentes, canceladas e pendentes) e todas as visitas previstas na ordem do dia previsto, com situação, datas, motivo e os resultados das avaliações; só o coordenador tem o atalho para o agendamento | Participante inexistente → 404 com o caminho de volta; estudo sem visitas previstas mostra a lista vazia e o resumo zerado; administrador e participante recebem `403` na API |
+| RF16 | Na ficha do participante (aba **Participantes**), o coordenador clica em **Registrar retirada**, informa motivo (5 a 500 caracteres), solicitante (`Participante`, `Pesquisador` ou `Coordenação`) e data (até hoje), revisa na etapa de confirmação o aviso de irreversibilidade e a quantidade de visitas futuras afetadas e confirma (`POST /api/participacoes/{id}/retirada`). O participante passa para **RETIRADO** de forma irreversível, as visitas futuras agendadas são canceladas na mesma transação com o motivo `"retirada do estudo"`, visitas realizadas e vencidas ficam preservadas no histórico em modo somente leitura, os botões de escrita somem da ficha, do agendamento e da visita, a aba **Avaliações** exibe o aviso de participante retirado e a vaga continua ocupada | Motivo vazio ou com menos de 5 caracteres bloqueia a confirmação na tela e no servidor (`400`/`409 MOTIVO_OBRIGATORIO`); data futura → `DATA_RETIRADA_FUTURA`; segunda retirada → `PARTICIPANTE_JA_RETIRADO`; estudo encerrado → botão desabilitado na ficha e `409 ESTUDO_ENCERRADO`; novas tentativas de agendar, reagendar, registrar desfecho, salvar resultados ou vincular conta → `409 PARTICIPANTE_RETIRADO`; pesquisador, administrador e participante recebem `403` no registro (pesquisador pode consultar `GET .../retirada`) |
+| RF17 | O participante entra no app com a conta que o coordenador vinculou a ele na ficha do participante (web), vê **Meus estudos** (título, status e data de inclusão de cada estudo, com atualização por arrastar) e abre o detalhe (objetivo, responsável, período, situação); "Sair" no Perfil encerra a sessão. **Só o perfil participante entra no app** (RF02 e RF03 no mobile) e ele só vê as próprias participações (`/api/me/**`; estudo de outro participante responde 404) | Credencial inválida; perfil administrador, pesquisador ou coordenador → "Este aplicativo é exclusivo para participantes. Use a aplicação web."; sem conexão; lista vazia ("Você ainda não está incluído em nenhum estudo."); estudo inexistente ou de outro ("Estudo não encontrado."); vínculo: conta de outro perfil, inativa, já vinculada ou participação que já tem conta → 409 com o código da regra. Capturas (`rf17-*`) entram em `docs/imagens/sprint3/` quando o E2E rodar em emulador |
+| RF18 | Na aba **Visitas** do app, **Próximas** mostra as visitas agendadas de agora em diante, **da mais próxima para a mais distante**, com data e hora em português no fuso do aparelho, nome da visita, estudo e atividades previstas (só os nomes); tocar abre o detalhe da visita. **Histórico** mostra as realizadas, ausentes e canceladas, **da mais recente para a mais antiga**, com selo de texto, o motivo nas canceladas ("retirada do estudo"), paginação ("Carregar mais") e o **resumo de comparecimento** no topo ("comparecimento: 3 de 4 visitas"): realizadas sobre realizadas mais ausentes, **sem contar as canceladas**. O participante só vê os próprios dados (`/api/me/visitas/proximas` e `/api/me/visitas/historico`, sem id de participante); o retirado vê as próximas vazias e o histórico com as canceladas | Sem visitas ("Nenhuma visita agendada." e "Nenhuma visita no histórico ainda."); sem conexão ("Não foi possível conectar. Verifique sua conexão e tente de novo.", com a lista mantida e **Tentar de novo**); erro do servidor com texto genérico, nunca JSON cru; 401 volta ao login ("Sua sessão expirou. Entre novamente."); 403 leva ao login com o aviso do app exclusivo; parâmetro inválido (`pagina`, `tamanho` ou `estudoId`) → 400 `PARAMETRO_INVALIDO`; perfis que não são participante → 403. Capturas (`rf18-*`) entram em `docs/imagens/sprint3/` quando o fluxo Maestro rodar em emulador |
 
 Todas as telas dos perfis web só mostram o que o perfil pode fazer, e a API responde `403` quando o perfil não tem permissão.
 
 ### Capturas de tela
 
-As imagens estão em `docs/imagens/` e foram geradas por `web/ClinicalStudyPB/scripts/capturar-telas.mjs`, percorrendo a aplicação real com os usuários fictícios de demonstração. Para refazê-las: suba o backend com o perfil `demo`, rode `npm run dev` e execute `node scripts/capturar-telas.mjs` em `web/ClinicalStudyPB`.
+As imagens da Release 1 estão em `docs/imagens/` e foram geradas por `web/ClinicalStudyPB/scripts/capturar-telas.mjs`, percorrendo a aplicação real com os usuários fictícios de demonstração. Para refazê-las: suba o backend com o perfil `demo`, rode `npm run dev` e execute `node scripts/capturar-telas.mjs` em `web/ClinicalStudyPB`.
 
 | Tela | Sucesso | Erro |
 |---|---|---|
@@ -186,6 +198,15 @@ As imagens estão em `docs/imagens/` e foram geradas por `web/ClinicalStudyPB/sc
 | Inclusão (RF11) | ![Pré-condições](docs/imagens/13-inclusao-precondicoes.png) | ![Vagas esgotadas](docs/imagens/17-inclusao-vagas-esgotadas.png) |
 | Confirmação e resultado da inclusão | ![Confirmação](docs/imagens/14-inclusao-confirmacao.png) | ![Inclusão concluída](docs/imagens/15-inclusao-concluida.png) |
 | Participantes (RF11) | ![Participantes](docs/imagens/16-participantes.png) | |
+| Agendamento de visitas (RF12) | ![Visita agendada com a data sugerida](docs/imagens/sprint3/rf12-agendamento-sucesso.png) | ![Data fora da janela válida](docs/imagens/sprint3/rf12-agendamento-erro-janela.png) |
+| Agenda do estudo (RF12) | ![Agenda do estudo](docs/imagens/sprint3/rf12-agenda.png) | |
+| Histórico do participante (RF15) | ![Histórico](docs/imagens/sprint3/rf15-historico.png) | ![Resumo do histórico](docs/imagens/sprint3/rf15-historico-resumo.png) |
+| Fluxo de acompanhamento (RF12 a RF15) | ![Visita agendada](docs/imagens/sprint3/fluxo-acompanhamento-01-visita-agendada.png) | ![Visita realizada](docs/imagens/sprint3/fluxo-acompanhamento-02-visita-realizada.png) |
+| Resultado e leitura (RF14) | ![Resultado registrado pelo pesquisador](docs/imagens/sprint3/fluxo-acompanhamento-03-resultado-registrado.png) | ![Avaliação somente leitura para o coordenador](docs/imagens/sprint3/fluxo-acompanhamento-05-avaliacao-somente-leitura.png) |
+| Resultados das avaliações — registro e valor vazio (RF14) | ![Resultado registrado: selo e contador 1 de 2](docs/imagens/sprint3/rf14-resultado-registrado.png) | ![Erro de valor obrigatório](docs/imagens/sprint3/rf14-resultado-erro-valor.png) |
+| Resultados das avaliações — edição e leitura do coordenador (RF14) | ![Resultado editado](docs/imagens/sprint3/rf14-resultado-editado.png) | ![Resultados somente leitura para o coordenador](docs/imagens/sprint3/rf14-resultado-leitura-coordenador.png) |
+| Retirada de participante — confirmação e erro (RF16) | ![Confirmação da retirada](docs/imagens/sprint3/rf16-retirada-confirmacao.png) | ![Erro de motivo obrigatório](docs/imagens/sprint3/rf16-retirada-erro-motivo.png) |
+| Histórico após a retirada (RF16) | ![Histórico do participante retirado](docs/imagens/sprint3/rf16-retirada-historico.png) | |
 
 ## 4. Stack tecnológico
 
@@ -406,24 +427,43 @@ Meta mínima: **80% de cobertura de linhas do código de negócio do backend**, 
 
 ### Resumo dos testes por sprint
 
-Última execução em 13/11/2026, no ramo `develop` (Sprint 3 em andamento). O detalhe por classe, a cobertura, a rastreabilidade RF × testes e os riscos estão no [relatório de testes das Sprints 1 a 3](docs/testes/relatorio-de-testes-sprints-1-a-3.md).
+Última execução em **16/11/2026**, no ramo `develop` (commit `3257595`, Sprint 3 em andamento). O detalhe por classe (execução de 13/11), a cobertura, a rastreabilidade RF × testes e os riscos estão no [relatório de testes das Sprints 1 a 3](docs/testes/relatorio-de-testes-sprints-1-a-3.md).
 
-| Suíte | Sprint 1 | Sprint 2 | Sprint 3 (em andamento) | Total | Falhas |
-|---|---|---|---|---|---|
-| Backend (JUnit) | 72 | 362 | 44 (2 ignorados de propósito) | **478** | 0 |
-| Web (Vitest) | 9 | 124 | 0 | **133** | 0 |
-| E2E (Playwright) | 9 | 20 | 0 | **29** | 0 |
-| Mobile | 0 | 0 | 0 (previstos na Sprint 3) | **0** | — |
-| **Total** | **90** | **506** | **44** | **640** | **0** |
+| Suíte | Em 13/11 | Em 16/11 | Falhas |
+|---|---|---|---|
+| Backend (JUnit) | 478 | **672** | 0 |
+| Web (Vitest) | 133 | **257** | 0 |
+| E2E (Playwright) | 29 | **29** (listados; não executados nesta rodada) | — |
+| Mobile | 0 | **0** (previstos na Sprint 3) | — |
+| **Total** | **640** | **958** | **0** |
 
 | Indicador | Valor | Meta |
 |---|---|---|
-| Cobertura de linhas do código de negócio (backend) | **99,2%** (621 de 626) | 80% |
-| Requisitos verificados | RF01 a RF11 (Sprints 1 e 2) | RF01 a RF22 |
-| Defeitos abertos na `develop` | 0 | 0 |
-| Defeitos abertos em Pull Requests | 1 erro de teste + 4 pontos de revisão no PR #12 (T75) | 0 |
+| Cobertura de linhas do código de negócio (backend) | **99,0%** (967 de 977) | 80% |
+| Requisitos verificados | RF01 a RF11 (Sprints 1 e 2); RF12, RF13, RF14 e RF15 com testes de backend, de componentes web e o E2E do fluxo de acompanhamento (`fluxo-acompanhamento.spec.ts`, T99); RF14 também com o E2E dedicado (`resultados-visita.spec.ts`, T93); RF16 com testes de backend, componentes web e E2E (`retirada.spec.ts`, T107); RF17 e RF18 com testes de backend e de componentes do app (o fluxo Maestro do app aguarda execução em emulador, T114 e T121) | RF01 a RF22 |
+| Falhas de teste na `develop` | 0 | 0 |
+| Itens de defeito abertos ou em verificação | 6 (de 29 registrados) | 0 |
 
-Os defeitos e não conformidades ficam no [registro de defeitos](docs/testes/registro-de-defeitos.md), com identificador, causa, evidência e estado.
+As capturas da Sprint 3 (`docs/imagens/sprint3/`) vêm dos E2E `e2e/tests/fluxo-acompanhamento.spec.ts` (T99, fluxo de acompanhamento com dois perfis) e `e2e/tests/retirada.spec.ts` (T107, retirada de participante — confirmação com visitas afetadas, histórico após cancelamento em cascata e erro de motivo vazio). Para refazê-las: `npm run test:e2e -- fluxo-acompanhamento retirada` em `web/ClinicalStudyPB` (as imagens saem em `test-results/capturas/`).
+
+### Rastreabilidade de erros
+
+Todo erro, defeito ou não conformidade das Sprints 1 a 3 tem um identificador, a causa, a resolução e o que funciona e o que não funciona depois de cada alteração. O histórico completo está na [rastreabilidade de erros e alterações](docs/rastreabilidade/rastreabilidade-erros-e-alteracoes.md) e a lista oficial, no [registro de defeitos](docs/testes/registro-de-defeitos.md). Situação em 16/11/2026:
+
+| Sprint | Itens registrados | Fechados | Em verificação ou abertos |
+|---|---|---|---|
+| Sprint 1 | 1 defeito + 4 dívidas técnicas | 3 | 2 dívidas (DT-S1-02, DT-S1-03) |
+| Sprint 2 | 9 | 9 | 0 |
+| Sprint 3 | 19 | 13 | 6 (D-S3-03, 06, 09, 10, 11 e 14) |
+
+| ID | O que está em aberto ou em verificação | Estado |
+|---|---|---|
+| D-S3-03 | T96 entrou na `develop` por push direto, sem Pull Request; falta o review do commit | Aberto |
+| D-S3-06 | T84 (RQ-T84-07 a 10), T86, T78 e T79 por fazer | Aberto (parcial) |
+| D-S3-09 | Consulta da agenda no PostgreSQL (T76): corrigida e mesclada; falta confirmar o job do CI | Em verificação |
+| D-S3-10 | `DemoDataIntegrationTest` falhou numa rodada local e não se reproduziu; causa não esclarecida | Em verificação |
+| D-S3-11 | O `@PreUpdate` de `VisitaAgendada` foi removido na T76; o revisor decide | Em verificação |
+| D-S3-14 | Docker: o Maven Central respondeu 429 no CI; retry mesclado, falta um job verde | Em verificação |
 
 ### Backend
 
@@ -484,7 +524,8 @@ Comando para rodar exclusivamente os testes de autenticação e segurança:
 
 - **Web, componentes:** Vitest + Testing Library (`npm test` em `web/ClinicalStudyPB`, 133 testes): detalhe do estudo com abas (T39), indicador e avanço de estado (T43), critérios (T46), visitas (T49), candidatos e ficha com a avaliação (T52 e T55), consentimento (T58), inclusão e participantes (T61), o `AuthContext` (login, sessão e logout), o conversor de erros e as telas rodando sobre o Mock Service Worker (T40). Os testes E2E ficam em `e2e/` e **não** rodam no Vitest.
 - **Web, E2E:** Playwright, descrito na próxima seção.
-- **Mobile:** ainda sem testes automatizados; na CI passa por lint e verificação de tipos. O E2E do app mobile está previsto para a Sprint 3.
+- **Mobile, componentes:** Jest + Testing Library (`npm test` em `mobile/ClinicalStudyPB`, 132 testes na Sprint 3: login, sessão, cliente HTTP, Meus estudos e detalhe); na CI roda com lint e verificação de tipos.
+- **Mobile, E2E:** fluxos Maestro em `mobile/ClinicalStudyPB/.maestro/` (login, Meus estudos, detalhe e sair; recusa de outro perfil), executados **localmente em emulador** (sem CI com emulador). Como rodar: [README do app](mobile/ClinicalStudyPB/README.md#e2e-com-maestro) e [evidência](docs/sprint3/e2e-mobile-evidencia.md).
 
 ### Testes E2E (Playwright, T65)
 
@@ -553,8 +594,12 @@ Explicação detalhada de cada arquivo e do fluxo: [docs/sprint2/T65 — Impleme
 | `regras-recrutamento.spec.ts` | Estudo sem critério/visita não avança; candidato duplicado; cadastro desabilitado fora de recrutamento; avaliação incompleta; candidato não elegível com o critério reprovador e reavaliação preservando o histórico. |
 | `regressao-sprint1.spec.ts` | Cadastro de usuário (RF01) e de estudo, com validação (RF04). |
 | `acesso-por-perfil.spec.ts` | O que cada perfil enxerga (RF03): abas, botão de avançar o estado e menu. |
+| `agendamento.spec.ts` | Agendamento de visitas (RF12, T79): o coordenador agenda com a data sugerida, vê a visita na agenda e reagenda; data fora da janela é recusada com a janela na mensagem; o pesquisador vê Participantes e Agenda só em leitura. |
+| `fluxo-acompanhamento.spec.ts` | Fluxo completo de acompanhamento (RF12 a RF15, T99): agendamento, realização, resultado de avaliação e histórico nos dois perfis. |
+| `resultados-visita.spec.ts` | Resultados das avaliações (RF14, T93): o pesquisador abre a visita realizada pela agenda, registra valor e unidade (selo "registrado" e contador "1 de 2"), edita o valor e confere que ficou gravado; o coordenador abre a mesma aba somente leitura; valor vazio ou só com espaços mostra o erro, desabilita o Salvar e nada é gravado (conferido na tela recarregada e pela API). Só as atividades de avaliação aparecem na aba. |
+| `retirada.spec.ts` | Retirada de participante (RF16, T107): confirmação com irreversibilidade e contagem de visitas futuras, cancelamento em cascata no histórico com motivo `"retirada do estudo"`, preservação de visitas realizadas e resultados, bloqueio das ações de escrita e da aba Avaliações, manutenção das vagas e validação de motivo vazio ou curto. |
 
-**Estado da suíte:** 29 testes, todos ativos. Antes de cada execução, `e2e/setup/ambiente.setup.ts` confirma que o backend responde, que a web abre e que o Mock Service Worker está desligado. As capturas dos passos-chave ficam em `test-results/capturas/` (artefato `playwright-report` no CI). Se um dia uma tela ainda não existir, os testes que dependem dela podem ser desligados em `e2e/support/pendencias.ts` (aparecem como "ignorados", com o motivo).
+**Estado da suíte:** 34 testes (2 de setup e 32 cenários), todos ativos. Antes de cada execução, `e2e/setup/ambiente.setup.ts` confirma que o backend responde, que a web abre e que o Mock Service Worker está desligado. As capturas dos passos-chave ficam em `test-results/capturas/` (artefato `playwright-report` no CI). Se um dia uma tela ainda não existir, os testes que dependem dela podem ser desligados em `e2e/support/pendencias.ts` (aparecem como "ignorados", com o motivo).
 
 Explicação do que foi implementado: [docs/sprint2/T50, T55, T59, T65 e T66 — implementação.md](<docs/sprint2/T50, T55, T59, T65 e T66 — implementação.md>) (inclui as telas T58 e T61).
 
@@ -693,7 +738,7 @@ ClinicalStudyPB/
 │           ├── api/              # Cliente HTTP e armazenamento seguro do token
 │           ├── components/       # Tema e componentes de interface
 │           └── contexts/         # Sessão do participante
-├── docs/                         # Especificação, planejamento, diagramas, design por task, imagens e relatório de testes
+├── docs/                         # Especificação, planejamento, diagramas, design por task, imagens, relatórios de testes e rastreabilidade de erros
 ├── releases/                     # Documentação de cada release (release1/README.md)
 ├── scripts/                      # verificar-ambiente.py (T67) e verificar-recrutamento.py (T68)
 ├── docker-compose.yml            # Ambiente completo: PostgreSQL + backend + web (T67)
@@ -714,7 +759,7 @@ ClinicalStudyPB/
 - [Mapeamento e complemento das tasks da Sprint 2 até 01/11](<docs/sprint2/Tasks até 01-11 — mapeamento e complemento.md>) — o que já estava feito, o que foi acrescentado, como funciona e o que ainda depende de pessoas.
 - [Contrato OpenAPI da Sprint 2](docs/api/openapi-sprint2.yaml) — endpoints de recrutamento e de estado do estudo (T37).
 - [Diagramas do domínio](docs/diagramas/dominio.md), [casos de uso](docs/diagramas/casos-de-uso.md), [sequência: avançar o estado](docs/diagramas/sequencia-avancar-estado.md), [sequência: incluir participante](docs/diagramas/sequencia-inclusao-participante.md) e [arquitetura](docs/diagramas/arquitetura.md) (T36 e T69).
-- [Relatório de testes das Sprints 1 a 3](docs/testes/relatorio-de-testes-sprints-1-a-3.md) — resultados consolidados por sprint, cobertura atual, rastreabilidade RF × testes e situação dos testes da Sprint 3; e o [registro de defeitos](docs/testes/registro-de-defeitos.md), com a rastreabilidade de cada defeito.
+- [Relatório de testes das Sprints 1 a 3](docs/testes/relatorio-de-testes-sprints-1-a-3.md) — resultados consolidados por sprint, cobertura atual, rastreabilidade RF × testes e situação dos testes da Sprint 3; o [registro de defeitos](docs/testes/registro-de-defeitos.md), com a lista oficial de defeitos; e a [rastreabilidade de erros e alterações](docs/rastreabilidade/rastreabilidade-erros-e-alteracoes.md), com o histórico de cada erro, a resolução e o que funciona ou não depois de cada mudança.
 - [Relatório de testes da Release 1](docs/testes/relatorio-de-testes-release1.md) — estratégia, ambiente, resultados por suíte, cobertura, rastreabilidade RF × testes, defeitos, riscos e conclusão.
 - [Release 1](releases/release1/README.md) — relatório da entrega: requisitos, resultados dos testes, problemas conhecidos e processo de desenvolvimento.
 - [Integração do planejamento (T67)](<docs/sprint2/T67 — Integração do planejamento (ambiente Docker).md>) e [do recrutamento (T68)](<docs/sprint2/T68 — Integração do recrutamento (roteiro e correções).md>) — roteiros executáveis e defeitos encontrados.

@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.UUID;
 
 import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoNoHistorico;
+import UEPB.ESWII.ClinicalStudyPB.domain.enums.SituacaoParticipacao;
+import UEPB.ESWII.ClinicalStudyPB.domain.enums.SolicitanteRetirada;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -29,7 +31,17 @@ public record HistoricoParticipanteResponse(
             UUID candidatoId,
             @Schema(example = "CAND-001") String codigo,
             @Schema(example = "Pessoa Teta (Ficticia)") String nomeFicticio,
-            @Schema(description = "Dia 0 do cronograma do participante", example = "2026-10-20") LocalDate dataInclusao) {
+            @Schema(description = "Dia 0 do cronograma do participante", example = "2026-10-20") LocalDate dataInclusao,
+            @Schema(description = "Situação da participação no estudo") SituacaoParticipacao situacao,
+            @Schema(description = "Dados da retirada; nulo enquanto o participante estiver ativo", nullable = true)
+            RetiradaDoHistorico retirada) {
+    }
+
+    @Schema(description = "Resumo da retirada do participante exibido na ficha e no histórico")
+    public record RetiradaDoHistorico(
+            @Schema(example = "2026-11-18") LocalDate dataRetirada,
+            @Schema(example = "Mudança de cidade") String motivo,
+            SolicitanteRetirada solicitante) {
     }
 
     @Schema(description = "Contagem de visitas por situação. pendentes = agendadas + naoAgendadas")

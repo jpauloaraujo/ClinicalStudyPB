@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | **Projeto** | ClinicalStudyPB — Sistema de Gestão de Estudos Clínicos (Engenharia de Software II, UEPB, 2026.2) |
-| **Versão testada** | Ramo `develop` no commit `499c951` (Sprint 3 em andamento: T73, T74, T87 e T95 integradas). Também foi testado o Pull Request #12 (T75), ainda não integrado |
+| **Versão testada** | Execução de 13/11/2026: ramo `develop` no commit `499c951` (T73, T74, T87 e T95) e o Pull Request #12 (T75). **Atualização de 16/11/2026:** ramo `develop` no commit `3257595` (T75 a T77, T80 a T85 e T97 integradas); as tabelas por classe e por sprint abaixo continuam sendo as da execução de 13/11 |
 | **Tipo do documento** | Relatório consolidado de execução de testes (estrutura inspirada na IEEE 829 / ISO 29119-3). Complementa o [relatório da Release 1](relatorio-de-testes-release1.md) |
-| **Data da execução** | 13/11/2026 |
+| **Data da execução** | 13/11/2026 (detalhe por classe) e 16/11/2026 (totais e defeitos atualizados) |
 | **Escopo funcional** | Sprint 1 (RF01 a RF04), Sprint 2 (RF05 a RF11) e início da Sprint 3 (RF12 a RF15: modelo, contrato e dados de demonstração) |
-| **Resultado geral** | **Aprovado na `develop`:** 478 testes de backend (476 passaram, 0 falhas, 2 ignorados de propósito), 133 de web e 29 de E2E; cobertura de linhas do código de negócio de **99,2%** (meta: 80%). **Reprovado no Pull Request #12:** 1 erro de backend (seção 8) |
+| **Resultado geral** | **Aprovado na `develop` em 16/11/2026:** 672 testes de backend (0 falhas, 0 erros, 0 ignorados), 257 de web e 29 de E2E (listados, não executados nesta rodada); cobertura de linhas do código de negócio de **99,0%** (967 de 977 linhas; meta: 80%). Em 13/11 eram 478 de backend, 133 de web e 29 de E2E, com 99,2% |
 
 ---
 
@@ -20,6 +20,23 @@ Registrar, em um só lugar, **todos os testes automatizados que o projeto tem de
 **Fora do escopo:** o aplicativo mobile ainda não tem testes automatizados (só `lint` e `tsc --noEmit`); testes de carga, desempenho e segurança ofensiva; navegadores além do Chromium.
 
 ## 2. Resumo dos resultados por sprint
+
+**Atualização de 16/11/2026** (totais medidos na `develop`, commit `3257595`):
+
+| Suíte | Em 13/11 | Em 16/11 | Variação | Falhas |
+|---|---|---|---|---|
+| Backend (JUnit) | 478 | **672** | +194 | 0 |
+| Web (Vitest) | 133 | **257** | +124 | 0 |
+| E2E (Playwright) | 29 | **29** (listados; não executados nesta rodada) | 0 | — |
+| Mobile | 0 | **0** | 0 | — |
+| **Total** | **640** | **958** | **+318** | **0** |
+
+| Indicador | Em 13/11 | Em 16/11 |
+|---|---|---|
+| Cobertura de linhas do código de negócio (`domain` + `service`) | 99,2% (621 de 626) | **99,0%** (967 de 977) |
+| Testes ignorados no backend | 2 (de propósito) | **0** (todos os casos do contrato e do desfecho foram ligados) |
+
+A tabela por sprint abaixo é a da execução de 13/11 (a divisão entre sprints usa a data de criação de cada arquivo de teste e não foi refeita).
 
 | Suíte | Sprint 1 | Sprint 2 | Sprint 3 (em andamento) | **Total** | Falhas |
 |---|---|---|---|---|---|
@@ -216,30 +233,34 @@ Sem alteração desde a Release 1: roteiro do recrutamento (T68), 58 de 58 verif
 
 ## 8. Defeitos
 
-O registro completo, com identificador, origem, causa, evidência e situação, está em [registro-de-defeitos.md](registro-de-defeitos.md). Resumo:
+O registro completo, com identificador, origem, causa, evidência e situação, está em [registro-de-defeitos.md](registro-de-defeitos.md), e o histórico com as alterações, em [rastreabilidade de erros e alterações](../rastreabilidade/rastreabilidade-erros-e-alteracoes.md). Resumo em 16/11/2026:
 
 | ID | Descrição | Onde | Severidade | Situação |
 |---|---|---|---|---|
-| D-S3-01 | `AgendamentoVisitaServiceTest.validaLimitesInclusivosDaJanela` falha: o teste agenda uma data passada e a regra (correta, conforme o design) a recusa | Pull Request #12 (T75), branch `task/t75/domain` | Média (bloqueia o merge) | **Aberto** |
-| OBS-12-01 a OBS-12-04 | Quatro pontos de revisão do mesmo PR (entidade e códigos de erro diferentes do design) | Pull Request #12 | A confirmar | **Aberto** |
-| B-T67-01 a B-AUD-01 | Seis defeitos da Release 1 | Sprints 1 e 2 | — | Todos corrigidos |
+| D-S3-01 | `validaLimitesInclusivosDaJanela` falhava: o teste agendava uma data passada | PR #12 (T75) | Média | **Fechado** (PR #12 mesclado) |
+| OBS-12-01 a OBS-12-04 | Pontos de revisão do PR #12 (entidade e códigos de erro) | PR #12 | Baixa a Média | **Fechados** (PR #17 e PR #21) |
+| D-S3-02, 04, 05, 07 e 08 | Testes da T75, do desfecho e da agenda (relógio, `flush`, ordem das regras e fuso) | T75, T76, T85 | Média | **Fechados** |
+| D-S3-09 | Consulta da agenda sem parâmetro nulo para o PostgreSQL | T76 | Média | **Em verificação** (job PostgreSQL do CI) |
+| D-S3-14 | Docker: Maven Central respondeu 429; retry no Dockerfile | T77 (CI) | Média | **Em verificação** (job do CI) |
+| D-S3-03, 06, 10 e 11 | Push direto da T96; T84, T86, T78 e T79 por fazer; teste de demonstração não reproduzido; `@PreUpdate` removido | T96, T76, tasks 80-86 | Baixa a Média | **Abertos ou em verificação** |
+| B-T67-01 a B-AUD-01 e D-S2-01 a 04 | Dez itens da Release 1 | Sprints 1 e 2 | — | Todos corrigidos |
 
-Nenhum defeito aberto na `develop`.
-
+Nenhuma falha de teste na `develop`; os itens abertos são de processo, de tasks por fazer ou aguardam confirmação do CI.
 ## 9. Riscos, limitações e recomendações
 
-| # | Risco ou limitação | Impacto | Recomendação |
-|---|---|---|---|
-| R1 | Os testes foram rodados no H2; o job `Backend (testes no PostgreSQL)` do CI não foi executado aqui. O SQL da Sprint 3 usa `INTERVAL '35' DAY` e `CHECK` com `OR` | Médio | Conferir o job verde antes de promover a `develop` para a `main` |
-| R2 | O PR #12 não pode entrar com o teste falhando (o CI também falharia) | Alto para o PBI-19 | Corrigir o teste, que contradiz a regra do design (ver D-S3-01) |
-| R3 | O aplicativo mobile não tem teste automatizado | Médio, até a T113 e a T114 | Cumprir as tasks previstas |
-| R4 | Dois casos de contrato desligados | Baixo | Ligar na T76 e na T96 |
-| R5 | Os testes de web e de E2E ainda não cobrem nada da Sprint 3 | Baixo agora | As tasks T79, T86, T93, T97 e T99 trazem os casos |
-| R6 | O PR #12 mudou a entidade `VisitaAgendada` (OBS-12-01 a 03) | Médio | Revisar antes do merge |
+| # | Risco ou limitação | Impacto | Situação em 16/11/2026 | Recomendação |
+|---|---|---|---|---|
+| R1 | Os testes locais usam H2; os jobs `Backend (testes no PostgreSQL)` e `Ambiente Docker (T67)` do CI não foram consultados a partir desta máquina | Médio | Aberto: a consulta da agenda (D-S3-09) e o retry do Docker (D-S3-14) só se confirmam no CI | Conferir os dois jobs verdes na `develop` antes de promovê-la para a `main` |
+| R2 | O PR #12 não podia entrar com o teste falhando | Alto | **Fechado**: PR #12 mesclado (D-S3-01) | — |
+| R3 | O aplicativo mobile não tem teste automatizado | Médio, até a T113 e a T114 | Aberto | Cumprir as tasks previstas |
+| R4 | Dois casos de contrato desligados | Baixo | **Fechado**: nenhum `@Disabled` na `develop`; o contrato tem 34 casos e o desfecho, 33 | — |
+| R5 | Os testes de web e de E2E cobriam pouco da Sprint 3 | Médio | Parcial: a web passou de 133 para 257 testes (agendamento, desfecho e histórico); **nenhum E2E novo** foi escrito e o `acesso-por-perfil` foi alterado sem ser executado | Escrever e executar os E2E da T79, T86, T93 e T99 |
+| R6 | O PR #12 mudou a entidade `VisitaAgendada` (OBS-12-01 a 03) | Médio | **Fechado**: restaurado no PR #17; o `@PreUpdate` voltou a faltar na T76 (D-S3-11) | O revisor decide sobre o `@PreUpdate` |
+| R7 | T84 (RQ-T84-07 a 10), T86, T78 e T79 ainda não foram feitas | Médio | Aberto (D-S3-06) | Concluir antes de dar o RF13 como verificado de ponta a ponta |
 
 ## 10. Conclusão
 
-Na `develop`, as três sprints têm **640 casos automatizados e nenhuma falha**, e a cobertura do código de negócio está em **99,2%**, acima da meta de 80%. Os requisitos RF01 a RF11 estão verificados; o início da Sprint 3 (T73, T74, T87 e T95) está testado. O que impede dar a Sprint 3 como verificada é o que falta implementar (T75 a T121) e o **erro do Pull Request #12**, que deve ser resolvido antes do merge.
+Em 16/11/2026, na `develop`, as três sprints têm **958 casos automatizados (672 de backend, 257 de web e 29 de E2E) e nenhuma falha** nos que foram executados, e a cobertura do código de negócio está em **99,0%**, acima da meta de 80%. Os requisitos RF01 a RF11 estão verificados. Da Sprint 3, o agendamento (RF12), o desfecho (RF13) e o histórico (RF15) têm testes de backend e de componentes web; os resultados das avaliações (RF14) só têm backend. **Faltam** os E2E da Sprint 3, as telas dos resultados, a retirada, o aplicativo mobile e a confirmação dos jobs `PostgreSQL` e `Docker` no CI.
 
 ## 11. Como reproduzir
 

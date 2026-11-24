@@ -199,6 +199,136 @@ class FlywayMigrationIntegrationTest {
                 acao.toString()));
     }
 
+    @Test
+    @DisplayName("T111 - O índice único de candidatos.usuario_id existe, aceita vários candidatos sem conta e recusa a mesma conta duas vezes")
+    void uniqueDaContaDoCandidato() {
+        UUID estudo = inserirEstudoParaConta();
+        UUID conta = inserirContaParticipante();
+
+        assertThat(indicesUnicosDeCandidatos()).as("índices únicos de candidatos").contains("uk_candidatos_usuario");
+
+        inserirCandidatoComConta(estudo, null, "T111-A");
+        inserirCandidatoComConta(estudo, null, "T111-B");
+        inserirCandidatoComConta(estudo, conta, "T111-C");
+
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM candidatos WHERE estudo_id = CAST(? AS UUID) "
+                + "AND usuario_id IS NULL", Integer.class, estudo.toString())).isEqualTo(2);
+        recusadoPeloBanco(() -> inserirCandidatoComConta(estudo, conta, "T111-D"));
+    }
+
+    @Test
+    @DisplayName("T111 - Contas diferentes em candidatos diferentes convivem; o índice não atrapalha o um para um")
+    void contasDiferentesConvivem() {
+        UUID estudo = inserirEstudoParaConta();
+
+        inserirCandidatoComConta(estudo, inserirContaParticipante(), "T111-E");
+        inserirCandidatoComConta(estudo, inserirContaParticipante(), "T111-F");
+
+        assertThat(jdbc.queryForObject("SELECT COUNT(DISTINCT usuario_id) FROM candidatos WHERE estudo_id = CAST(? AS UUID)",
+                Integer.class, estudo.toString())).isEqualTo(2);
+    }
+
+    /**
+     * Nomes (em minúsculas) dos índices únicos da tabela candidatos, pelo {@code DatabaseMetaData} do JDBC: a consulta
+     * funciona no H2 e no PostgreSQL (D-T111-06: {@code information_schema.indexes} só existe no H2).
+     */
+    private List<String> indicesUnicosDeCandidatos() {
+        return jdbc.execute((java.sql.Connection conexao) -> {
+            java.util.Set<String> nomes = new java.util.TreeSet<>();
+            // o H2 e o PostgreSQL guardam o nome da tabela em caixas diferentes
+            for (String tabela : new String[] { "candidatos", "CANDIDATOS" }) {
+                try (java.sql.ResultSet indices = conexao.getMetaData().getIndexInfo(null, null, tabela, true, false)) {
+                    while (indices.next()) {
+                        String nome = indices.getString("INDEX_NAME");
+                        if (nome != null) {
+                            nomes.add(nome.toLowerCase());
+                        }
+                    }
+                }
+            }
+            return new java.util.ArrayList<>(nomes);
+        });
+    }
+
+    private UUID inserirEstudoParaConta() {
+        UUID estudo = UUID.randomUUID();
+        jdbc.update("INSERT INTO estudos (id, titulo, objetivo, responsavel_id, data_inicio, data_fim, "
+                + "limite_participantes, status) SELECT CAST(? AS UUID), 'Estudo T111', 'Objetivo.', id, "
+                + "DATE '2026-11-01', DATE '2027-05-01', 6, 'RECRUTAMENTO' FROM usuarios "
+                + "WHERE email = 'pesquisador@clinicalstudy.test'", estudo.toString());
+        return estudo;
+    }
+
+    private UUID inserirContaParticipante() {
+        UUID id = UUID.randomUUID();
+        jdbc.update("INSERT INTO usuarios (id, nome, email, senha, perfil, ativo) VALUES (CAST(? AS UUID), "
+                + "'Conta T111 (Ficticia)', ?, 'x', 'PARTICIPANTE', TRUE)", id.toString(),
+                "t111." + id + "@clinicalstudy.test");
+        return id;
+    }
+
+    private void inserirCandidatoComConta(UUID estudo, UUID conta, String codigo) {
+        jdbc.update("INSERT INTO candidatos (id, estudo_id, codigo, nome_ficticio, data_nascimento, usuario_id, "
+                + "situacao) VALUES (CAST(? AS UUID), CAST(? AS UUID), ?, ?, DATE '1990-01-01', "
+                + "CAST(? AS UUID), 'CONSENTIDO')", UUID.randomUUID().toString(), estudo.toString(), codigo,
+                // nome único por candidato: o índice da Sprint 2 recusa o mesmo nome e data no mesmo estudo (D-T111-01)
+                "Pessoa " + codigo + " (Ficticia)", conta == null ? null : conta.toString());
+    }
+
+    @Test
+    @DisplayName("T101 - A coluna participacoes.situacao nasce com padrão ATIVO e o CHECK recusa situação inválida")
+    void participacaoNasceAtivaECheckRecusaInvalida() {
+        var ids = CenarioVisitaAgendada.criar(jdbc);
+
+        String situacao = jdbc.queryForObject(
+                "SELECT situacao FROM participacoes WHERE id = CAST(? AS UUID)",
+                String.class, ids.participacao().toString());
+        assertThat(situacao).isEqualTo("ATIVO");
+
+        jdbc.update("UPDATE participacoes SET situacao = 'RETIRADO' WHERE id = CAST(? AS UUID)",
+                ids.participacao().toString());
+        assertThat(jdbc.queryForObject("SELECT situacao FROM participacoes WHERE id = CAST(? AS UUID)",
+                String.class, ids.participacao().toString())).isEqualTo("RETIRADO");
+
+        recusadoPeloBanco(() -> jdbc.update("UPDATE participacoes SET situacao = 'SUSPENSO' WHERE id = CAST(? AS UUID)",
+                ids.participacao().toString()));
+    }
+
+    @Test
+    @DisplayName("T101 - A tabela retiradas_participacao aceita retirada válida e recusa duplicidade (UNIQUE)")
+    void retiradaUnicaPorParticipacao() {
+        var ids = CenarioVisitaAgendada.criar(jdbc);
+
+        inserirRetirada(ids.participacao(), "PARTICIPANTE", ids.usuario());
+
+        assertThat(jdbc.queryForObject(
+                "SELECT COUNT(*) FROM retiradas_participacao WHERE participacao_id = CAST(? AS UUID)",
+                Integer.class, ids.participacao().toString())).isEqualTo(1);
+
+        recusadoPeloBanco(() -> inserirRetirada(ids.participacao(), "COORDENACAO", ids.usuario()));
+    }
+
+    @Test
+    @DisplayName("T101 - O CHECK de solicitante recusa valor fora de PARTICIPANTE, PESQUISADOR e COORDENACAO")
+    void checkRecusaSolicitanteInvalido() {
+        var ids = CenarioVisitaAgendada.criar(jdbc);
+
+        recusadoPeloBanco(() -> inserirRetirada(ids.participacao(), "ADMINISTRADOR", ids.usuario()));
+    }
+
+    @Test
+    @DisplayName("T101 - Chaves estrangeiras da retirada recusam referências inexistentes e impedem apagar participação")
+    void fksDaRetiradaPreservamHistorico() {
+        var ids = CenarioVisitaAgendada.criar(jdbc);
+
+        recusadoPeloBanco(() -> inserirRetirada(UUID.randomUUID(), "PARTICIPANTE", ids.usuario()));
+        recusadoPeloBanco(() -> inserirRetirada(ids.participacao(), "PARTICIPANTE", UUID.randomUUID()));
+
+        inserirRetirada(ids.participacao(), "PESQUISADOR", ids.usuario());
+        recusadoPeloBanco(() -> jdbc.update("DELETE FROM participacoes WHERE id = CAST(? AS UUID)",
+                ids.participacao().toString()));
+    }
+
     /**
      * Confere que o banco recusa o comando com {@link DataIntegrityViolationException}, dentro de um savepoint: no
      * PostgreSQL um erro aborta a transação inteira do teste, e o savepoint deixa os comandos seguintes rodarem.
@@ -220,5 +350,13 @@ class FlywayMigrationIntegrationTest {
                 + "CAST(? AS UUID), ?, CAST(? AS UUID), ?)",
                 UUID.randomUUID().toString(), visitaAgendada.toString(), acao.toString(),
                 usuario.toString(), agora, usuario.toString(), agora);
+    }
+
+    private void inserirRetirada(UUID participacao, String solicitante, UUID usuario) {
+        java.sql.Timestamp agora = java.sql.Timestamp.valueOf(LocalDateTime.now());
+        jdbc.update("INSERT INTO retiradas_participacao (id, participacao_id, motivo, solicitante, data_retirada, "
+                + "registrado_por_id, registrado_em) "
+                + "VALUES (CAST(? AS UUID), CAST(? AS UUID), 'Mudança de cidade', ?, CURRENT_DATE, CAST(? AS UUID), ?)",
+                UUID.randomUUID().toString(), participacao.toString(), solicitante, usuario.toString(), agora);
     }
 }

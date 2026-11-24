@@ -11,6 +11,10 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -49,6 +53,8 @@ class ParticipacaoServiceTest {
     private ConsentimentoRepository consentimentoRepository;
     private CandidatoService candidatoService;
     private ParticipacaoService service;
+    // 01:30 UTC de 22/11 ainda é 21/11 em Recife: a data de inclusão tem de seguir o relógio da aplicação
+    private final Clock relogio = Clock.fixed(Instant.parse("2026-11-22T01:30:00Z"), ZoneId.of("America/Recife"));
 
     private Estudo estudo;
     private Candidato candidato;
@@ -63,7 +69,7 @@ class ParticipacaoServiceTest {
         UsuarioAutenticado usuarioAutenticado = mock(UsuarioAutenticado.class);
         EstudoAcesso estudoAcesso = spy(new EstudoAcesso(mock(EstudoRepository.class)));
         service = new ParticipacaoService(participacaoRepository, avaliacaoRepository, consentimentoRepository,
-                candidatoService, estudoAcesso, usuarioAutenticado);
+                candidatoService, estudoAcesso, usuarioAutenticado, relogio);
 
         estudo = new Estudo();
         estudo.setId(UUID.randomUUID());
@@ -113,7 +119,7 @@ class ParticipacaoServiceTest {
 
         assertThat(resposta.codigo()).isEqualTo("CAND-001");
         assertThat(resposta.incluidoPor()).isEqualTo("Coordenador");
-        assertThat(resposta.dataInclusao()).isNotNull();
+        assertThat(resposta.dataInclusao()).isEqualTo(LocalDate.of(2026, 11, 21));
         assertThat(candidato.getSituacao()).isEqualTo(SituacaoCandidato.INCLUIDO);
     }
 
